@@ -221,28 +221,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: url('@/assets/login-bg.png') center center / cover no-repeat;
-  position: relative;
-}
-
-.login-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
+  background: #000;
 }
 
 .login-background {
   width: 100%;
   max-width: 480px;
   padding: 20px;
-  position: relative;
-  z-index: 1;
 }
 
 .login-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);

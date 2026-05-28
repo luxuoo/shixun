@@ -184,28 +184,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: url('@/assets/login-bg.png') center center / cover no-repeat;
+  background: #000;
   padding: 20px;
-  position: relative;
-}
-
-.register-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  z-index: 1;
 }
 
 .register-header {
