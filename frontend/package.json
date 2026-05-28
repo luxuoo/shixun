@@ -1,0 +1,28 @@
+{
+  "name": "ai-teaching-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vueuse/core": "^10.7.2",
+    "axios": "^1.6.5",
+    "monaco-editor": "^0.45.0",
+    "naive-ui": "^2.37.3",
+    "pinia": "^2.1.7",
+    "vfonts": "^0.0.3",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vicons/ionicons5": "^0.12.0",
+    "@vitejs/plugin-vue": "^5.0.3",
+    "typescript": "^6.0.3",
+    "vite": "^5.0.11",
+    "vue-tsc": "^3.3.2"
+  }
+}

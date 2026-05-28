@@ -1,0 +1,47 @@
+<template>
+  <n-config-provider :theme-overrides="themeOverrides">
+    <n-message-provider>
+      <n-dialog-provider>
+        <router-view />
+      </n-dialog-provider>
+    </n-message-provider>
+  </n-config-provider>
+</template>
+
+<script setup lang="ts">
+import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import type { GlobalThemeOverrides } from 'naive-ui'
+
+const themeOverrides: GlobalThemeOverrides = {
+  common: {
+    primaryColor: '#2080f0',
+    primaryColorHover: '#4098fc',
+    primaryColorPressed: '#1060c9',
+    borderRadius: '8px'
+  },
+  Card: {
+    borderRadius: '12px'
+  }
+}
+</script>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+</style>
