@@ -93,24 +93,42 @@
     </n-spin>
 
     <!-- AI 助手弹窗 -->
-    <n-modal v-model:show="showAiModal" preset="card" title="AI 助手" style="width: 800px">
+    <n-modal v-model:show="showAiModal" preset="card" title="AI 助手" style="width: 840px">
       <n-space vertical :size="16">
         <!-- AI 对话区 -->
         <div class="ai-chat-area" ref="chatArea">
-          <div v-for="(msg, index) in aiMessages" :key="index" :class="['message', msg.role]">
-            <n-card :type="msg.role === 'ai' ? 'info' : 'default'" size="small" style="max-width: 85%;">
-              <div style="white-space: pre-wrap; word-break: break-word;">{{ msg.content }}</div>
-            </n-card>
+          <div v-for="(msg, index) in aiMessages" :key="index" :class="['chat-msg', msg.role]">
+            <div class="chat-avatar">
+              <n-icon v-if="msg.role === 'ai'" size="20" color="#6366f1"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
+              <n-icon v-else size="20" color="#fff"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></n-icon>
+            </div>
+            <div class="chat-bubble" :class="msg.role">
+              <div v-if="msg.role === 'ai'" class="markdown-body" v-html="renderMarkdown(msg.content)"></div>
+              <div v-else style="white-space: pre-wrap; word-break: break-word;">{{ msg.content }}</div>
+            </div>
           </div>
-          <n-empty v-if="aiMessages.length === 0" description="点击下方按钮获取 AI 帮助" />
+
+          <!-- AI 加载气泡 -->
+          <div v-if="isAiTyping" class="chat-msg ai">
+            <div class="chat-avatar">
+              <n-icon size="20" color="#6366f1"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
+            </div>
+            <div class="chat-bubble ai typing-bubble">
+              <div class="typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+
+          <n-empty v-if="aiMessages.length === 0 && !isAiTyping" description="点击下方按钮获取 AI 帮助" />
         </div>
 
         <!-- AI 操作按钮 -->
         <n-space>
-          <n-button @click="getHint" :loading="hintLoading" :disabled="hintsRemaining <= 0" type="warning">
+          <n-button @click="getHint" :loading="hintLoading" :disabled="hintsRemaining <= 0 || isAiTyping" type="warning">
             获取提示 ({{ hintsRemaining }}次)
           </n-button>
-          <n-button @click="analyzeCode" :loading="analyzeLoading" type="info">
+          <n-button @click="analyzeCode" :loading="analyzeLoading" :disabled="isAiTyping" type="info">
             分析代码
           </n-button>
         </n-space>
@@ -121,9 +139,10 @@
             v-model:value="aiQuestion"
             placeholder="输入你的问题..."
             @keyup.enter="askQuestion"
+            :disabled="isAiTyping"
             style="flex: 1;"
           />
-          <n-button type="primary" @click="askQuestion" :loading="questionLoading">
+          <n-button type="primary" @click="askQuestion" :loading="questionLoading" :disabled="isAiTyping">
             提问
           </n-button>
         </n-input-group>
@@ -138,7 +157,11 @@ import { useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { NButton, NTag } from 'naive-ui'
 import * as monaco from 'monaco-editor'
+import { marked } from 'marked'
 import { taskApi, submissionApi, aiApi, authApi } from '@/api'
+
+// 配置 marked
+marked.setOptions({ breaks: true, gfm: true } as any)
 
 const route = useRoute()
 const message = useMessage()
@@ -164,6 +187,7 @@ const aiMessages = ref<{ role: string; content: string }[]>([])
 const aiQuestion = ref('')
 const hintsRemaining = ref(3)
 const chatArea = ref<HTMLElement | null>(null)
+const isAiTyping = ref(false)
 
 const submissions = ref<any[]>([])
 
@@ -260,22 +284,33 @@ async function submitCode() {
   }
 }
 
+function renderMarkdown(content: string): string {
+  try {
+    return marked.parse(content || '') as string
+  } catch {
+    return content
+  }
+}
+
 async function getHint() {
   if (!currentStepData.value) return
   hintLoading.value = true
+  isAiTyping.value = true
+  scrollChat()
   try {
     const result = await aiApi.getHint({
       task_id: task.value.id,
       step_id: currentStepData.value.id,
       student_code: editor?.getValue()
     }) as any
-    aiMessages.value.push({ role: 'ai', content: `[提示 - 级别${result.hint_level}]\n${result.content}` })
+    aiMessages.value.push({ role: 'ai', content: `**提示 - 级别${result.hint_level}**\n\n${result.content}` })
     hintsRemaining.value = result.remaining_hints
-    scrollChat()
   } catch (error: any) {
     message.error(error.detail || '获取提示失败')
   } finally {
     hintLoading.value = false
+    isAiTyping.value = false
+    scrollChat()
   }
 }
 
@@ -287,40 +322,47 @@ async function analyzeCode() {
     return
   }
   analyzeLoading.value = true
+  isAiTyping.value = true
+  scrollChat()
   try {
     const result = await aiApi.analyzeCode({
       task_id: task.value.id,
       step_id: currentStepData.value.id,
       code: code
     }) as any
-    aiMessages.value.push({ role: 'ai', content: `[代码分析]\n${result.analysis}` })
-    scrollChat()
+    aiMessages.value.push({ role: 'ai', content: `**代码分析**\n\n${result.analysis}` })
   } catch (error: any) {
     message.error(error.detail || '分析失败')
   } finally {
     analyzeLoading.value = false
+    isAiTyping.value = false
+    scrollChat()
   }
 }
 
 async function askQuestion() {
   if (!aiQuestion.value.trim() || !currentStepData.value) return
+  const q = aiQuestion.value
+  aiMessages.value.push({ role: 'user', content: q })
+  aiQuestion.value = ''
   questionLoading.value = true
+  isAiTyping.value = true
+  scrollChat()
   try {
-    aiMessages.value.push({ role: 'user', content: aiQuestion.value })
     const result = await aiApi.getHint({
       task_id: task.value.id,
       step_id: currentStepData.value.id,
       student_code: editor?.getValue(),
-      question: aiQuestion.value
+      question: q
     }) as any
     aiMessages.value.push({ role: 'ai', content: result.content })
     hintsRemaining.value = result.remaining_hints
-    aiQuestion.value = ''
-    scrollChat()
   } catch (error: any) {
     message.error(error.detail || '提问失败')
   } finally {
     questionLoading.value = false
+    isAiTyping.value = false
+    scrollChat()
   }
 }
 
@@ -372,23 +414,139 @@ onMounted(async () => {
 }
 
 .ai-chat-area {
-  max-height: 450px;
+  max-height: 480px;
   overflow-y: auto;
-  padding: 16px;
-  background: #f8f8fa;
-  border-radius: 8px;
+  padding: 20px;
+  background: #f5f5f9;
+  border-radius: 12px;
 }
 
-.message {
-  margin-bottom: 12px;
+.chat-msg {
   display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.message.user {
-  justify-content: flex-end;
+.chat-msg.user {
+  flex-direction: row-reverse;
 }
 
-.message.ai {
-  justify-content: flex-start;
+.chat-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-msg.ai .chat-avatar {
+  background: #eef2ff;
+}
+
+.chat-msg.user .chat-avatar {
+  background: #6366f1;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.chat-bubble.ai {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-top-left-radius: 4px;
+  color: #1e1e2d;
+}
+
+.chat-bubble.user {
+  background: #6366f1;
+  color: white;
+  border-top-right-radius: 4px;
+}
+
+/* Markdown 样式 */
+.markdown-body :deep(p) {
+  margin: 0 0 8px;
+}
+
+.markdown-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-body :deep(code) {
+  background: #f0f0f4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.markdown-body :deep(pre) {
+  background: #1e1e2d;
+  color: #e0e0e0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.markdown-body :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.markdown-body :deep(ul), .markdown-body :deep(ol) {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.markdown-body :deep(li) {
+  margin: 2px 0;
+}
+
+.markdown-body :deep(strong) {
+  font-weight: 600;
+}
+
+.markdown-body :deep(blockquote) {
+  border-left: 3px solid #6366f1;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #666;
+}
+
+/* 加载动画 */
+.typing-bubble {
+  padding: 14px 20px !important;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 </style>

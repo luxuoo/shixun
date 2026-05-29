@@ -1,114 +1,104 @@
 <template>
   <div class="roll-call-container">
-    <n-space justify="space-between" align="center" style="margin-bottom: 24px;">
+    <!-- 顶部控制栏 -->
+    <div class="top-bar">
       <h2>课堂点名</h2>
-      <n-space>
-        <n-select
-          v-model:value="selectedClass"
-          :options="classOptions"
-          placeholder="选择班级"
-          clearable
-          style="width: 200px;"
-          @update:value="loadStudents"
-        />
-      </n-space>
-    </n-space>
+      <n-select
+        v-model:value="selectedClass"
+        :options="classOptions"
+        placeholder="选择班级"
+        clearable
+        style="width: 200px;"
+        @update:value="loadStudents"
+      />
+    </div>
 
-    <n-grid :cols="2" :x-gap="24">
-      <!-- 左侧：点名区域 -->
-      <n-gi>
-        <n-card>
-          <n-space vertical :size="24" align="center">
-            <!-- 点名显示区 -->
-            <div class="roll-call-display" :class="{ rolling: isRolling, called: calledStudent }">
-              <div v-if="!calledStudent && !isRolling" class="placeholder">
-                <n-icon size="64" color="#ccc">
-                  <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-                </n-icon>
-                <p style="color: #999; margin-top: 12px;">点击下方按钮开始点名</p>
-              </div>
-              <div v-else-if="isRolling" class="rolling-name">
-                {{ rollingName }}
-              </div>
-              <div v-else-if="calledStudent" class="called-info">
-                <n-tag type="success" size="large" style="font-size: 20px; padding: 12px 24px;">
-                  {{ calledStudent.name }}
-                </n-tag>
-                <n-descriptions bordered :column="1" style="margin-top: 16px; width: 100%;">
-                  <n-descriptions-item label="姓名">{{ calledStudent.name }}</n-descriptions-item>
-                  <n-descriptions-item label="学号">{{ calledStudent.student_id || '-' }}</n-descriptions-item>
-                  <n-descriptions-item label="用户名">{{ calledStudent.username }}</n-descriptions-item>
-                </n-descriptions>
-              </div>
+    <!-- 主体 -->
+    <div class="main-area">
+      <!-- 左侧：点名核心区域 -->
+      <div class="call-zone">
+        <div class="call-display" :class="{ rolling: isRolling, called: calledStudent }">
+          <!-- 初始状态 -->
+          <div v-if="!calledStudent && !isRolling" class="init-state">
+            <div class="init-icon">
+              <n-icon size="56" color="#c0c4cc"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></n-icon>
             </div>
+            <p class="init-text">选择班级后点击按钮开始点名</p>
+          </div>
 
-            <!-- 操作按钮 -->
-            <n-space>
-              <n-button
-                type="primary"
-                size="large"
-                :disabled="students.length === 0 || isRolling"
-                @click="startRollCall"
-              >
-                {{ calledStudent ? '再次点名' : '开始点名' }}
-              </n-button>
-              <n-button
-                v-if="calledStudent"
-                size="large"
-                @click="calledStudent = null"
-              >
-                清除
-              </n-button>
-            </n-space>
+          <!-- 滚动动画 -->
+          <div v-else-if="isRolling" class="rolling-state">
+            <div class="rolling-name">{{ rollingName }}</div>
+          </div>
 
-            <n-text depth="3">
-              共 {{ students.length }} 名学生，已点名 {{ calledHistory.length }} 人
-            </n-text>
-          </n-space>
-        </n-card>
-      </n-gi>
+          <!-- 点名结果 -->
+          <div v-else-if="calledStudent" class="result-state">
+            <div class="result-avatar">{{ calledStudent.name?.charAt(0) }}</div>
+            <div class="result-name">{{ calledStudent.name }}</div>
+            <div class="result-info">
+              <span v-if="calledStudent.student_id">学号 {{ calledStudent.student_id }}</span>
+              <span>{{ calledStudent.username }}</span>
+            </div>
+          </div>
+        </div>
 
-      <!-- 右侧：点名历史和未点名列表 -->
-      <n-gi>
-        <n-space vertical :size="16">
-          <!-- 点名历史 -->
-          <n-card title="点名历史">
-            <n-empty v-if="calledHistory.length === 0" description="暂无点名记录" />
-            <n-list v-else bordered>
-              <n-list-item v-for="(item, index) in calledHistory" :key="index">
-                <n-thing>
-                  <template #header>
-                    <n-space align="center">
-                      <n-tag :type="index === 0 ? 'error' : 'info'" size="small">
-                        {{ index === 0 ? '最近' : `第${calledHistory.length - index}次` }}
-                      </n-tag>
-                      {{ item.name }}
-                      <n-text depth="3" style="font-size: 12px;">{{ item.student_id }}</n-text>
-                    </n-space>
-                  </template>
-                </n-thing>
-              </n-list-item>
-            </n-list>
-          </n-card>
+        <!-- 操作按钮 -->
+        <div class="call-actions">
+          <n-button
+            type="primary"
+            size="large"
+            round
+            :disabled="students.length === 0 || isRolling"
+            @click="startRollCall"
+            style="min-width: 160px;"
+          >
+            {{ calledStudent ? '再次点名' : '开始点名' }}
+          </n-button>
+          <n-button v-if="calledStudent" size="large" round @click="calledStudent = null">
+            清除
+          </n-button>
+        </div>
 
-          <!-- 未点名学生 -->
-          <n-card title="未点名学生">
-            <n-empty v-if="uncalledStudents.length === 0" description="所有学生都已点名" />
-            <n-space v-else wrap>
-              <n-tag v-for="s in uncalledStudents" :key="s.id" size="small">
-                {{ s.name }} ({{ s.student_id || s.username }})
-              </n-tag>
-            </n-space>
-          </n-card>
-        </n-space>
-      </n-gi>
-    </n-grid>
+        <div class="call-stats">
+          共 <strong>{{ students.length }}</strong> 名学生 &middot; 已点名 <strong>{{ calledHistory.length }}</strong> 人 &middot; 未点名 <strong>{{ uncalledStudents.length }}</strong> 人
+        </div>
+      </div>
+
+      <!-- 右侧：历史和未点名 -->
+      <div class="side-panel">
+        <!-- 点名历史 -->
+        <div class="panel-card">
+          <div class="panel-title">点名历史</div>
+          <div v-if="calledHistory.length === 0" class="panel-empty">暂无记录</div>
+          <div v-else class="history-list">
+            <div v-for="(item, index) in calledHistory" :key="index" class="history-item">
+              <span class="history-badge" :class="{ recent: index === 0 }">
+                {{ index === 0 ? '最新' : `#${calledHistory.length - index}` }}
+              </span>
+              <span class="history-name">{{ item.name }}</span>
+              <span class="history-id">{{ item.student_id || '' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 未点名学生 -->
+        <div class="panel-card">
+          <div class="panel-title">未点名 ({{ uncalledStudents.length }})</div>
+          <div v-if="uncalledStudents.length === 0" class="panel-empty">全部已点名</div>
+          <div v-else class="uncalled-grid">
+            <span v-for="s in uncalledStudents" :key="s.id" class="uncalled-tag">
+              {{ s.name }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { authApi } from '@/api'
+import { authApi, adminApi } from '@/api'
 
 const students = ref<any[]>([])
 const selectedClass = ref<number | null>(null)
@@ -119,17 +109,10 @@ const calledStudent = ref<any>(null)
 const calledHistory = ref<any[]>([])
 const calledIds = ref<Set<number>>(new Set())
 
-const uncalledStudents = computed(() => {
-  return students.value.filter(s => !calledIds.value.has(s.id))
-})
+const uncalledStudents = computed(() => students.value.filter(s => !calledIds.value.has(s.id)))
 
 async function loadStudents() {
   try {
-    const data = await authApi.getClasses() as any
-    classOptions.value = data.map((c: any) => ({ label: c.name, value: c.id }))
-  } catch {}
-  try {
-    const { adminApi } = await import('@/api')
     const data = await adminApi.getStudents(selectedClass.value || undefined) as any
     students.value = data
   } catch {}
@@ -144,7 +127,6 @@ async function loadClasses() {
 
 function startRollCall() {
   if (students.value.length === 0) return
-
   isRolling.value = true
   calledStudent.value = null
 
@@ -156,7 +138,6 @@ function startRollCall() {
     const random = students.value[Math.floor(Math.random() * students.value.length)]
     rollingName.value = random.name
     elapsed += interval
-
     if (elapsed >= duration) {
       clearInterval(timer)
       isRolling.value = false
@@ -175,43 +156,228 @@ onMounted(() => {
 
 <style scoped>
 .roll-call-container {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-.roll-call-display {
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.top-bar h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.main-area {
+  display: flex;
+  gap: 24px;
+}
+
+/* 左侧点名区 */
+.call-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.call-display {
   width: 100%;
-  min-height: 260px;
+  min-height: 320px;
+  background: #fff;
+  border-radius: 20px;
+  border: 2px solid #e8e8ec;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
-  background: #f8f8fa;
   transition: all 0.3s;
+  margin-bottom: 24px;
 }
 
-.roll-call-display.called {
-  background: #f0faf0;
+.call-display.rolling {
+  border-color: #6366f1;
+  background: #fafafe;
 }
 
-.placeholder {
+.call-display.called {
+  border-color: #18a058;
+  background: #f0faf4;
+}
+
+/* 初始状态 */
+.init-state {
+  text-align: center;
+}
+
+.init-icon {
+  margin-bottom: 12px;
+}
+
+.init-text {
+  color: #999;
+  font-size: 15px;
+  margin: 0;
+}
+
+/* 滚动状态 */
+.rolling-state {
   text-align: center;
 }
 
 .rolling-name {
-  font-size: 48px;
-  font-weight: bold;
-  color: #2080f0;
-  animation: pulse 0.1s infinite alternate;
+  font-size: 56px;
+  font-weight: 800;
+  color: #6366f1;
+  letter-spacing: 4px;
+  animation: pulse 0.08s infinite alternate;
 }
 
-.called-info {
+/* 结果状态 */
+.result-state {
   text-align: center;
   padding: 20px;
 }
 
+.result-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.result-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e1e2d;
+  margin-bottom: 8px;
+}
+
+.result-info {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 按钮区 */
+.call-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.call-stats {
+  font-size: 14px;
+  color: #999;
+}
+
+.call-stats strong {
+  color: #1e1e2d;
+  font-weight: 600;
+}
+
+/* 右侧面板 */
+.side-panel {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.panel-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e8e8ec;
+  padding: 16px;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e1e2d;
+  margin-bottom: 12px;
+}
+
+.panel-empty {
+  color: #ccc;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.history-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f9;
+}
+
+.history-item:last-child { border-bottom: none; }
+
+.history-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f0f0f4;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.history-badge.recent {
+  background: #6366f1;
+  color: white;
+}
+
+.history-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e1e2d;
+}
+
+.history-id {
+  font-size: 12px;
+  color: #999;
+  margin-left: auto;
+}
+
+.uncalled-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.uncalled-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f5f5f9;
+  color: #666;
+}
+
 @keyframes pulse {
-  from { opacity: 0.5; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1.05); }
+  from { opacity: 0.6; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1.03); }
 }
 </style>
