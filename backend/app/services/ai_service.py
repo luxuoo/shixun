@@ -41,15 +41,24 @@ class AiService:
         }
         response = await self.client.chat.completions.create(**kwargs)
 
-        content = response.choices[0].message.content or ""
+        msg = response.choices[0].message
+        content = msg.content or ""
         tokens_used = response.usage.total_tokens if response.usage else 0
 
-        # 推理模型可能将思考过程作为 reasoning_tokens 消耗，
-        # 但 content 为空时尝试从 reasoning_content 提取
+        # 推理模型（如 mimo-v2.5-pro）会先消耗 reasoning_tokens 思考，
+        # 然后才生成 content。如果 content 为空，尝试多种方式获取 reasoning 内容
         if not content.strip():
-            msg = response.choices[0].message
-            reasoning = getattr(msg, "reasoning_content", None) or ""
-            if reasoning:
+            # 方式1: 直接属性访问
+            reasoning = getattr(msg, "reasoning_content", None)
+            # 方式2: 通过 model_extra 字典访问（Pydantic v2）
+            if not reasoning and hasattr(msg, "model_extra"):
+                extra = msg.model_extra or {}
+                reasoning = extra.get("reasoning_content")
+            # 方式3: 通过 to_dict 访问
+            if not reasoning and hasattr(msg, "to_dict"):
+                d = msg.to_dict()
+                reasoning = d.get("reasoning_content")
+            if reasoning and reasoning.strip():
                 content = reasoning
 
         if not content.strip():

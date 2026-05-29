@@ -35,19 +35,35 @@ async def test_ai_connection(
     try:
         resp = await ai_service.client.chat.completions.create(
             model=settings.MIMO_MODEL,
-            messages=[{"role": "user", "content": "回复OK"}],
-            max_tokens=50
+            messages=[{"role": "user", "content": "请用中文回复：你好"}],
+            max_tokens=200
         )
         msg = resp.choices[0].message
         content = msg.content or ""
-        reasoning = getattr(msg, "reasoning_content", "") or ""
+
+        # 尝试多种方式获取 reasoning_content
+        reasoning = getattr(msg, "reasoning_content", None)
+        if not reasoning and hasattr(msg, "model_extra"):
+            extra = msg.model_extra or {}
+            reasoning = extra.get("reasoning_content")
+        if not reasoning and hasattr(msg, "to_dict"):
+            d = msg.to_dict()
+            reasoning = d.get("reasoning_content")
+        reasoning = reasoning or ""
+
         result["test_result"] = {
-            "content": content[:200],
-            "reasoning": reasoning[:200],
+            "content": content[:300],
+            "reasoning": reasoning[:300],
             "content_empty": not content.strip(),
+            "reasoning_empty": not reasoning.strip(),
             "tokens": resp.usage.total_tokens if resp.usage else 0
         }
-        result["status"] = "ok" if content.strip() else "content_empty"
+        if content.strip():
+            result["status"] = "ok"
+        elif reasoning.strip():
+            result["status"] = "reasoning_only"
+        else:
+            result["status"] = "content_empty"
     except Exception as e:
         result["status"] = "error"
         result["error"] = f"{type(e).__name__}: {str(e)[:300]}"
