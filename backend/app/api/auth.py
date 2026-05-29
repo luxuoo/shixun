@@ -30,7 +30,8 @@ _system_settings = {
     "student_register_enabled": True,
     "ai_chat_enabled": True,
     "ai_hints_limit": 0,
-    "ai_auto_score": True
+    "ai_auto_score": True,
+    "submission_limit": 0
 }
 
 
@@ -238,6 +239,8 @@ async def update_settings(
         _system_settings["ai_hints_limit"] = max(0, int(data["ai_hints_limit"]))
     if "ai_auto_score" in data:
         _system_settings["ai_auto_score"] = bool(data["ai_auto_score"])
+    if "submission_limit" in data:
+        _system_settings["submission_limit"] = max(0, int(data["submission_limit"]))
     return _system_settings
 
 

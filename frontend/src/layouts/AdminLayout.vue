@@ -126,7 +126,8 @@ const menuGroups = computed(() => {
         { label: '任务管理', key: 'AdminTasks', icon: icon('M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z') },
         { label: '提交记录', key: 'AdminSubmissions', icon: icon('M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z') },
         { label: '成绩管理', key: 'AdminGrades', icon: icon('M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z') },
-        { label: '课堂点名', key: 'AdminRollCall', icon: icon('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z') }
+        { label: '课堂点名', key: 'AdminRollCall', icon: icon('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z') },
+        { label: '加减分', key: 'AdminAdjustScore', icon: icon('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 10h-4v4h-2v-4H7v-2h4V6h2v4h4v2z') }
       ]
     },
     {
@@ -164,7 +165,8 @@ const breadcrumbs = computed(() => {
     AdminUsers: '用户管理',
     AdminSystemStats: '系统统计',
     AdminRollCall: '课堂点名',
-    AdminGrades: '成绩管理'
+    AdminGrades: '成绩管理',
+    AdminAdjustScore: '加减分'
   }
   if (route.name && nameMap[route.name as string]) {
     items.push({ path: route.path, title: nameMap[route.name as string] })

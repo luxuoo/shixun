@@ -118,6 +118,23 @@ async def create_submission(
     if not step:
         raise HTTPException(status_code=404, detail="步骤不存在")
 
+    # 检查提交次数限制
+    submission_limit = _system_settings.get("submission_limit", 0)
+    if submission_limit > 0:
+        count_result = await db.execute(
+            select(func.count(Submission.id)).where(
+                Submission.user_id == current_user.id,
+                Submission.task_id == submission_data.task_id,
+                Submission.step_id == submission_data.step_id
+            )
+        )
+        current_count = count_result.scalar() or 0
+        if current_count >= submission_limit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"本步骤最多只能提交 {submission_limit} 次"
+            )
+
     # 创建提交记录
     submission = Submission(
         user_id=current_user.id,

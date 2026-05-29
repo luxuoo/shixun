@@ -84,11 +84,32 @@ async def get_student_detail(
     if not student:
         raise HTTPException(status_code=404, detail="学生不存在")
 
-    # 获取学生的任务完成情况
+    # 获取学生的任务完成情况（手动序列化，避免 SQLAlchemy 对象序列化问题）
     scores_result = await db.execute(
         select(Score).where(Score.user_id == student_id)
     )
     scores = scores_result.scalars().all()
+
+    # 获取任务标题映射
+    tasks_result = await db.execute(select(Task.id, Task.title))
+    task_map = {row[0]: row[1] for row in tasks_result}
+
+    score_list = []
+    for s in scores:
+        score_list.append({
+            "id": s.id,
+            "user_id": s.user_id,
+            "task_id": s.task_id,
+            "task_title": task_map.get(s.task_id, f"任务 #{s.task_id}"),
+            "ai_total_score": round(s.ai_total_score, 1) if s.ai_total_score else None,
+            "completion_rate": round(s.completion_rate, 1) if s.completion_rate else None,
+            "teacher_score": round(s.teacher_score, 1) if s.teacher_score else None,
+            "bonus_score": round(s.bonus_score, 1) if s.bonus_score else None,
+            "final_score": round(s.final_score, 1) if s.final_score else None,
+            "ai_hint_count": s.ai_hint_count,
+            "total_submissions": s.total_submissions,
+            "status": s.status
+        })
 
     # 获取学生的提交统计
     submissions_count = await db.execute(
@@ -104,7 +125,7 @@ async def get_student_detail(
 
     return {
         "student": UserResponse.model_validate(student),
-        "scores": scores,
+        "scores": score_list,
         "total_submissions": total_submissions,
         "total_ai_calls": total_ai_calls
     }

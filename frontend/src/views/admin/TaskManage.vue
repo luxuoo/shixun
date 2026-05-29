@@ -45,6 +45,16 @@
                 <n-rate v-model:value="aiForm.difficulty" :count="5" />
               </n-form-item>
             </n-gi>
+            <n-gi>
+              <n-form-item label="详细度">
+                <n-select v-model:value="aiForm.detail_level" :options="detailLevelOptions" />
+              </n-form-item>
+            </n-gi>
+            <n-gi>
+              <n-form-item label="步骤数">
+                <n-input-number v-model:value="aiForm.steps_count" :min="0" :max="20" placeholder="0=自动" />
+              </n-form-item>
+            </n-gi>
           </n-grid>
         </n-form>
 
@@ -193,8 +203,16 @@ const aiForm = ref({
   title: '',
   description: '',
   category: null as string | null,
-  difficulty: 3
+  difficulty: 3,
+  detail_level: 'normal',
+  steps_count: 0
 })
+
+const detailLevelOptions = [
+  { label: '简洁 - 要求简短精炼', value: 'brief' },
+  { label: '标准 - 适中详细', value: 'normal' },
+  { label: '详细 - 包含技术方案和检查点', value: 'detailed' }
+]
 
 const formData = ref({
   title: '',
@@ -281,7 +299,7 @@ function openCreateTask() {
 }
 
 function openAiDecompose() {
-  aiForm.value = { title: '', description: '', category: null, difficulty: 3 }
+  aiForm.value = { title: '', description: '', category: null, difficulty: 3, detail_level: 'normal', steps_count: 0 }
   aiResult.value = null
   showAiModal.value = true
 }
@@ -343,7 +361,9 @@ async function handleAiDecompose(autoPublish: boolean) {
       description: aiForm.value.description,
       category: aiForm.value.category || undefined,
       difficulty: aiForm.value.difficulty,
-      auto_publish: autoPublish
+      auto_publish: autoPublish,
+      detail_level: aiForm.value.detail_level,
+      steps_count: aiForm.value.steps_count || undefined
     }) as any
 
     if (result.success) {

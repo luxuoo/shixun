@@ -44,4 +44,27 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
+/* 全局表格防溢出 */
+.n-data-table .n-data-table-td {
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 统计数字防换行 */
+.n-statistic .n-statistic-value__content {
+  white-space: nowrap;
+}
+
+/* 描述列表防溢出 */
+.n-descriptions .n-descriptions-table-content {
+  word-break: break-word;
+}
+
+/* 按钮组防换行 */
+.n-space {
+  flex-wrap: nowrap !important;
+}
 </style>

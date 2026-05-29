@@ -310,38 +310,55 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         title: str,
         description: str,
         category: str = "",
-        difficulty: int = 3
+        difficulty: int = 3,
+        detail_level: str = "normal",
+        steps_count: int = 0
     ) -> dict:
         """AI 自动分解实训任务为多个步骤"""
-        system_prompt = """你是一个编程教学课程设计专家。根据用户给出的实训任务描述，自动将其分解为若干个循序渐进的步骤。
+
+        # 根据详细度调整提示词
+        detail_instructions = {
+            "brief": "每个步骤的要求和描述要简洁明了，每条不超过50字，重点突出核心目标。",
+            "normal": "每个步骤的描述适中，要求具体明确，包含必要的技术细节。",
+            "detailed": "每个步骤要非常详细，描述要包含具体的技术方案、参考代码思路、常见问题提示，要求要列出每一条检查点。"
+        }
+        detail_hint = detail_instructions.get(detail_level, detail_instructions["normal"])
+
+        steps_hint = ""
+        if steps_count > 0:
+            steps_hint = f"\n请将任务分解为恰好 {steps_count} 个步骤。"
+        else:
+            steps_hint = "\n根据任务复杂度自动决定步骤数量（一般4-10步）。"
+
+        system_prompt = f"""你是一个编程教学课程设计专家。根据用户给出的实训任务描述，自动将其分解为若干个循序渐进的步骤。
+
+{detail_hint}{steps_hint}
 
 ## 输出要求
 必须以严格的 JSON 格式输出，不要任何其它文字，不要 markdown 代码块标记：
 
-{
+{{
   "title": "优化后的任务标题",
   "description": "优化后的任务描述（更详细）",
   "category": "分类（Python/Web/YOLO/数据分析/机器学习 中选一个）",
   "difficulty": 数字1-5,
   "estimated_hours": 预计完成时长（小时）,
   "steps": [
-    {
+    {{
       "step_order": 1,
       "title": "步骤标题",
       "description": "步骤详细描述",
       "requirements": "具体要求（学生需要完成什么）",
       "expected_output": "预期输出描述",
       "hints_available": 3
-    }
+    }}
   ]
-}
+}}
 
 ## 规则
-1. 步骤数量在 3-10 个之间，根据任务复杂度决定
-2. 每个步骤应该是可独立完成的小任务
-3. 步骤之间有逻辑递进关系
-4. 每个步骤的 requirements 要具体明确
-5. 难度要合理评估"""
+1. 每个步骤应该是可独立完成的小任务
+2. 步骤之间有逻辑递进关系
+3. 难度要合理评估"""
 
         user_prompt = f"""请分解以下实训任务：
 

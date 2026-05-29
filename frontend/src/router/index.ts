@@ -113,6 +113,11 @@ const router = createRouter({
           path: 'grades',
           name: 'AdminGrades',
           component: () => import('@/views/admin/GradeManage.vue')
+        },
+        {
+          path: 'adjust-score',
+          name: 'AdminAdjustScore',
+          component: () => import('@/views/admin/AdjustScore.vue')
         }
       ]
     }

@@ -234,6 +234,8 @@ async def ai_decompose_task(
     category = data.get("category", "")
     difficulty = data.get("difficulty", 3)
     auto_publish = data.get("auto_publish", False)
+    detail_level = data.get("detail_level", "normal")
+    steps_count = data.get("steps_count", 0)
 
     if not title or not description:
         raise HTTPException(status_code=400, detail="请提供任务名称和描述")
@@ -243,7 +245,9 @@ async def ai_decompose_task(
         title=title,
         description=description,
         category=category,
-        difficulty=difficulty
+        difficulty=difficulty,
+        detail_level=detail_level,
+        steps_count=steps_count
     )
 
     if not result["success"]:

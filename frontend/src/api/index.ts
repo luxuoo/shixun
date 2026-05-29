@@ -71,7 +71,7 @@ export const authApi = {
     api.post('/auth/batch-register', data),
   getSettings: () =>
     api.get('/auth/settings'),
-  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean }) =>
+  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number }) =>
     api.put('/auth/settings', data)
 }
 
@@ -97,7 +97,7 @@ export const taskApi = {
     api.put(`/tasks/${taskId}/steps/${stepId}`, data),
   deleteStep: (taskId: number, stepId: number) =>
     api.delete(`/tasks/${taskId}/steps/${stepId}`),
-  aiDecompose: (data: { title: string; description: string; category?: string; difficulty?: number; auto_publish?: boolean }) =>
+  aiDecompose: (data: { title: string; description: string; category?: string; difficulty?: number; auto_publish?: boolean; detail_level?: string; steps_count?: number }) =>
     api.post('/tasks/ai-decompose', data)
 }
 
