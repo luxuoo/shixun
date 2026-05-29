@@ -1,6 +1,32 @@
 <template>
   <div class="ai-stats-container">
-    <h2 style="margin-bottom: 24px;">AI 使用统计</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <h2>AI 使用统计</h2>
+      <n-button @click="testAiConnection" :loading="testing" type="info">
+        测试 AI 连接
+      </n-button>
+    </div>
+
+    <!-- AI 连接测试结果 -->
+    <n-card v-if="testResult" title="AI 连接诊断" style="margin-bottom: 24px;" :bordered="true">
+      <n-descriptions bordered :column="2">
+        <n-descriptions-item label="API 地址">{{ testResult.api_url }}</n-descriptions-item>
+        <n-descriptions-item label="模型">{{ testResult.model }}</n-descriptions-item>
+        <n-descriptions-item label="API Key">{{ testResult.api_key_prefix }}</n-descriptions-item>
+        <n-descriptions-item label="OpenAI 版本">{{ testResult.openai_version }}</n-descriptions-item>
+        <n-descriptions-item label="状态" :span="2">
+          <n-tag :type="testResult.status === 'ok' ? 'success' : testResult.status === 'content_empty' ? 'warning' : 'error'">
+            {{ testResult.status === 'ok' ? '正常' : testResult.status === 'content_empty' ? '响应为空' : '连接失败' }}
+          </n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item v-if="testResult.test_result" label="AI 回复" :span="2">
+          {{ testResult.test_result.content || '(空)' }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="testResult.error" label="错误信息" :span="2">
+          <n-text type="error">{{ testResult.error }}</n-text>
+        </n-descriptions-item>
+      </n-descriptions>
+    </n-card>
 
     <n-spin :show="loading">
       <!-- 统计卡片 -->
@@ -82,8 +108,11 @@
 import { ref, computed, onMounted, h } from 'vue'
 import { NTag } from 'naive-ui'
 import { adminApi } from '@/api'
+import api from '@/api'
 
 const loading = ref(false)
+const testing = ref(false)
+const testResult = ref<any>(null)
 
 const stats = ref({
   total_calls: 0,
@@ -174,6 +203,22 @@ async function loadStats() {
     console.error('加载 AI 统计失败', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function testAiConnection() {
+  testing.value = true
+  testResult.value = null
+  try {
+    const data = await api.get('/admin/ai-test') as any
+    testResult.value = data
+  } catch (error: any) {
+    testResult.value = {
+      status: 'error',
+      error: error.detail || '测试请求失败'
+    }
+  } finally {
+    testing.value = false
   }
 }
 

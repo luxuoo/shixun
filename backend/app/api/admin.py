@@ -10,8 +10,49 @@ from app.models.submission import Submission
 from app.models.ai_log import AiLog, Score
 from app.schemas.submission import SubmissionReview, SubmissionResponse
 from app.schemas.user import UserResponse, ClassUpdate, ClassResponse
+from app.services.ai_service import ai_service
+from app.core.config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["管理后台"])
+
+
+@router.get("/ai-test")
+async def test_ai_connection(
+    current_user: User = Depends(get_current_admin)
+):
+    """测试 AI 服务连接（仅管理员）"""
+    import openai
+    result = {
+        "api_url": settings.MIMO_API_URL,
+        "model": settings.MIMO_MODEL,
+        "api_key_set": bool(settings.MIMO_API_KEY),
+        "api_key_prefix": settings.MIMO_API_KEY[:10] + "..." if settings.MIMO_API_KEY else "未设置",
+        "openai_version": openai.__version__,
+        "test_result": None,
+        "error": None
+    }
+
+    try:
+        resp = await ai_service.client.chat.completions.create(
+            model=settings.MIMO_MODEL,
+            messages=[{"role": "user", "content": "回复OK"}],
+            max_tokens=50
+        )
+        msg = resp.choices[0].message
+        content = msg.content or ""
+        reasoning = getattr(msg, "reasoning_content", "") or ""
+        result["test_result"] = {
+            "content": content[:200],
+            "reasoning": reasoning[:200],
+            "content_empty": not content.strip(),
+            "tokens": resp.usage.total_tokens if resp.usage else 0
+        }
+        result["status"] = "ok" if content.strip() else "content_empty"
+    except Exception as e:
+        result["status"] = "error"
+        result["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+
+    return result
 
 
 @router.get("/dashboard")
