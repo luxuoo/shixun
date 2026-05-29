@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from openai import OpenAIError, APIError, AuthenticationError, APITimeoutError
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -80,14 +79,14 @@ async def get_hint(
             student_code=request.student_code,
             question=request.question
         )
-    except AuthenticationError:
-        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-    except APITimeoutError:
-        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-    except APIError as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
+        err_msg = str(e)[:300]
+        if "auth" in err_msg.lower() or "401" in err_msg:
+            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+        elif "timeout" in err_msg.lower():
+            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+        else:
+            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -156,14 +155,14 @@ async def analyze_code(
             task_title=task.title,
             step_title=step.title
         )
-    except AuthenticationError:
-        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-    except APITimeoutError:
-        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-    except APIError as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
+        err_msg = str(e)[:300]
+        if "auth" in err_msg.lower() or "401" in err_msg:
+            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+        elif "timeout" in err_msg.lower():
+            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+        else:
+            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -214,14 +213,14 @@ async def score_submission(
             task_title=task.title,
             step_title=step.title
         )
-    except AuthenticationError:
-        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-    except APITimeoutError:
-        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-    except APIError as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
+        err_msg = str(e)[:300]
+        if "auth" in err_msg.lower() or "401" in err_msg:
+            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+        elif "timeout" in err_msg.lower():
+            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+        else:
+            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(

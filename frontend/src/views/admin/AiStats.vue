@@ -8,7 +8,7 @@
     </div>
 
     <!-- AI 连接测试结果 -->
-    <n-card v-if="testResult" title="AI 连接诊断" style="margin-bottom: 24px;" :bordered="true">
+    <n-card v-if="testResult" title="AI 连接诊断" style="margin-bottom: 24px;">
       <n-descriptions bordered :column="2">
         <n-descriptions-item label="API 地址">{{ testResult.api_url }}</n-descriptions-item>
         <n-descriptions-item label="模型">{{ testResult.model }}</n-descriptions-item>
@@ -16,7 +16,7 @@
         <n-descriptions-item label="OpenAI 版本">{{ testResult.openai_version }}</n-descriptions-item>
         <n-descriptions-item label="状态" :span="2">
           <n-tag :type="testResult.status === 'ok' ? 'success' : testResult.status === 'content_empty' ? 'warning' : 'error'">
-            {{ testResult.status === 'ok' ? '正常' : testResult.status === 'content_empty' ? '响应为空' : '连接失败' }}
+            {{ testResult.status === 'ok' ? '正常' : testResult.status === 'content_empty' ? '响应为空' : testResult.status === 'reasoning_only' ? '仅推理内容' : '连接失败' }}
           </n-tag>
         </n-descriptions-item>
         <n-descriptions-item v-if="testResult.test_result" label="AI 回复" :span="2">
@@ -30,7 +30,7 @@
 
     <n-spin :show="loading">
       <!-- 统计卡片 -->
-      <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-bottom: 32px;">
+      <n-grid :cols="3" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
         <n-gi>
           <n-card>
             <n-statistic label="总调用次数" :value="stats.total_calls">
@@ -60,53 +60,51 @@
         </n-gi>
       </n-grid>
 
-      <!-- 图表区域 -->
-      <n-grid :cols="2" :x-gap="16" :y-gap="16" style="margin-bottom: 32px;">
+      <!-- 调用类型分布 + 提示级别分布 -->
+      <n-grid :cols="2" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
         <n-gi>
-          <n-card title="调用类型分布" style="height: 350px;">
-            <div ref="typeChartRef" style="width: 100%; height: 280px;"></div>
+          <n-card title="调用类型分布">
+            <n-space vertical :size="12">
+              <div v-for="item in typeData" :key="item.type" style="display: flex; align-items: center; gap: 12px;">
+                <span style="width: 80px; font-size: 14px;">{{ item.type }}</span>
+                <n-progress type="line" :percentage="item.percentage" :color="item.color" style="flex: 1;" />
+                <span style="width: 50px; text-align: right; font-size: 14px; font-weight: 500;">{{ item.count }}</span>
+              </div>
+              <n-empty v-if="typeData.length === 0" description="暂无数据" />
+            </n-space>
           </n-card>
         </n-gi>
         <n-gi>
-          <n-card title="提示级别分布" style="height: 350px;">
-            <div ref="levelChartRef" style="width: 100%; height: 280px;"></div>
+          <n-card title="提示级别分布">
+            <n-space vertical :size="12">
+              <div v-for="item in levelData" :key="item.level" style="display: flex; align-items: center; gap: 12px;">
+                <span style="width: 100px; font-size: 14px;">{{ item.level }}</span>
+                <n-progress type="line" :percentage="item.percentage" :color="item.color" style="flex: 1;" />
+                <span style="width: 50px; text-align: right; font-size: 14px; font-weight: 500;">{{ item.count }}</span>
+              </div>
+              <n-empty v-if="levelData.length === 0" description="暂无数据" />
+            </n-space>
           </n-card>
         </n-gi>
       </n-grid>
 
       <!-- 每日调用趋势 -->
-      <n-card title="每日调用趋势" style="margin-bottom: 32px;">
-        <div ref="dailyChartRef" style="width: 100%; height: 300px;"></div>
+      <n-card title="每日调用趋势" style="margin-bottom: 24px;">
+        <n-space vertical :size="12">
+          <div v-for="item in stats.daily_calls" :key="item.date" style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 80px; font-size: 13px; color: #666;">{{ item.date }}</span>
+            <n-progress type="line" :percentage="getDailyPercentage(item.count)" :color="'#2080f0'" style="flex: 1;" />
+            <span style="width: 40px; text-align: right; font-size: 14px; font-weight: 500;">{{ item.count }}</span>
+          </div>
+          <n-empty v-if="!stats.daily_calls.length" description="暂无数据" />
+        </n-space>
       </n-card>
-
-      <!-- 详细数据 -->
-      <n-grid :cols="2" :x-gap="16">
-        <n-gi>
-          <n-card title="调用类型统计">
-            <n-data-table
-              :columns="typeColumns"
-              :data="typeData"
-              :bordered="false"
-            />
-          </n-card>
-        </n-gi>
-        <n-gi>
-          <n-card title="提示级别统计">
-            <n-data-table
-              :columns="levelColumns"
-              :data="levelData"
-              :bordered="false"
-            />
-          </n-card>
-        </n-gi>
-      </n-grid>
     </n-spin>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
-import { NTag } from 'naive-ui'
+import { ref, computed, onMounted } from 'vue'
 import { adminApi } from '@/api'
 import api from '@/api'
 
@@ -123,69 +121,39 @@ const stats = ref({
 })
 
 const todayCalls = computed(() => {
-  // 使用本地日期而非UTC日期，与服务器时区保持一致
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const todayData = stats.value.daily_calls.find(d => d.date === today)
   return todayData?.count || 0
 })
 
-const typeColumns = [
-  { title: '类型', key: 'type' },
-  { title: '次数', key: 'count' },
-  {
-    title: '占比',
-    key: 'percentage',
-    render: (row: any) => {
-      const total = stats.value.total_calls || 1
-      return `${((row.count / total) * 100).toFixed(1)}%`
-    }
-  }
-]
-
-const levelColumns = [
-  { title: '级别', key: 'level' },
-  { title: '次数', key: 'count' },
-  {
-    title: '占比',
-    key: 'percentage',
-    render: (row: any) => {
-      const total = Object.values(stats.value.level_distribution).reduce((a, b) => a + b, 0) || 1
-      return `${((row.count / total) * 100).toFixed(1)}%`
-    }
-  }
-]
-
 const typeData = computed(() => {
+  const total = stats.value.total_calls || 1
+  const colors: Record<string, string> = { hint: '#2080f0', analyze: '#18a058', score: '#f0a020' }
+  const labels: Record<string, string> = { hint: '提示请求', analyze: '代码分析', score: '代码评分' }
   return Object.entries(stats.value.type_distribution).map(([type, count]) => ({
-    type: getTypeLabel(type),
-    count
+    type: labels[type] || type,
+    count,
+    percentage: Math.round((count / total) * 100),
+    color: colors[type] || '#999'
   }))
 })
 
 const levelData = computed(() => {
+  const total = Object.values(stats.value.level_distribution).reduce((a, b) => a + b, 0) || 1
+  const colors: Record<string, string> = { level_1: '#2080f0', level_2: '#f0a020', level_3: '#d03050' }
+  const labels: Record<string, string> = { level_1: '一级（思路）', level_2: '二级（API）', level_3: '三级（代码）' }
   return Object.entries(stats.value.level_distribution).map(([level, count]) => ({
-    level: getLevelLabel(level),
-    count
+    level: labels[level] || level,
+    count,
+    percentage: Math.round((count / total) * 100),
+    color: colors[level] || '#999'
   }))
 })
 
-function getTypeLabel(type: string) {
-  const labels: Record<string, string> = {
-    'hint': '提示请求',
-    'analyze': '代码分析',
-    'score': '代码评分'
-  }
-  return labels[type] || type
-}
-
-function getLevelLabel(level: string) {
-  const labels: Record<string, string> = {
-    'level_1': '一级提示（思路）',
-    'level_2': '二级提示（API）',
-    'level_3': '三级提示（代码）'
-  }
-  return labels[level] || level
+function getDailyPercentage(count: number) {
+  const max = Math.max(...stats.value.daily_calls.map(d => d.count), 1)
+  return Math.round((count / max) * 100)
 }
 
 async function loadStats() {
@@ -229,7 +197,7 @@ onMounted(() => {
 
 <style scoped>
 .ai-stats-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 </style>
