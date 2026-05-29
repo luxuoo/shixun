@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <n-layout-sider
       bordered
-      :width="240"
+      :width="220"
       :native-scrollbar="false"
       :collapsed="collapsed"
       show-trigger
@@ -39,7 +39,9 @@
           </n-breadcrumb-item>
         </n-breadcrumb>
 
-        <n-space align="center">
+        <n-space align="center" :size="12">
+          <n-tag type="info" size="small" round>学生</n-tag>
+          <n-divider vertical />
           <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
             <n-button text>
               {{ userStore.user?.name || userStore.user?.username }}

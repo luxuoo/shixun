@@ -164,7 +164,12 @@ async function handleLogin() {
     loading.value = true
     await userStore.login(formData.value.username, formData.value.password)
     message.success('登录成功')
-    router.replace('/')
+    // 教师和管理员跳转管理后台，学生跳转首页
+    if (userStore.isTeacher) {
+      router.replace('/admin')
+    } else {
+      router.replace('/')
+    }
   } catch (error: any) {
     message.error(error.detail || '登录失败')
   } finally {
