@@ -543,6 +543,143 @@ async def get_ai_logs(
     return {"total": total, "items": items, "page": page, "page_size": page_size}
 
 
+# ==================== 加减分 ====================
+
+@router.post("/students/{student_id}/adjust-score")
+async def adjust_student_score(
+    student_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    student_result = await db.execute(select(User).where(User.id == student_id, User.role == "student"))
+    student = student_result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    task_id = data.get("task_id")
+    adjustment = data.get("adjustment", 0)
+    reason = data.get("reason", "")
+
+    if adjustment == 0:
+        raise HTTPException(status_code=400, detail="调整分数不能为0")
+
+    if task_id:
+        # 针对某个任务加减分
+        score_result = await db.execute(
+            select(Score).where(Score.user_id == student_id, Score.task_id == task_id)
+        )
+        score = score_result.scalar_one_or_none()
+        if not score:
+            # 如果没有 Score 记录，创建一个
+            score = Score(user_id=student_id, task_id=task_id, total_submissions=0)
+            db.add(score)
+            await db.flush()
+
+        score.bonus_score = (score.bonus_score or 0) + adjustment
+        # 重新计算最终分数
+        base = score.ai_total_score or score.teacher_score or 0
+        score.final_score = base + (score.bonus_score or 0)
+    else:
+        # 全局加减分（不针对特定任务），给所有任务都加上
+        scores_result = await db.execute(
+            select(Score).where(Score.user_id == student_id)
+        )
+        scores = scores_result.scalars().all()
+        for score in scores:
+            score.bonus_score = (score.bonus_score or 0) + adjustment
+            base = score.ai_total_score or score.teacher_score or 0
+            score.final_score = base + (score.bonus_score or 0)
+
+    await db.commit()
+    return {"message": f"已{'加' if adjustment > 0 else '减'}{abs(adjustment)}分", "adjustment": adjustment}
+
+
+# ==================== 成绩汇总 ====================
+
+@router.get("/grades")
+async def get_grades(
+    class_id: int = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    query = select(User).where(User.role == "student")
+    if class_id:
+        query = query.where(User.class_id == class_id)
+    students_result = await db.execute(query.order_by(User.student_id))
+    students = students_result.scalars().all()
+
+    # 获取所有任务
+    tasks_result = await db.execute(select(Task).where(Task.is_active == True).order_by(Task.id))
+    tasks = tasks_result.scalars().all()
+
+    result = []
+    for student in students:
+        # 获取该学生所有成绩
+        scores_result = await db.execute(
+            select(Score).where(Score.user_id == student.id)
+        )
+        scores = {s.task_id: s for s in scores_result.scalars().all()}
+
+        task_scores = []
+        total_weighted = 0
+        total_bonus = 0
+        task_count = 0
+
+        for task in tasks:
+            score = scores.get(task.id)
+            if score:
+                final = score.final_score or 0
+                bonus = score.bonus_score or 0
+                task_scores.append({
+                    "task_id": task.id,
+                    "task_title": task.title,
+                    "ai_score": round(score.ai_total_score or 0, 1),
+                    "teacher_score": round(score.teacher_score or 0, 1) if score.teacher_score else None,
+                    "bonus_score": round(bonus, 1),
+                    "final_score": round(final, 1),
+                    "status": score.status
+                })
+                total_weighted += final
+                total_bonus += bonus
+                task_count += 1
+            else:
+                task_scores.append({
+                    "task_id": task.id,
+                    "task_title": task.title,
+                    "ai_score": None,
+                    "teacher_score": None,
+                    "bonus_score": 0,
+                    "final_score": None,
+                    "status": "not_started"
+                })
+
+        avg_score = round(total_weighted / task_count, 1) if task_count > 0 else 0
+
+        # 获取班级名
+        class_name = None
+        if student.class_id:
+            cls_result = await db.execute(select(Class.name).where(Class.id == student.class_id))
+            class_name = cls_result.scalar()
+
+        result.append({
+            "student_id": student.id,
+            "student_no": student.student_id or "",
+            "name": student.name or "",
+            "username": student.username,
+            "class_name": class_name or "",
+            "task_scores": task_scores,
+            "total_bonus": round(total_bonus, 1),
+            "average_score": avg_score,
+            "task_count": task_count
+        })
+
+    # 获取任务列表信息
+    task_list = [{"id": t.id, "title": t.title} for t in tasks]
+
+    return {"students": result, "tasks": task_list}
+
+
 # ==================== 系统统计 ====================
 
 @router.get("/system-stats")

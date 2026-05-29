@@ -47,6 +47,10 @@
           </n-descriptions>
           <h4>任务完成情况</h4>
           <n-data-table :columns="scoreColumns" :data="detailData.scores || []" :bordered="false" />
+          <n-divider />
+          <n-space>
+            <n-button type="warning" @click="openAdjustScore()">总分加减分</n-button>
+          </n-space>
         </n-space>
       </n-spin>
     </n-modal>
@@ -132,6 +136,28 @@
       </template>
     </n-modal>
 
+    <!-- 加减分弹窗 -->
+    <n-modal v-model:show="showAdjustScore" preset="card" title="加减分" style="width: 450px">
+      <n-space vertical :size="16">
+        <n-descriptions bordered :column="1">
+          <n-descriptions-item label="学生">{{ detailData.student?.name }} ({{ detailData.student?.student_id }})</n-descriptions-item>
+          <n-descriptions-item label="任务">{{ adjustTaskId ? (detailData.scores?.find((s: any) => s.task_id === adjustTaskId)?.task_title || `任务 #${adjustTaskId}`) : '所有任务（总分调整）' }}</n-descriptions-item>
+        </n-descriptions>
+        <n-form-item label="调整分数">
+          <n-input-number v-model:value="adjustValue" :min="-100" :max="100" style="width: 100%;" />
+        </n-form-item>
+        <n-form-item label="原因">
+          <n-input v-model:value="adjustReason" type="textarea" placeholder="请输入加减分原因" />
+        </n-form-item>
+      </n-space>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showAdjustScore = false">取消</n-button>
+          <n-button type="primary" :loading="adjustLoading" @click="handleAdjustScore">确认</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- 设置弹窗 -->
     <n-modal v-model:show="showSettings" preset="card" title="系统设置" style="width: 560px">
       <n-space vertical :size="20">
@@ -207,6 +233,14 @@ const batchClassId = ref<number | null>(null)
 const batchText = ref('')
 const batchResult = ref<any>(null)
 
+// 加减分
+const showAdjustScore = ref(false)
+const adjustTaskId = ref<number | null>(null)
+const adjustValue = ref(0)
+const adjustReason = ref('')
+const adjustLoading = ref(false)
+const adjustingStudentId = ref<number | null>(null)
+
 // 设置
 const settings = ref({ student_register_enabled: true, ai_chat_enabled: true, ai_hints_limit: 0, ai_auto_score: true })
 
@@ -238,7 +272,7 @@ const pagination = reactive({
 const columns = [
   { title: '姓名', key: 'name', render: (row: any) => row.name || '-' },
   { title: '用户名', key: 'username' },
-  { title: '学号', key: 'student_id', render: (row: any) => row.student_id || '-' },
+  { title: '学号', key: 'student_id', sorter: (a: any, b: any) => (a.student_id || '').localeCompare(b.student_id || ''), render: (row: any) => row.student_id || '-' },
   { title: '邮箱', key: 'email', render: (row: any) => row.email || '-' },
   { title: '状态', key: 'is_active', render: (row: any) => h(NTag, { type: row.is_active ? 'success' : 'error', size: 'small' }, { default: () => row.is_active ? '正常' : '禁用' }) },
   { title: '操作', key: 'actions', render: (row: any) => h(NButton, { type: 'primary', size: 'small', onClick: () => viewDetail(row) }, { default: () => '查看' }) }
@@ -248,9 +282,11 @@ const scoreColumns = [
   { title: '任务', key: 'task_title', render: (row: any) => row.task_title || `任务 #${row.task_id}` },
   { title: 'AI 评分', key: 'ai_total_score', render: (row: any) => row.ai_total_score ? `${row.ai_total_score}分` : '-' },
   { title: '老师评分', key: 'teacher_score', render: (row: any) => row.teacher_score ? `${row.teacher_score}分` : '-' },
+  { title: '加减分', key: 'bonus_score', render: (row: any) => row.bonus_score ? `${row.bonus_score > 0 ? '+' : ''}${row.bonus_score}分` : '-' },
   { title: '最终分数', key: 'final_score', render: (row: any) => row.final_score ? `${row.final_score}分` : '-' },
   { title: '完成率', key: 'completion_rate', render: (row: any) => row.completion_rate ? `${row.completion_rate}%` : '-' },
-  { title: '状态', key: 'status', render: (row: any) => h(NTag, { type: row.status === 'completed' ? 'success' : 'info', size: 'small' }, { default: () => row.status === 'completed' ? '已完成' : '进行中' }) }
+  { title: '状态', key: 'status', render: (row: any) => h(NTag, { type: row.status === 'completed' ? 'success' : 'info', size: 'small' }, { default: () => row.status === 'completed' ? '已完成' : '进行中' }) },
+  { title: '操作', key: 'actions', width: 100, render: (row: any) => h(NButton, { type: 'warning', size: 'small', onClick: () => openAdjustScore(row.task_id) }, { default: () => '加减分' }) }
 ]
 
 const batchResultColumns = [
@@ -376,6 +412,39 @@ async function saveSettings() {
     message.success('设置已保存')
   } catch (error: any) {
     message.error(error.detail || '保存失败')
+  }
+}
+
+function openAdjustScore(taskId?: number) {
+  adjustTaskId.value = taskId || null
+  adjustValue.value = 0
+  adjustReason.value = ''
+  adjustingStudentId.value = detailData.value.student?.id
+  showAdjustScore.value = true
+}
+
+async function handleAdjustScore() {
+  if (!adjustingStudentId.value) return
+  if (adjustValue.value === 0) {
+    message.warning('请输入调整分数')
+    return
+  }
+  adjustLoading.value = true
+  try {
+    await adminApi.adjustScore(adjustingStudentId.value, {
+      task_id: adjustTaskId.value || undefined,
+      adjustment: adjustValue.value,
+      reason: adjustReason.value
+    })
+    message.success(`已${adjustValue.value > 0 ? '加' : '减'}${Math.abs(adjustValue.value)}分`)
+    showAdjustScore.value = false
+    // 刷新详情
+    const data = await adminApi.getStudentDetail(adjustingStudentId.value) as any
+    detailData.value = data
+  } catch (error: any) {
+    message.error(error.detail || '操作失败')
+  } finally {
+    adjustLoading.value = false
   }
 }
 

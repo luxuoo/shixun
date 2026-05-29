@@ -88,6 +88,7 @@ class ScoreResponse(BaseModel):
     ai_total_score: Optional[float] = None
     completion_rate: Optional[float] = None
     teacher_score: Optional[float] = None
+    bonus_score: Optional[float] = None
     final_score: Optional[float] = None
     ai_hint_count: Optional[int] = None
     total_submissions: Optional[int] = None

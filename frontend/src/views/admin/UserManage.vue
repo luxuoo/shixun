@@ -236,7 +236,7 @@ async function handleSaveUser() {
         message.error('请输入密码')
         return
       }
-      await authApi.register(formData.value)
+      await authApi.registerByAdmin(formData.value)
       message.success('用户创建成功')
     }
     showUserModal.value = false

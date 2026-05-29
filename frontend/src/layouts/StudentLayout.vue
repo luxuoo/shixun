@@ -34,7 +34,7 @@
       <!-- 顶部导航 -->
       <n-layout-header bordered style="height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between;">
         <n-breadcrumb>
-          <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+          <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" @click="router.push(item.path)" style="cursor: pointer;">
             {{ item.title }}
           </n-breadcrumb-item>
         </n-breadcrumb>

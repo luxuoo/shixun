@@ -32,6 +32,7 @@ class Score(Base):
     ai_total_score = Column(Float)  # AI 总评分
     completion_rate = Column(Float)  # 完成率
     teacher_score = Column(Float)  # 老师评分
+    bonus_score = Column(Float, default=0)  # 加减分
     final_score = Column(Float)  # 最终综合评分
     ai_hint_count = Column(Integer)  # AI 提示使用次数
     total_submissions = Column(Integer)  # 总提交次数

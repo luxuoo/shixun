@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS scores (
     ai_total_score FLOAT,
     completion_rate FLOAT,
     teacher_score FLOAT,
+    bonus_score FLOAT DEFAULT 0,
     final_score FLOAT,
     ai_hint_count INTEGER,
     total_submissions INTEGER,

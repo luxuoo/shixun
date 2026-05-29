@@ -103,6 +103,16 @@ const router = createRouter({
           name: 'AdminSystemStats',
           component: () => import('@/views/admin/SystemStats.vue'),
           meta: { requiresAdmin: true }
+        },
+        {
+          path: 'roll-call',
+          name: 'AdminRollCall',
+          component: () => import('@/views/admin/RollCall.vue')
+        },
+        {
+          path: 'grades',
+          name: 'AdminGrades',
+          component: () => import('@/views/admin/GradeManage.vue')
         }
       ]
     }

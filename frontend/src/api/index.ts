@@ -51,6 +51,8 @@ export const authApi = {
     api.post('/auth/login', data),
   register: (data: any) =>
     api.post('/auth/register', data),
+  registerByAdmin: (data: any) =>
+    api.post('/auth/register/admin', data),
   getMe: () =>
     api.get('/auth/me'),
   getClasses: () =>
@@ -155,5 +157,11 @@ export const adminApi = {
     api.get('/admin/ai-logs', { params }),
   // 系统统计
   getSystemStats: () =>
-    api.get('/admin/system-stats')
+    api.get('/admin/system-stats'),
+  // 加减分
+  adjustScore: (studentId: number, data: { task_id?: number; adjustment: number; reason: string }) =>
+    api.post(`/admin/students/${studentId}/adjust-score`, data),
+  // 成绩汇总
+  getGrades: (classId?: number) =>
+    api.get('/admin/grades', { params: classId ? { class_id: classId } : {} })
 }

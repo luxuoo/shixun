@@ -34,7 +34,7 @@
       <!-- 顶部导航 -->
       <n-layout-header bordered style="height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between;">
         <n-breadcrumb>
-          <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+          <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" @click="router.push(item.path)" style="cursor: pointer;">
             {{ item.title }}
           </n-breadcrumb-item>
         </n-breadcrumb>
@@ -120,6 +120,16 @@ const menuOptions = computed<MenuOption[]>(() => {
       label: 'AI 日志',
       key: 'AdminAiLogs',
       icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z' })]) })
+    },
+    {
+      label: '课堂点名',
+      key: 'AdminRollCall',
+      icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' })]) })
+    },
+    {
+      label: '成绩管理',
+      key: 'AdminGrades',
+      icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z' })]) })
     }
   ]
 
@@ -153,7 +163,9 @@ const breadcrumbs = computed(() => {
     AdminAiStats: 'AI 统计',
     AdminAiLogs: 'AI 日志',
     AdminUsers: '用户管理',
-    AdminSystemStats: '系统统计'
+    AdminSystemStats: '系统统计',
+    AdminRollCall: '课堂点名',
+    AdminGrades: '成绩管理'
   }
   if (route.name && nameMap[route.name as string]) {
     items.push({ path: route.path, title: nameMap[route.name as string] })
