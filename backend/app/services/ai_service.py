@@ -30,39 +30,32 @@ class AiService:
         force_json: bool = False
     ) -> dict:
         """统一的 chat 调用，处理推理模型的空响应问题"""
-        try:
-            kwargs = {
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            }
-            response = await self.client.chat.completions.create(**kwargs)
+        kwargs = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        response = await self.client.chat.completions.create(**kwargs)
 
-            content = response.choices[0].message.content or ""
-            tokens_used = response.usage.total_tokens if response.usage else 0
+        content = response.choices[0].message.content or ""
+        tokens_used = response.usage.total_tokens if response.usage else 0
 
-            # 推理模型（如 mimo-v2.5-pro）可能将思考过程作为 reasoning_tokens 消耗，
-            # 但 content 为空时尝试从 reasoning_content 提取
-            if not content.strip():
-                msg = response.choices[0].message
-                reasoning = getattr(msg, "reasoning_content", None) or ""
-                if reasoning:
-                    content = reasoning
+        # 推理模型可能将思考过程作为 reasoning_tokens 消耗，
+        # 但 content 为空时尝试从 reasoning_content 提取
+        if not content.strip():
+            msg = response.choices[0].message
+            reasoning = getattr(msg, "reasoning_content", None) or ""
+            if reasoning:
+                content = reasoning
 
-            if not content.strip():
-                content = "AI 暂时没有给出回复，可能是请求复杂度过高，请稍后重试或简化问题。"
+        if not content.strip():
+            content = "AI 暂时没有给出回复，可能是请求复杂度过高，请稍后重试或简化问题。"
 
-            return {"content": content.strip(), "tokens_used": tokens_used}
-        except Exception as e:
-            return {
-                "content": f"AI 服务暂时不可用：{str(e)[:200]}",
-                "tokens_used": 0,
-                "error": True
-            }
+        return {"content": content.strip(), "tokens_used": tokens_used}
 
     async def get_hint(
         self,

@@ -94,7 +94,9 @@ const stats = ref({
 })
 
 const todayCalls = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
+  // 使用本地日期而非UTC日期，与服务器时区保持一致
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const todayData = stats.value.daily_calls.find(d => d.date === today)
   return todayData?.count || 0
 })

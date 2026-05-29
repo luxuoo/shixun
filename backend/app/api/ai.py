@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from openai import OpenAIError, APIError, AuthenticationError, APITimeoutError
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -70,14 +71,23 @@ async def get_hint(
         )
 
     # 调用 AI 服务获取提示
-    result = await ai_service.get_hint(
-        task_title=task.title,
-        step_title=step.title,
-        step_requirements=step.requirements or "",
-        hint_count=hint_count + 1,
-        student_code=request.student_code,
-        question=request.question
-    )
+    try:
+        result = await ai_service.get_hint(
+            task_title=task.title,
+            step_title=step.title,
+            step_requirements=step.requirements or "",
+            hint_count=hint_count + 1,
+            student_code=request.student_code,
+            question=request.question
+        )
+    except AuthenticationError:
+        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+    except APIError as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -139,12 +149,21 @@ async def analyze_code(
         raise HTTPException(status_code=404, detail="步骤不存在")
 
     # 调用 AI 服务分析代码
-    result = await ai_service.analyze_code(
-        code=request.code,
-        step_requirements=step.requirements or "",
-        task_title=task.title,
-        step_title=step.title
-    )
+    try:
+        result = await ai_service.analyze_code(
+            code=request.code,
+            step_requirements=step.requirements or "",
+            task_title=task.title,
+            step_title=step.title
+        )
+    except AuthenticationError:
+        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+    except APIError as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -188,12 +207,21 @@ async def score_submission(
         raise HTTPException(status_code=404, detail="步骤不存在")
 
     # 调用 AI 服务评分
-    result = await ai_service.score_submission(
-        code=request.code,
-        step_requirements=step.requirements or "",
-        task_title=task.title,
-        step_title=step.title
-    )
+    try:
+        result = await ai_service.score_submission(
+            code=request.code,
+            step_requirements=step.requirements or "",
+            task_title=task.title,
+            step_title=step.title
+        )
+    except AuthenticationError:
+        raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
+    except APIError as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务返回错误：{str(e)[:200]}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 服务不可用：{str(e)[:200]}")
 
     # 记录 AI 调用日志
     ai_log = AiLog(

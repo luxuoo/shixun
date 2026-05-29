@@ -92,7 +92,29 @@ async def _auto_score_background(
 
             await db.commit()
         except Exception as e:
-            print(f"后台 AI 评分失败: {e}")
+            # 记录错误到AI日志，便于管理员排查
+            try:
+                error_log = AiLog(
+                    user_id=user_id, task_id=task_id, step_id=step_id,
+                    request_type="score_error",
+                    request_content=code[:500],
+                    response_content=f"AI 评分失败: {str(e)[:500]}",
+                    tokens_used=0
+                )
+                db.add(error_log)
+                # 将提交状态改为错误，避免永久pending
+                sub_result = await db.execute(
+                    select(Submission)
+                    .where(Submission.user_id == user_id, Submission.task_id == task_id, Submission.step_id == step_id)
+                    .order_by(Submission.submitted_at.desc())
+                    .limit(1)
+                )
+                submission = sub_result.scalar_one_or_none()
+                if submission and submission.status == "pending":
+                    submission.ai_feedback = f"AI 评分失败：{str(e)[:200]}。请联系教师手动评分。"
+                await db.commit()
+            except Exception:
+                print(f"后台 AI 评分失败且记录错误日志也失败: {e}")
 
 
 @router.post("", response_model=SubmissionResponse)
