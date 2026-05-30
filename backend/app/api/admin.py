@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update, delete
 from datetime import datetime, timedelta
 from app.core.database import get_db
-from app.core.security import get_current_teacher, get_current_admin
+from app.core.security import get_current_teacher, get_current_admin, get_current_user
 from app.models.user import User, Class
 from app.models.task import Task, TaskStep
 from app.models.submission import Submission
