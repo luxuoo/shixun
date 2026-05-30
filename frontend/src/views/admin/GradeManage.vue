@@ -1,148 +1,272 @@
 <template>
   <div class="grade-manage-container">
-    <n-space justify="space-between" align="center" style="margin-bottom: 24px;">
+    <div class="page-header">
       <h2>成绩管理</h2>
       <n-space>
-        <n-select
-          v-model:value="selectedClass"
-          :options="classOptions"
-          placeholder="选择班级"
-          clearable
-          style="width: 200px;"
-          @update:value="loadGrades"
-        />
-        <n-button @click="exportCSV" :disabled="!gradeData.students?.length">
-          导出 CSV
-        </n-button>
+        <n-select v-model:value="selectedScheme" :options="schemeOptions" placeholder="选择方案" style="width: 180px;" @update:value="loadRecords" />
+        <n-select v-model:value="selectedClass" :options="classOptions" placeholder="选择班级" clearable style="width: 160px;" @update:value="loadRecords" />
+        <n-button @click="openRecord">录入成绩</n-button>
+        <n-button @click="openBatchImport">批量导入</n-button>
+        <n-button @click="openStatistics">统计</n-button>
+        <n-button @click="handleExport">导出</n-button>
       </n-space>
-    </n-space>
+    </div>
 
     <n-spin :show="loading">
-      <!-- 汇总表格 -->
       <n-card>
-        <n-data-table
-          :columns="columns"
-          :data="gradeData.students || []"
-          :bordered="false"
-          :scroll-x="scrollX"
-          :max-height="600"
-          :row-key="(row: any) => row.student_id"
-        />
+        <n-data-table :columns="columns" :data="tableData" :bordered="false" :scroll-x="scrollX" :max-height="600" :row-key="(row: any) => row.student_id" />
       </n-card>
     </n-spin>
 
-    <!-- 学生详情弹窗 -->
-    <n-modal v-model:show="showDetail" preset="card" :title="`${detailStudent?.name} 的成绩详情`" style="width: 700px">
+    <!-- 录入成绩弹窗 -->
+    <n-modal v-model:show="showRecord" preset="card" title="录入成绩" style="width: 600px">
+      <n-form label-placement="left" label-width="80">
+        <n-form-item label="学生">
+          <n-select v-model:value="recordForm.student_id" :options="studentOptions" placeholder="选择学生" filterable />
+        </n-form-item>
+        <n-divider>各项分数</n-divider>
+        <n-form-item v-for="item in gradeItems" :key="item.id" :label="item.name">
+          <n-space align="center">
+            <n-input-number v-model:value="recordForm.scores[item.id]" :min="0" :max="item.max_score" style="width: 120px;" />
+            <span style="color: #999;">/ {{ item.max_score }}</span>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="备注">
+          <n-input v-model:value="recordForm.remark" placeholder="可选：缺考/缓考等" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showRecord = false">取消</n-button>
+          <n-button type="primary" :loading="recordLoading" @click="handleSaveRecord">保存</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 批量导入弹窗 -->
+    <n-modal v-model:show="showBatchImport" preset="card" title="批量导入成绩" style="width: 700px">
       <n-space vertical :size="16">
-        <n-descriptions bordered :column="2">
-          <n-descriptions-item label="姓名">{{ detailStudent?.name }}</n-descriptions-item>
-          <n-descriptions-item label="学号">{{ detailStudent?.student_no || '-' }}</n-descriptions-item>
-          <n-descriptions-item label="班级">{{ detailStudent?.class_name || '-' }}</n-descriptions-item>
-          <n-descriptions-item label="平均分">{{ detailStudent?.average_score }}</n-descriptions-item>
-          <n-descriptions-item label="总加减分">{{ detailStudent?.total_bonus > 0 ? '+' : '' }}{{ detailStudent?.total_bonus }}</n-descriptions-item>
-        </n-descriptions>
-        <n-data-table
-          :columns="detailColumns"
-          :data="detailStudent?.task_scores || []"
-          :bordered="false"
-        />
+        <n-alert type="info">
+          格式：每行一条记录，格式为 "学号 项目名 分数"（空格分隔）。例如：<br>
+          2024001 平时分 85<br>
+          2024001 考试分 90
+        </n-alert>
+        <n-input v-model:value="batchText" type="textarea" placeholder="每行格式：学号 项目名 分数" :rows="10" style="font-family: monospace;" />
+        <div v-if="batchResult">
+          <n-alert :type="batchResult.errors?.length ? 'warning' : 'success'" style="margin-bottom: 8px;">
+            成功导入 {{ batchResult.success }} 条
+            <span v-if="batchResult.errors?.length">，{{ batchResult.errors.length }} 条失败</span>
+          </n-alert>
+        </div>
       </n-space>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showBatchImport = false">关闭</n-button>
+          <n-button type="primary" :loading="batchLoading" :disabled="!batchText.trim()" @click="handleBatchImport">导入</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 统计弹窗 -->
+    <n-modal v-model:show="showStats" preset="card" title="成绩统计" style="width: 700px">
+      <n-spin :show="statsLoading">
+        <n-descriptions v-if="statsData.total_stats?.count" bordered :column="2" style="margin-bottom: 20px;">
+          <n-descriptions-item label="总人数">{{ statsData.total_stats.count }}</n-descriptions-item>
+          <n-descriptions-item label="平均分">{{ statsData.total_stats.avg }}</n-descriptions-item>
+          <n-descriptions-item label="最高分">{{ statsData.total_stats.max }}</n-descriptions-item>
+          <n-descriptions-item label="最低分">{{ statsData.total_stats.min }}</n-descriptions-item>
+          <n-descriptions-item label="及格率">{{ statsData.total_stats.pass_rate }}%</n-descriptions-item>
+        </n-descriptions>
+        <n-data-table :columns="statsColumns" :data="statsData.statistics || []" :bordered="false" />
+      </n-spin>
     </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, h } from 'vue'
+import { useMessage } from 'naive-ui'
 import { NButton, NTag } from 'naive-ui'
 import { adminApi, authApi } from '@/api'
 
+const message = useMessage()
 const loading = ref(false)
+const recordLoading = ref(false)
+const batchLoading = ref(false)
+const statsLoading = ref(false)
+
+const schemes = ref<any[]>([])
+const selectedScheme = ref<number | null>(null)
 const selectedClass = ref<number | null>(null)
 const classOptions = ref<{ label: string; value: number }[]>([])
-const gradeData = ref<any>({})
-const showDetail = ref(false)
-const detailStudent = ref<any>(null)
+const studentOptions = ref<{ label: string; value: number }[]>([])
 
-const scrollX = computed(() => {
-  const tasks = gradeData.value.tasks || []
-  return 600 + tasks.length * 140
-})
+const gradeItems = ref<any[]>([])
+const students = ref<any[]>([])
+
+const showRecord = ref(false)
+const showBatchImport = ref(false)
+const showStats = ref(false)
+
+const recordForm = ref({ student_id: null as number | null, scores: {} as Record<number, number | null>, remark: '' })
+const batchText = ref('')
+const batchResult = ref<any>(null)
+const statsData = ref<any>({})
+
+const schemeOptions = computed(() => schemes.value.map(s => ({ label: s.name + (s.is_active ? ' (激活)' : ''), value: s.id })))
+
+const scrollX = computed(() => 400 + gradeItems.value.length * 110 + 200)
 
 const columns = computed(() => {
-  const tasks = gradeData.value.tasks || []
   const base = [
     { title: '学号', key: 'student_no', width: 100, fixed: 'left' as const, sorter: (a: any, b: any) => (a.student_no || '').localeCompare(b.student_no || '') },
-    { title: '姓名', key: 'name', width: 90, fixed: 'left' as const },
-    { title: '班级', key: 'class_name', width: 120 },
+    { title: '姓名', key: 'student_name', width: 90, fixed: 'left' as const },
   ]
-  const taskCols = tasks.map((t: any) => ({
-    title: t.title,
-    key: `task_${t.id}`,
-    width: 130,
+  const itemCols = gradeItems.value.map((item: any) => ({
+    title: `${item.name}(${item.weight}%)`,
+    key: `item_${item.id}`,
+    width: 110,
+    sorter: (a: any, b: any) => {
+      const sa = a.items?.find((i: any) => i.item_id === item.id)?.score ?? -1
+      const sb = b.items?.find((i: any) => i.item_id === item.id)?.score ?? -1
+      return sa - sb
+    },
     render: (row: any) => {
-      const ts = row.task_scores?.find((s: any) => s.task_id === t.id)
-      if (!ts || ts.final_score === null) return h('span', { style: 'color: #ccc' }, '-')
-      const color = ts.final_score >= 90 ? '#18a058' : ts.final_score >= 60 ? '#f0a020' : '#d03050'
-      return h('span', { style: `color: ${color}; font-weight: 500;` }, `${ts.final_score}分`)
+      const si = row.items?.find((i: any) => i.item_id === item.id)
+      if (!si || si.score === null) return h('span', { style: 'color: #ccc' }, '-')
+      const pct = si.score / item.max_score
+      const color = pct >= 0.9 ? '#18a058' : pct >= 0.6 ? '#f0a020' : '#d03050'
+      const statusTag = si.status === 'absent' ? h(NTag, { type: 'error', size: 'tiny' }, { default: () => '缺考' }) : null
+      return h('span', {}, [
+        h('span', { style: `color: ${color}; font-weight: 500;` }, `${si.score}`),
+        statusTag
+      ])
     }
   }))
   const tail = [
-    { title: '出勤分', key: 'total_attendance', width: 80, render: (row: any) => {
-      const a = row.total_attendance || 0
-      return h('span', { style: `color: ${a > 0 ? '#2080f0' : '#999'}` }, a || '-')
-    }},
-    { title: '加减分', key: 'total_bonus', width: 80, render: (row: any) => {
-      const b = row.total_bonus || 0
-      return h('span', { style: `color: ${b > 0 ? '#18a058' : b < 0 ? '#d03050' : '#999'}` }, b > 0 ? `+${b}` : b || '-')
-    }},
-    { title: '平均分', key: 'average_score', width: 90, sorter: (a: any, b: any) => (a.average_score || 0) - (b.average_score || 0), render: (row: any) => {
-      const s = row.average_score || 0
+    { title: '总成绩', key: 'total_score', width: 90, fixed: 'right' as const, sorter: (a: any, b: any) => (a.total_score || 0) - (b.total_score || 0), render: (row: any) => {
+      const s = row.total_score
+      if (s === null || s === undefined || s === 0) return h('span', { style: 'color: #ccc' }, '-')
       const color = s >= 90 ? '#18a058' : s >= 60 ? '#f0a020' : '#d03050'
-      return h('span', { style: `color: ${color}; font-weight: bold;` }, `${s}分`)
+      return h('span', { style: `color: ${color}; font-weight: bold; font-size: 15px;` }, `${s}`)
     }},
     { title: '操作', key: 'actions', width: 80, fixed: 'right' as const, render: (row: any) =>
-      h(NButton, { type: 'info', size: 'small', onClick: () => { detailStudent.value = row; showDetail.value = true } }, { default: () => '详情' })
+      h(NButton, { type: 'info', size: 'small', onClick: () => openEditRecord(row) }, { default: () => '编辑' })
     },
   ]
-  return [...base, ...taskCols, ...tail]
+  return [...base, ...itemCols, ...tail]
 })
 
-const detailColumns = [
-  { title: '任务', key: 'task_title' },
-  { title: 'AI 评分', key: 'ai_score', render: (row: any) => row.ai_score ? `${row.ai_score}分` : '-' },
-  { title: '教师评分', key: 'teacher_score', render: (row: any) => row.teacher_score ? `${row.teacher_score}分` : '-' },
-  { title: '出勤分', key: 'attendance_score', render: (row: any) => row.attendance_score ? `${row.attendance_score}分` : '-' },
-  { title: '加减分', key: 'bonus_score', render: (row: any) => {
-    const b = row.bonus_score || 0
-    return b ? `${b > 0 ? '+' : ''}${b}分` : '-'
-  }},
-  { title: '点名', key: 'rollcall_count', render: (row: any) => row.rollcall_count ? `${row.rollcall_count}次` : '-' },
-  { title: '最终分数', key: 'final_score', render: (row: any) => {
-    if (row.final_score === null) return '-'
-    const color = row.final_score >= 90 ? '#18a058' : row.final_score >= 60 ? '#f0a020' : '#d03050'
-    return h('span', { style: `color: ${color}; font-weight: bold;` }, `${row.final_score}分`)
-  }},
-  { title: '状态', key: 'status', render: (row: any) => {
-    const map: Record<string, { label: string; type: string }> = {
-      not_started: { label: '未开始', type: 'default' },
-      in_progress: { label: '进行中', type: 'info' },
-      completed: { label: '已完成', type: 'success' },
-      reviewed: { label: '已审核', type: 'success' }
-    }
-    const info = map[row.status] || { label: row.status, type: 'default' }
-    return h(NTag, { type: info.type as any, size: 'small' }, { default: () => info.label })
-  }}
+const statsColumns = [
+  { title: '项目', key: 'item_name' },
+  { title: '人数', key: 'count', width: 60 },
+  { title: '平均分', key: 'avg', width: 80 },
+  { title: '最高分', key: 'max', width: 80 },
+  { title: '最低分', key: 'min', width: 80 },
+  { title: '及格率', key: 'pass_rate', width: 80, render: (row: any) => `${row.pass_rate}%` },
 ]
 
-async function loadGrades() {
+function openRecord() {
+  recordForm.value = { student_id: null, scores: {}, remark: '' }
+  showRecord.value = true
+}
+
+function openEditRecord(row: any) {
+  recordForm.value = { student_id: row.student_id, scores: {}, remark: '' }
+  for (const item of row.items || []) {
+    recordForm.value.scores[item.item_id] = item.score
+  }
+  showRecord.value = true
+}
+
+async function handleSaveRecord() {
+  if (!recordForm.value.student_id) { message.warning('请选择学生'); return }
+  recordLoading.value = true
+  try {
+    for (const item of gradeItems.value) {
+      const score = recordForm.value.scores[item.id]
+      if (score !== null && score !== undefined) {
+        await adminApi.saveGradeRecord({
+          student_id: recordForm.value.student_id,
+          item_id: item.id,
+          score: score,
+          remark: recordForm.value.remark
+        })
+      }
+    }
+    message.success('成绩已保存')
+    showRecord.value = false
+    await loadRecords()
+  } catch (e: any) { message.error(e.detail || '保存失败') }
+  finally { recordLoading.value = false }
+}
+
+function openBatchImport() {
+  batchText.value = ''
+  batchResult.value = null
+  showBatchImport.value = true
+}
+
+async function handleBatchImport() {
+  const lines = batchText.value.trim().split('\n').filter(l => l.trim())
+  const records: any[] = []
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/)
+    if (parts.length >= 3) {
+      const studentNo = parts[0]
+      const itemName = parts[1]
+      const score = parseFloat(parts[2])
+      const student = students.value.find(s => s.student_id === studentNo || s.username === studentNo)
+      const item = gradeItems.value.find(i => i.name === itemName)
+      if (student && item && !isNaN(score)) {
+        records.push({ student_id: student.id, item_id: item.id, score })
+      }
+    }
+  }
+  if (!records.length) { message.warning('没有有效数据'); return }
+  batchLoading.value = true
+  try {
+    const result = await adminApi.batchImportGrades({ records }) as any
+    batchResult.value = result
+    message.success(`成功导入 ${result.success} 条`)
+    await loadRecords()
+  } catch (e: any) { message.error(e.detail || '导入失败') }
+  finally { batchLoading.value = false }
+}
+
+async function openStatistics() {
+  showStats.value = true
+  statsLoading.value = true
+  try {
+    statsData.value = await adminApi.getGradeStatistics({ scheme_id: selectedScheme.value || undefined, class_id: selectedClass.value || undefined }) as any
+  } catch {} finally { statsLoading.value = false }
+}
+
+function handleExport() {
+  const data = { scheme_id: selectedScheme.value, class_id: selectedClass.value }
+  const params = new URLSearchParams()
+  if (data.scheme_id) params.set('scheme_id', String(data.scheme_id))
+  if (data.class_id) params.set('class_id', String(data.class_id))
+  window.open(`/api/admin/grades/export?${params.toString()}`, '_blank')
+}
+
+async function loadRecords() {
+  if (!selectedScheme.value) return
   loading.value = true
   try {
-    const data = await adminApi.getGrades(selectedClass.value || undefined) as any
-    gradeData.value = data
-  } catch {
-  } finally {
-    loading.value = false
-  }
+    const data = await adminApi.getGradeRecords({ scheme_id: selectedScheme.value, class_id: selectedClass.value || undefined }) as any
+    gradeItems.value = data.items || []
+    students.value = data.students || []
+    studentOptions.value = students.value.map(s => ({ label: `${s.student_no} ${s.student_name}`, value: s.student_id }))
+  } catch {} finally { loading.value = false }
+}
+
+async function loadSchemes() {
+  try {
+    schemes.value = await adminApi.getGradeSchemes() as any
+    const active = schemes.value.find(s => s.is_active)
+    if (active) { selectedScheme.value = active.id; await loadRecords() }
+  } catch {}
 }
 
 async function loadClasses() {
@@ -152,42 +276,14 @@ async function loadClasses() {
   } catch {}
 }
 
-function exportCSV() {
-  const students = gradeData.value.students || []
-  const tasks = gradeData.value.tasks || []
-  if (!students.length) return
-
-  let csv = '﻿学号,姓名,班级'
-  for (const t of tasks) csv += `,${t.title}`
-  csv += ',加减分,平均分\n'
-
-  for (const s of students) {
-    csv += `${s.student_no},${s.name},${s.class_name}`
-    for (const t of tasks) {
-      const ts = s.task_scores?.find((sc: any) => sc.task_id === t.id)
-      csv += `,${ts?.final_score ?? ''}`
-    }
-    csv += `,${s.total_bonus || 0},${s.average_score || 0}\n`
-  }
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `成绩汇总_${new Date().toISOString().slice(0, 10)}.csv`
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
 onMounted(() => {
+  loadSchemes()
   loadClasses()
-  loadGrades()
 })
 </script>
 
 <style scoped>
-.grade-manage-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
+.grade-manage-container { max-width: 1400px; margin: 0 auto; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.page-header h2 { margin: 0; font-size: 20px; }
 </style>

@@ -34,7 +34,8 @@ _system_settings = {
     "submission_limit": 0,
     "grade_weights": {"ai": 40, "teacher": 30, "attendance": 20},
     "rollcall_score": 5,
-    "rollcall_auto_score": False
+    "rollcall_auto_score": False,
+    "student_view_grades": True
 }
 
 
@@ -256,6 +257,8 @@ async def update_settings(
         _system_settings["rollcall_score"] = max(0, int(data["rollcall_score"]))
     if "rollcall_auto_score" in data:
         _system_settings["rollcall_auto_score"] = bool(data["rollcall_auto_score"])
+    if "student_view_grades" in data:
+        _system_settings["student_view_grades"] = bool(data["student_view_grades"])
     return _system_settings
 
 

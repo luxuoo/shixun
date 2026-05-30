@@ -114,6 +114,41 @@ CREATE TABLE IF NOT EXISTS rollcall_records (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 成绩方案表
+CREATE TABLE IF NOT EXISTS grade_schemes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) NOT NULL,
+    class_id INTEGER REFERENCES classes(id),
+    decimal_places INTEGER DEFAULT 1,
+    is_active BOOLEAN DEFAULT 0,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 计分项目表
+CREATE TABLE IF NOT EXISTS grade_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scheme_id INTEGER REFERENCES grade_schemes(id) ON DELETE CASCADE,
+    name VARCHAR(50) NOT NULL,
+    weight FLOAT NOT NULL,
+    max_score FLOAT DEFAULT 100,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 成绩记录表
+CREATE TABLE IF NOT EXISTS grade_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES users(id),
+    item_id INTEGER REFERENCES grade_items(id),
+    score FLOAT,
+    remark VARCHAR(200),
+    status VARCHAR(20) DEFAULT 'normal',
+    recorded_by INTEGER REFERENCES users(id),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(student_id, item_id)
+);
+
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_class_id ON users(class_id);

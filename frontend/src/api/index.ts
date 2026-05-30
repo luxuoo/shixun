@@ -71,7 +71,7 @@ export const authApi = {
     api.post('/auth/batch-register', data),
   getSettings: () =>
     api.get('/auth/settings'),
-  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number; grade_weights?: { ai: number; teacher: number; attendance: number }; rollcall_score?: number; rollcall_auto_score?: boolean }) =>
+  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number; grade_weights?: { ai: number; teacher: number; attendance: number }; rollcall_score?: number; rollcall_auto_score?: boolean; student_view_grades?: boolean }) =>
     api.put('/auth/settings', data)
 }
 
@@ -171,5 +171,24 @@ export const adminApi = {
     api.get('/admin/rollcall/today', { params: classId ? { class_id: classId } : {} }),
   // 出勤分
   setAttendanceScore: (data: { student_id: number; task_id?: number; score: number }) =>
-    api.post('/admin/attendance', data)
+    api.post('/admin/attendance', data),
+  // 成绩方案管理
+  getGradeSchemes: () => api.get('/admin/grade-schemes'),
+  createGradeScheme: (data: any) => api.post('/admin/grade-schemes', data),
+  updateGradeScheme: (id: number, data: any) => api.put(`/admin/grade-schemes/${id}`, data),
+  deleteGradeScheme: (id: number) => api.delete(`/admin/grade-schemes/${id}`),
+  activateGradeScheme: (id: number) => api.post(`/admin/grade-schemes/${id}/activate`),
+  // 计分项目管理
+  getGradeItems: (schemeId: number) => api.get(`/admin/grade-schemes/${schemeId}/items`),
+  createGradeItem: (schemeId: number, data: any) => api.post(`/admin/grade-schemes/${schemeId}/items`, data),
+  updateGradeItem: (id: number, data: any) => api.put(`/admin/grade-items/${id}`, data),
+  deleteGradeItem: (id: number) => api.delete(`/admin/grade-items/${id}`),
+  // 成绩录入与查询
+  getGradeRecords: (params?: any) => api.get('/admin/grades/records', { params }),
+  saveGradeRecord: (data: any) => api.post('/admin/grades/records', data),
+  batchImportGrades: (data: any) => api.post('/admin/grades/records/batch', data),
+  deleteGradeRecord: (id: number) => api.delete(`/admin/grades/records/${id}`),
+  getGradeStatistics: (params?: any) => api.get('/admin/grades/statistics', { params }),
+  exportGrades: (params?: any) => api.get('/admin/grades/export', { params }),
+  getStudentGrades: () => api.get('/admin/student/grades')
 }
