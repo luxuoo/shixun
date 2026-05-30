@@ -254,9 +254,28 @@ async function loadRecords() {
   if (!selectedScheme.value) return
   loading.value = true
   try {
-    const data = await adminApi.getGradeRecords({ scheme_id: selectedScheme.value, class_id: selectedClass.value || undefined }) as any
-    gradeItems.value = data.items || []
-    students.value = data.students || []
+    // 同时加载学生列表和成绩记录
+    const [studentList, gradeData] = await Promise.all([
+      adminApi.getStudents(selectedClass.value || undefined) as any,
+      adminApi.getGradeRecords({ scheme_id: selectedScheme.value, class_id: selectedClass.value || undefined }) as any
+    ])
+
+    gradeItems.value = gradeData.items || []
+    const gradeStudents = gradeData.students || []
+
+    // 以学生列表为基准，合并成绩数据
+    const gradeMap = new Map(gradeStudents.map((s: any) => [s.student_id, s]))
+    students.value = (studentList || []).map((s: any) => {
+      const grade = gradeMap.get(s.id)
+      return {
+        student_id: s.id,
+        student_no: s.student_id || '',
+        student_name: s.name || '',
+        class_name: '',
+        items: grade?.items || gradeItems.value.map((i: any) => ({ item_id: i.id, item_name: i.name, weight: i.weight, max_score: i.max_score, score: null, remark: null, status: 'normal' })),
+        total_score: grade?.total_score ?? null
+      }
+    })
     studentOptions.value = students.value.map(s => ({ label: `${s.student_no} ${s.student_name}`, value: s.student_id }))
   } catch {} finally { loading.value = false }
 }
