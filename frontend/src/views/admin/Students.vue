@@ -188,6 +188,49 @@
             </n-space>
           </n-descriptions-item>
         </n-descriptions>
+
+        <n-divider>成绩构成</n-divider>
+
+        <n-descriptions bordered :column="1">
+          <n-descriptions-item label="AI 评分权重">
+            <n-space align="center">
+              <n-input-number v-model:value="settings.grade_weights.ai" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
+              <span style="color: #666;">%</span>
+            </n-space>
+          </n-descriptions-item>
+          <n-descriptions-item label="教师评分权重">
+            <n-space align="center">
+              <n-input-number v-model:value="settings.grade_weights.teacher" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
+              <span style="color: #666;">%</span>
+            </n-space>
+          </n-descriptions-item>
+          <n-descriptions-item label="出勤/平时分权重">
+            <n-space align="center">
+              <n-input-number v-model:value="settings.grade_weights.attendance" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
+              <span style="color: #666;">%</span>
+            </n-space>
+          </n-descriptions-item>
+          <n-descriptions-item label="公式">
+            <span style="color: #666; font-size: 13px;">最终分 = AI分×{{ settings.grade_weights.ai }}% + 教师分×{{ settings.grade_weights.teacher }}% + 出勤分×{{ settings.grade_weights.attendance }}% + 加减分</span>
+          </n-descriptions-item>
+        </n-descriptions>
+
+        <n-divider>点名设置</n-divider>
+
+        <n-descriptions bordered :column="1">
+          <n-descriptions-item label="每次点名出勤分">
+            <n-space align="center">
+              <n-input-number v-model:value="settings.rollcall_score" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
+              <span style="color: #666;">分</span>
+            </n-space>
+          </n-descriptions-item>
+          <n-descriptions-item label="点名自动计入出勤分">
+            <n-switch v-model:value="settings.rollcall_auto_score" @update:value="saveSettings" />
+            <span style="margin-left: 12px; color: #666;">
+              {{ settings.rollcall_auto_score ? '已开启 - 点名时自动加分' : '已关闭 - 需手动设置出勤分' }}
+            </span>
+          </n-descriptions-item>
+        </n-descriptions>
       </n-space>
     </n-modal>
   </div>
@@ -222,7 +265,7 @@ const batchText = ref('')
 const batchResult = ref<any>(null)
 
 // 设置
-const settings = ref({ student_register_enabled: true, ai_chat_enabled: true, ai_hints_limit: 0, ai_auto_score: true, submission_limit: 0 })
+const settings = ref({ student_register_enabled: true, ai_chat_enabled: true, ai_hints_limit: 0, ai_auto_score: true, submission_limit: 0, grade_weights: { ai: 40, teacher: 30, attendance: 20 }, rollcall_score: 5, rollcall_auto_score: false })
 
 const formData = ref({
   username: '',

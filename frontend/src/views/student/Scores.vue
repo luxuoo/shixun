@@ -61,18 +61,23 @@ const totalSubmissions = computed(() => scores.value.reduce((sum, s) => sum + (s
 
 const columns = [
   { title: '任务', key: 'task_title', render: (row: any) => row.task_title || `任务 #${row.task_id}` },
-  { title: '完成率', key: 'completion_rate', width: 150, render: (row: any) => h(NProgress, { type: 'line', percentage: row.completion_rate || 0, status: (row.completion_rate || 0) >= 100 ? 'success' : 'info', showIndicator: true, indicatorPlacement: 'inside' }) },
-  { title: 'AI 评分', key: 'ai_total_score', width: 90, render: (row: any) => row.ai_total_score != null ? `${row.ai_total_score}` : '-' },
-  { title: '教师评分', key: 'teacher_score', width: 90, render: (row: any) => row.teacher_score != null ? `${row.teacher_score}` : '-' },
-  { title: '最终分数', key: 'final_score', width: 100, render: (row: any) => {
+  { title: '完成率', key: 'completion_rate', width: 130, render: (row: any) => h(NProgress, { type: 'line', percentage: row.completion_rate || 0, status: (row.completion_rate || 0) >= 100 ? 'success' : 'info', showIndicator: true, indicatorPlacement: 'inside' }) },
+  { title: 'AI 评分', key: 'ai_total_score', width: 80, render: (row: any) => row.ai_total_score != null ? `${row.ai_total_score}` : '-' },
+  { title: '教师评分', key: 'teacher_score', width: 80, render: (row: any) => row.teacher_score != null ? `${row.teacher_score}` : '-' },
+  { title: '出勤分', key: 'attendance_score', width: 70, render: (row: any) => row.attendance_score ? `${row.attendance_score}` : '-' },
+  { title: '加减分', key: 'bonus_score', width: 70, render: (row: any) => {
+    const b = row.bonus_score || 0
+    return b ? `${b > 0 ? '+' : ''}${b}` : '-'
+  }},
+  { title: '最终分数', key: 'final_score', width: 90, render: (row: any) => {
     const s = row.final_score
     if (s == null) return '-'
     const type = s >= 90 ? 'success' : s >= 60 ? 'warning' : 'error'
     return h(NTag, { type, size: 'small' }, { default: () => `${s}分` })
   }},
-  { title: '提示次数', key: 'ai_hint_count', width: 80, render: (row: any) => row.ai_hint_count || 0 },
-  { title: '提交', key: 'total_submissions', width: 60 },
-  { title: '状态', key: 'status', width: 80, render: (row: any) => {
+  { title: '提示', key: 'ai_hint_count', width: 60, render: (row: any) => row.ai_hint_count || 0 },
+  { title: '提交', key: 'total_submissions', width: 50 },
+  { title: '状态', key: 'status', width: 70, render: (row: any) => {
     const m: Record<string, { l: string; t: string }> = { in_progress: { l: '进行中', t: 'info' }, completed: { l: '已完成', t: 'success' }, reviewed: { l: '已评阅', t: 'success' } }
     const i = m[row.status] || { l: row.status, t: 'default' }
     return h(NTag, { type: i.t as any, size: 'small' }, { default: () => i.l })

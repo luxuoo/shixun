@@ -71,7 +71,7 @@ export const authApi = {
     api.post('/auth/batch-register', data),
   getSettings: () =>
     api.get('/auth/settings'),
-  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number }) =>
+  updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number; grade_weights?: { ai: number; teacher: number; attendance: number }; rollcall_score?: number; rollcall_auto_score?: boolean }) =>
     api.put('/auth/settings', data)
 }
 
@@ -163,5 +163,13 @@ export const adminApi = {
     api.post(`/admin/students/${studentId}/adjust-score`, data),
   // 成绩汇总
   getGrades: (classId?: number) =>
-    api.get('/admin/grades', { params: classId ? { class_id: classId } : {} })
+    api.get('/admin/grades', { params: classId ? { class_id: classId } : {} }),
+  // 点名记录
+  recordRollcall: (data: { student_id: number; class_id?: number }) =>
+    api.post('/admin/rollcall', data),
+  getTodayRollcall: (classId?: number) =>
+    api.get('/admin/rollcall/today', { params: classId ? { class_id: classId } : {} }),
+  // 出勤分
+  setAttendanceScore: (data: { student_id: number; task_id?: number; score: number }) =>
+    api.post('/admin/attendance', data)
 }

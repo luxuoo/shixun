@@ -87,6 +87,10 @@ const columns = computed(() => {
     }
   }))
   const tail = [
+    { title: '出勤分', key: 'total_attendance', width: 80, render: (row: any) => {
+      const a = row.total_attendance || 0
+      return h('span', { style: `color: ${a > 0 ? '#2080f0' : '#999'}` }, a || '-')
+    }},
     { title: '加减分', key: 'total_bonus', width: 80, render: (row: any) => {
       const b = row.total_bonus || 0
       return h('span', { style: `color: ${b > 0 ? '#18a058' : b < 0 ? '#d03050' : '#999'}` }, b > 0 ? `+${b}` : b || '-')
@@ -107,10 +111,12 @@ const detailColumns = [
   { title: '任务', key: 'task_title' },
   { title: 'AI 评分', key: 'ai_score', render: (row: any) => row.ai_score ? `${row.ai_score}分` : '-' },
   { title: '教师评分', key: 'teacher_score', render: (row: any) => row.teacher_score ? `${row.teacher_score}分` : '-' },
+  { title: '出勤分', key: 'attendance_score', render: (row: any) => row.attendance_score ? `${row.attendance_score}分` : '-' },
   { title: '加减分', key: 'bonus_score', render: (row: any) => {
     const b = row.bonus_score || 0
     return b ? `${b > 0 ? '+' : ''}${b}分` : '-'
   }},
+  { title: '点名', key: 'rollcall_count', render: (row: any) => row.rollcall_count ? `${row.rollcall_count}次` : '-' },
   { title: '最终分数', key: 'final_score', render: (row: any) => {
     if (row.final_score === null) return '-'
     const color = row.final_score >= 90 ? '#18a058' : row.final_score >= 60 ? '#f0a020' : '#d03050'

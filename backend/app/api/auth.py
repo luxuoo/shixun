@@ -31,7 +31,10 @@ _system_settings = {
     "ai_chat_enabled": True,
     "ai_hints_limit": 0,
     "ai_auto_score": True,
-    "submission_limit": 0
+    "submission_limit": 0,
+    "grade_weights": {"ai": 40, "teacher": 30, "attendance": 20},
+    "rollcall_score": 5,
+    "rollcall_auto_score": False
 }
 
 
@@ -241,6 +244,18 @@ async def update_settings(
         _system_settings["ai_auto_score"] = bool(data["ai_auto_score"])
     if "submission_limit" in data:
         _system_settings["submission_limit"] = max(0, int(data["submission_limit"]))
+    if "grade_weights" in data:
+        gw = data["grade_weights"]
+        if isinstance(gw, dict):
+            _system_settings["grade_weights"] = {
+                "ai": max(0, min(100, int(gw.get("ai", 40)))),
+                "teacher": max(0, min(100, int(gw.get("teacher", 30)))),
+                "attendance": max(0, min(100, int(gw.get("attendance", 20))))
+            }
+    if "rollcall_score" in data:
+        _system_settings["rollcall_score"] = max(0, int(data["rollcall_score"]))
+    if "rollcall_auto_score" in data:
+        _system_settings["rollcall_auto_score"] = bool(data["rollcall_auto_score"])
     return _system_settings
 
 

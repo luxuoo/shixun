@@ -94,14 +94,24 @@ CREATE TABLE IF NOT EXISTS scores (
     ai_total_score FLOAT,
     completion_rate FLOAT,
     teacher_score FLOAT,
+    attendance_score FLOAT DEFAULT 0,
     bonus_score FLOAT DEFAULT 0,
     final_score FLOAT,
     ai_hint_count INTEGER,
     total_submissions INTEGER,
+    rollcall_count INTEGER DEFAULT 0,
     status VARCHAR(20) DEFAULT 'in_progress',
     completed_at TIMESTAMP,
     reviewed_at TIMESTAMP,
     UNIQUE(user_id, task_id)
+);
+
+-- 点名记录表
+CREATE TABLE IF NOT EXISTS rollcall_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES users(id),
+    class_id INTEGER REFERENCES classes(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 创建索引
