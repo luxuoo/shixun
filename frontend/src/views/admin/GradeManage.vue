@@ -14,7 +14,7 @@
 
     <n-spin :show="loading">
       <n-card>
-        <n-data-table :columns="columns" :data="tableData" :bordered="false" :scroll-x="scrollX" :max-height="600" :row-key="(row: any) => row.student_id" />
+        <n-data-table :columns="columns" :data="students" :bordered="false" :scroll-x="scrollX" :max-height="600" :row-key="(row: any) => row.student_id" />
       </n-card>
     </n-spin>
 
