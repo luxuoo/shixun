@@ -266,7 +266,7 @@ async function loadRecords() {
     // 以学生列表为基准，合并成绩数据
     const gradeMap = new Map(gradeStudents.map((s: any) => [s.student_id, s]))
     students.value = (studentList || []).map((s: any) => {
-      const grade = gradeMap.get(s.id)
+      const grade: any = gradeMap.get(s.id)
       return {
         student_id: s.id,
         student_no: s.student_id || '',
