@@ -70,7 +70,7 @@
     </div>
 
     <!-- 注册弹窗 -->
-    <n-modal v-model:show="showRegister" preset="card" title="学生注册" style="width: 500px">
+    <n-modal v-model:show="showRegister" preset="card" title="学生注册" :style="{ width: isMobile ? '95vw' : '500px' }">
       <n-form
         ref="registerFormRef"
         :model="registerData"
@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
@@ -132,6 +132,19 @@ const registerLoading = ref(false)
 const showRegister = ref(false)
 const registerEnabled = ref(true)
 const classOptions = ref<{ label: string; value: number }[]>([])
+const isMobile = ref(window.innerWidth <= 768)
+
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 const formData = ref({
   username: '',
@@ -261,5 +274,25 @@ onMounted(() => {
 
 .login-footer {
   margin-top: 24px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-background {
+    padding: 12px;
+  }
+
+  .login-card {
+    padding: 24px 20px;
+    border-radius: 12px;
+  }
+
+  .login-header h1 {
+    font-size: 18px;
+  }
+
+  .login-header p {
+    font-size: 13px;
+  }
 }
 </style>

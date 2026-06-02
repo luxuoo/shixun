@@ -1,8 +1,8 @@
 <template>
   <div class="students-container">
-    <n-space justify="space-between" align="center" style="margin-bottom: 24px;">
+    <div class="page-header">
       <h2>学生管理</h2>
-      <n-space>
+      <n-space :size="8">
         <n-select
           v-model:value="selectedClass"
           :options="classOptions"
@@ -21,7 +21,7 @@
           设置
         </n-button>
       </n-space>
-    </n-space>
+    </div>
 
     <n-card>
       <n-data-table
@@ -448,5 +448,26 @@ onMounted(() => {
 .students-container {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

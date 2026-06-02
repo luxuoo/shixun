@@ -1,7 +1,8 @@
 <template>
   <n-layout has-sider style="height: 100vh">
-    <!-- 侧边栏 -->
+    <!-- 桌面端侧边栏 -->
     <n-layout-sider
+      v-if="!isMobile"
       bordered
       :width="220"
       :native-scrollbar="false"
@@ -29,19 +30,46 @@
       />
     </n-layout-sider>
 
+    <!-- 移动端抽屉侧边栏 -->
+    <n-drawer v-model:show="showDrawer" :width="260" placement="left">
+      <n-drawer-content>
+        <div class="logo">
+          <n-icon size="32" color="#2080f0">
+            <svg viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </n-icon>
+          <span class="logo-text">AI 实训系统</span>
+        </div>
+        <n-menu
+          :options="menuOptions"
+          :value="activeKey"
+          @update:value="handleDrawerMenuClick"
+        />
+      </n-drawer-content>
+    </n-drawer>
+
     <!-- 主内容区 -->
     <n-layout>
       <!-- 顶部导航 -->
-      <n-layout-header bordered style="height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between;">
-        <n-breadcrumb>
+      <n-layout-header bordered class="student-header">
+        <!-- 移动端汉堡菜单 -->
+        <n-button v-if="isMobile" text @click="showDrawer = true" style="margin-right: 8px;">
+          <n-icon size="22">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          </n-icon>
+        </n-button>
+
+        <n-breadcrumb v-if="!isMobile">
           <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" @click="router.push(item.path)" style="cursor: pointer;">
             {{ item.title }}
           </n-breadcrumb-item>
         </n-breadcrumb>
+        <span v-if="isMobile" style="font-weight: 600; font-size: 16px;">{{ currentPageTitle }}</span>
 
         <n-space align="center" :size="12">
           <n-tag type="info" size="small" round>学生</n-tag>
-          <n-divider vertical />
+          <n-divider vertical v-if="!isMobile" />
           <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
             <n-button text>
               {{ userStore.user?.name || userStore.user?.username }}
@@ -54,7 +82,7 @@
       </n-layout-header>
 
       <!-- 页面内容 -->
-      <n-layout-content content-style="padding: 24px;" :native-scrollbar="false">
+      <n-layout-content :content-style="isMobile ? 'padding: 12px;' : 'padding: 24px;'" :native-scrollbar="false">
         <router-view />
       </n-layout-content>
     </n-layout>
@@ -62,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
@@ -80,8 +108,34 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const collapsed = ref(false)
+const showDrawer = ref(false)
+const isMobile = ref(window.innerWidth <= 768)
+
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 const activeKey = computed(() => route.name as string)
+
+const currentPageTitle = computed(() => {
+  const nameMap: Record<string, string> = {
+    Home: '首页',
+    TaskList: '实训任务',
+    TaskDetail: '任务详情',
+    Submissions: '提交记录',
+    Scores: '我的成绩',
+    AiHistory: 'AI 对话历史'
+  }
+  return nameMap[route.name as string] || 'AI 实训系统'
+})
 
 const menuOptions: MenuOption[] = [
   {
@@ -139,6 +193,11 @@ function handleMenuClick(key: string) {
   router.push({ name: key })
 }
 
+function handleDrawerMenuClick(key: string) {
+  showDrawer.value = false
+  router.push({ name: key })
+}
+
 function handleUserMenu(key: string) {
   if (key === 'logout') {
     userStore.logout()
@@ -163,5 +222,21 @@ function handleUserMenu(key: string) {
   font-size: 18px;
   font-weight: 600;
   color: var(--n-text-color);
+}
+
+.student-header {
+  height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+}
+
+@media (min-width: 769px) {
+  .student-header {
+    height: 64px;
+    padding: 0 24px;
+  }
 }
 </style>

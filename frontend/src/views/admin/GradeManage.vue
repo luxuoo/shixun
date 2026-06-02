@@ -239,7 +239,9 @@ async function openStatistics() {
   statsLoading.value = true
   try {
     statsData.value = await adminApi.getGradeStatistics({ scheme_id: selectedScheme.value || undefined, class_id: selectedClass.value || undefined }) as any
-  } catch {} finally { statsLoading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载统计数据失败')
+  } finally { statsLoading.value = false }
 }
 
 function handleExport() {
@@ -277,7 +279,9 @@ async function loadRecords() {
       }
     })
     studentOptions.value = students.value.map(s => ({ label: `${s.student_no} ${s.student_name}`, value: s.student_id }))
-  } catch {} finally { loading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载成绩记录失败')
+  } finally { loading.value = false }
 }
 
 async function loadSchemes() {
@@ -285,14 +289,18 @@ async function loadSchemes() {
     schemes.value = await adminApi.getGradeSchemes() as any
     const active = schemes.value.find(s => s.is_active)
     if (active) { selectedScheme.value = active.id; await loadRecords() }
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载成绩方案失败')
+  }
 }
 
 async function loadClasses() {
   try {
     const data = await authApi.getClasses() as any
     classOptions.value = data.map((c: any) => ({ label: c.name, value: c.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载班级列表失败')
+  }
 }
 
 onMounted(() => {

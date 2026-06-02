@@ -114,14 +114,18 @@ const uncalledStudents = computed(() => students.value.filter(s => !calledIds.va
 async function loadStudents() {
   try {
     students.value = await adminApi.getStudents(selectedClass.value || undefined) as any
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载学生列表失败')
+  }
 }
 
 async function loadClasses() {
   try {
     const data = await authApi.getClasses() as any
     classOptions.value = data.map((c: any) => ({ label: c.name, value: c.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载班级列表失败')
+  }
 }
 
 async function loadSettings() {
@@ -129,7 +133,9 @@ async function loadSettings() {
     const data = await authApi.getSettings() as any
     settings.value.rollcall_score = data.rollcall_score || 5
     settings.value.rollcall_auto_score = data.rollcall_auto_score || false
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载设置失败')
+  }
 }
 
 async function startRollCall() {

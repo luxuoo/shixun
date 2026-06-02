@@ -3,29 +3,40 @@
     <n-spin :show="loading">
       <!-- 任务头部 -->
       <n-card style="margin-bottom: 24px;">
-        <n-space align="center" :size="24">
-          <div style="flex: 1;">
-            <n-space align="center" style="margin-bottom: 12px;">
+        <div class="task-header-content">
+          <div style="flex: 1; min-width: 0;">
+            <n-space align="center" style="margin-bottom: 12px;" :size="8">
               <n-tag :type="getCategoryType(task.category)">{{ task.category || '未分类' }}</n-tag>
               <n-tag :type="getDifficultyType(task.difficulty)">{{ task.difficulty }}星难度</n-tag>
             </n-space>
             <h2 style="margin: 0 0 8px 0;">{{ task.title }}</h2>
             <p style="color: #666; margin: 0;">{{ task.description }}</p>
-            <n-space style="margin-top: 16px;">
+            <n-space style="margin-top: 16px;" :size="16">
               <n-statistic label="总步骤" :value="task.total_steps" />
               <n-statistic label="预计时长" :value="task.estimated_hours || '未知'" suffix="小时" />
               <n-statistic label="当前进度" :value="currentStep" :suffix="`/ ${task.total_steps}`" />
             </n-space>
           </div>
-        </n-space>
+        </div>
       </n-card>
 
-      <!-- 步骤导航和内容 -->
-      <n-grid :cols="24" :x-gap="16">
+      <!-- 步骤导航和内容 - 移动端堆叠 -->
+      <div class="detail-layout">
         <!-- 左侧步骤导航 -->
-        <n-gi :span="6">
-          <n-card title="步骤导航" style="position: sticky; top: 24px;">
-            <n-steps vertical :current="currentStep" :status="stepStatus">
+        <div class="step-nav-panel">
+          <n-card title="步骤导航" :style="isMobile ? {} : { position: 'sticky', top: '24px' }">
+            <!-- 移动端用横向步骤条 -->
+            <n-steps v-if="isMobile" :current="currentStep" :status="stepStatus" size="small">
+              <n-step
+                v-for="step in steps"
+                :key="step.id"
+                :title="`步骤${step.step_order}`"
+                @click="selectStep(step)"
+                style="cursor: pointer;"
+              />
+            </n-steps>
+            <!-- 桌面端用纵向步骤条 -->
+            <n-steps v-else vertical :current="currentStep" :status="stepStatus">
               <n-step
                 v-for="step in steps"
                 :key="step.id"
@@ -36,10 +47,10 @@
               />
             </n-steps>
           </n-card>
-        </n-gi>
+        </div>
 
         <!-- 右侧内容区 -->
-        <n-gi :span="18">
+        <div class="content-panel">
           <!-- 当前步骤详情 -->
           <n-card v-if="currentStepData" :title="`步骤 ${currentStepData.step_order}: ${currentStepData.title}`" style="margin-bottom: 16px;">
             <n-space vertical :size="16">
@@ -64,20 +75,20 @@
 
           <!-- 代码编辑器 -->
           <n-card title="代码编辑器" style="margin-bottom: 16px;">
-            <div ref="editorContainer" style="height: 400px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;"></div>
-            <n-space justify="space-between" style="margin-top: 16px;">
-              <n-space>
-                <n-button @click="resetCode">重置代码</n-button>
+            <div ref="editorContainer" :style="{ height: isMobile ? '300px' : '400px', border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden' }"></div>
+            <div class="editor-actions">
+              <n-space :size="8">
+                <n-button @click="resetCode" size="small">重置代码</n-button>
               </n-space>
-              <n-space>
-                <n-button type="info" @click="openAiChat" :disabled="!aiChatEnabled" :title="aiChatEnabled ? '打开 AI 助手' : 'AI 对话功能已被管理员禁用'">
+              <n-space :size="8">
+                <n-button type="info" @click="openAiChat" :disabled="!aiChatEnabled" :title="aiChatEnabled ? '打开 AI 助手' : 'AI 对话功能已被管理员禁用'" size="small">
                   AI 助手
                 </n-button>
-                <n-button type="primary" @click="submitCode" :loading="submitting">
+                <n-button type="primary" @click="submitCode" :loading="submitting" size="small">
                   提交代码
                 </n-button>
               </n-space>
-            </n-space>
+            </div>
           </n-card>
 
           <!-- 提交记录 -->
@@ -86,14 +97,15 @@
               :columns="submissionColumns"
               :data="submissions"
               :bordered="false"
+              :scroll-x="600"
             />
           </n-card>
-        </n-gi>
-      </n-grid>
+        </div>
+      </div>
     </n-spin>
 
     <!-- AI 助手弹窗 -->
-    <n-modal v-model:show="showAiModal" preset="card" title="AI 助手" style="width: 840px">
+    <n-modal v-model:show="showAiModal" preset="card" title="AI 助手" :style="{ width: isMobile ? '95vw' : '840px' }">
       <n-space vertical :size="16">
         <!-- AI 对话区 -->
         <div class="ai-chat-area" ref="chatArea">
@@ -124,11 +136,11 @@
         </div>
 
         <!-- AI 操作按钮 -->
-        <n-space>
-          <n-button @click="getHint" :loading="hintLoading" :disabled="hintsRemaining <= 0 || isAiTyping" type="warning">
+        <n-space :size="8">
+          <n-button @click="getHint" :loading="hintLoading" :disabled="hintsRemaining <= 0 || isAiTyping" type="warning" size="small">
             获取提示 ({{ hintsRemaining }}次)
           </n-button>
-          <n-button @click="analyzeCode" :loading="analyzeLoading" :disabled="isAiTyping" type="info">
+          <n-button @click="analyzeCode" :loading="analyzeLoading" :disabled="isAiTyping" type="info" size="small">
             分析代码
           </n-button>
         </n-space>
@@ -152,7 +164,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, h } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { NButton, NTag } from 'naive-ui'
@@ -173,6 +185,7 @@ const analyzeLoading = ref(false)
 const questionLoading = ref(false)
 const showAiModal = ref(false)
 const aiChatEnabled = ref(true)
+const isMobile = ref(window.innerWidth <= 768)
 
 const task = ref<any>({})
 const steps = ref<any[]>([])
@@ -188,8 +201,25 @@ const aiQuestion = ref('')
 const hintsRemaining = ref(3)
 const chatArea = ref<HTMLElement | null>(null)
 const isAiTyping = ref(false)
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const submissions = ref<any[]>([])
+
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 根据任务分类获取编辑器语言
+function getEditorLanguage(category: string): string {
+  const langMap: Record<string, string> = {
+    'Python': 'python',
+    'Web': 'html',
+    'YOLO': 'python',
+    '数据分析': 'python',
+    '机器学习': 'python'
+  }
+  return langMap[category] || 'python'
+}
 
 const submissionColumns = [
   { title: '提交时间', key: 'submitted_at', render: (row: any) => new Date(row.submitted_at).toLocaleString() },
@@ -223,9 +253,10 @@ function getDifficultyType(difficulty: number) {
 
 function initEditor() {
   if (!editorContainer.value) return
+  const language = getEditorLanguage(task.value.category)
   editor = monaco.editor.create(editorContainer.value, {
     value: '# 在这里编写你的代码\n\n',
-    language: 'python',
+    language: language,
     theme: 'vs-dark',
     minimap: { enabled: false },
     fontSize: 14,
@@ -272,16 +303,36 @@ async function submitCode() {
       task_id: task.value.id,
       step_id: currentStepData.value.id,
       code: code,
-      language: 'python'
+      language: getEditorLanguage(task.value.category)
     })
     message.success('代码提交成功，AI 正在自动评分...')
-    // 等一下再刷新，让 AI 评分有时间处理
-    setTimeout(() => loadSubmissions(), 2000)
+    // 轮询等待评分完成，最多 30 秒
+    startPolling()
   } catch (error: any) {
     message.error(error.detail || '提交失败')
   } finally {
     submitting.value = false
   }
+}
+
+function startPolling() {
+  let attempts = 0
+  const maxAttempts = 15
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = setInterval(async () => {
+    attempts++
+    await loadSubmissions()
+    const latest = submissions.value[0]
+    if (latest && latest.status !== 'pending' || attempts >= maxAttempts) {
+      if (pollTimer) {
+        clearInterval(pollTimer)
+        pollTimer = null
+      }
+      if (latest && latest.status !== 'pending') {
+        message.success('AI 评分完成')
+      }
+    }
+  }, 2000)
 }
 
 function renderMarkdown(content: string): string {
@@ -401,9 +452,24 @@ async function loadSettings() {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize)
   await loadTask()
   initEditor()
   loadSettings()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  // 清理编辑器资源
+  if (editor) {
+    editor.dispose()
+    editor = null
+  }
+  // 清理轮询定时器
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 })
 </script>
 
@@ -411,6 +477,28 @@ onMounted(async () => {
 .task-detail-container {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.task-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .ai-chat-area {
@@ -548,5 +636,27 @@ onMounted(async () => {
 @keyframes bounce {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
   40% { transform: scale(1); opacity: 1; }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .task-header-content {
+    flex-direction: column;
+  }
+
+  .ai-chat-area {
+    max-height: 300px;
+    padding: 12px;
+  }
+
+  .chat-bubble {
+    max-width: 85%;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 }
 </style>

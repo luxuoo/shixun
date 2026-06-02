@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update, delete
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.core.security import get_current_teacher, get_current_admin, get_current_user
 from app.models.user import User, Class
@@ -824,7 +824,7 @@ async def get_today_rollcall(
     current_user: User = Depends(get_current_teacher)
 ):
     """获取今日点名记录"""
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     query = select(RollcallRecord).where(func.date(RollcallRecord.created_at) == today)
     if class_id:
         query = query.where(RollcallRecord.class_id == class_id)
@@ -893,7 +893,7 @@ async def get_system_stats(
     active_users = active_users_result.scalar() or 0
 
     # 最近7天注册趋势
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     reg_trend_result = await db.execute(
         select(
             func.date(User.created_at).label("date"),

@@ -36,9 +36,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { taskApi } from '@/api'
 
 const router = useRouter()
+const message = useMessage()
 const loading = ref(false)
 const tasks = ref<any[]>([])
 const selectedCategory = ref<string | null>(null)
@@ -87,7 +89,11 @@ async function loadTasks() {
   try {
     const data = await taskApi.getList(selectedCategory.value || undefined) as any
     tasks.value = data
-  } catch {} finally { loading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载任务列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => { loadTasks() })
@@ -104,6 +110,8 @@ onMounted(() => { loadTasks() })
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .page-header h2 { margin: 0; font-size: 20px; }
@@ -151,6 +159,9 @@ onMounted(() => { loadTasks() })
   font-size: 16px;
   font-weight: 600;
   color: #1e1e2d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-desc {
@@ -158,6 +169,10 @@ onMounted(() => { loadTasks() })
   font-size: 13px;
   color: #666;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .task-meta {
@@ -165,5 +180,28 @@ onMounted(() => { loadTasks() })
   gap: 16px;
   font-size: 12px;
   color: #999;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .task-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .task-cover {
+    height: 100px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .task-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

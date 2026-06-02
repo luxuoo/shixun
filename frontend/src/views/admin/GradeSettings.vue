@@ -258,21 +258,27 @@ async function saveViewSetting() {
 async function loadSchemes() {
   try {
     schemes.value = await adminApi.getGradeSchemes() as any
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载成绩方案失败')
+  }
 }
 
 async function loadClasses() {
   try {
     const data = await authApi.getClasses() as any
     classOptions.value = data.map((c: any) => ({ label: c.name, value: c.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载班级列表失败')
+  }
 }
 
 async function loadSettings() {
   try {
     const data = await authApi.getSettings() as any
     studentViewGrades.value = data.student_view_grades !== false
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载设置失败')
+  }
 }
 
 onMounted(() => {

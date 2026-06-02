@@ -143,21 +143,27 @@ async function loadStudents() {
   loading.value = true
   try {
     students.value = await adminApi.getStudents(selectedClass.value || undefined) as any
-  } catch {} finally { loading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载学生列表失败')
+  } finally { loading.value = false }
 }
 
 async function loadClasses() {
   try {
     const data = await authApi.getClasses() as any
     classOptions.value = data.map((c: any) => ({ label: c.name, value: c.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载班级列表失败')
+  }
 }
 
 async function loadTasks() {
   try {
     const data = await taskApi.getList() as any
     taskOptions.value = data.map((t: any) => ({ label: t.title, value: t.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载任务列表失败')
+  }
 }
 
 onMounted(() => {

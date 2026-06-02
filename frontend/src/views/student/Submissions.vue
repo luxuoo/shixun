@@ -2,18 +2,18 @@
   <div class="submissions-container">
     <div class="page-header">
       <h2>提交记录</h2>
-      <n-space>
+      <n-space :size="8">
         <n-select v-model:value="selectedTask" :options="taskOptions" placeholder="选择任务" clearable style="width: 180px;" @update:value="loadSubmissions" />
         <n-select v-model:value="selectedStatus" :options="statusOptions" placeholder="状态" clearable style="width: 130px;" @update:value="loadSubmissions" />
       </n-space>
     </div>
 
     <n-card>
-      <n-data-table :columns="columns" :data="submissions" :loading="loading" :bordered="false" :pagination="pagination" />
+      <n-data-table :columns="columns" :data="submissions" :loading="loading" :bordered="false" :pagination="pagination" :scroll-x="600" />
     </n-card>
 
     <!-- 详情弹窗 -->
-    <n-modal v-model:show="showDetail" preset="card" title="提交详情" style="width: 800px">
+    <n-modal v-model:show="showDetail" preset="card" title="提交详情" class="responsive-modal" style="width: 800px">
       <n-space vertical :size="16">
         <n-descriptions bordered :column="2">
           <n-descriptions-item label="提交时间">{{ detailData.submitted_at ? new Date(detailData.submitted_at).toLocaleString() : '-' }}</n-descriptions-item>
@@ -41,9 +41,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, h, reactive } from 'vue'
-import { NButton, NTag } from 'naive-ui'
+import { NButton, NTag, useMessage } from 'naive-ui'
 import { submissionApi, taskApi } from '@/api'
 
+const message = useMessage()
 const loading = ref(false)
 const submissions = ref<any[]>([])
 const selectedTask = ref<number | null>(null)
@@ -84,21 +85,49 @@ async function loadSubmissions() {
     const params: any = {}
     if (selectedTask.value) params.task_id = selectedTask.value
     submissions.value = await submissionApi.getList(params) as any
-  } catch {} finally { loading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载提交记录失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadTasks() {
   try {
     const data = await taskApi.getList() as any
     taskOptions.value = data.map((t: any) => ({ label: t.title, value: t.id }))
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载任务列表失败')
+  }
 }
 
 onMounted(() => { loadTasks(); loadSubmissions() })
 </script>
 
 <style scoped>
-.submissions-container { max-width: 1100px; margin: 0 auto; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.page-header h2 { margin: 0; font-size: 20px; }
+.submissions-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 </style>

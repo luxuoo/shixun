@@ -22,11 +22,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useMessage } from 'naive-ui'
 import { marked } from 'marked'
 import { aiApi } from '@/api'
 
 marked.setOptions({ breaks: true, gfm: true } as any)
 
+const message = useMessage()
 const loading = ref(false)
 const history = ref<any[]>([])
 const filterType = ref<string | null>(null)
@@ -69,7 +71,9 @@ async function loadHistory() {
     let items = Array.isArray(data) ? data : []
     if (filterType.value) items = items.filter((i: any) => i.request_type === filterType.value)
     history.value = items
-  } catch {} finally { loading.value = false }
+  } catch (error: any) {
+    message.error(error?.detail || '加载对话历史失败')
+  } finally { loading.value = false }
 }
 
 onMounted(() => { loadHistory() })

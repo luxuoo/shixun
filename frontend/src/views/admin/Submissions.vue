@@ -1,8 +1,8 @@
 <template>
   <div class="submissions-container">
-    <n-space justify="space-between" align="center" style="margin-bottom: 24px;">
+    <div class="page-header">
       <h2>提交记录管理</h2>
-      <n-space>
+      <n-space :size="8">
         <n-select
           v-model:value="selectedTask"
           :options="taskOptions"
@@ -27,7 +27,7 @@
           批量评分 ({{ selectedRowKeys.length }})
         </n-button>
       </n-space>
-    </n-space>
+    </div>
 
     <n-card>
       <n-data-table
@@ -42,7 +42,7 @@
     </n-card>
 
     <!-- 单个评分弹窗 -->
-    <n-modal v-model:show="showReview" preset="card" title="评分" style="width: 700px">
+    <n-modal v-model:show="showReview" preset="card" title="评分" class="responsive-modal" style="width: 700px">
       <n-space vertical :size="16">
         <n-descriptions bordered :column="2">
           <n-descriptions-item label="学生">{{ reviewData.user_name || reviewData.username || `ID: ${reviewData.user_id}` }}</n-descriptions-item>
@@ -307,5 +307,26 @@ onMounted(() => {
 .submissions-container {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

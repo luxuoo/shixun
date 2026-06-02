@@ -38,6 +38,7 @@ body {
     'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 #app {
@@ -63,8 +64,66 @@ body {
   word-break: break-word;
 }
 
-/* 按钮组防换行 */
-.n-space {
-  flex-wrap: nowrap !important;
+/* 表格容器允许横向滚动 */
+.n-card .n-data-table {
+  overflow-x: auto;
+}
+
+/* 全局响应式模态框 */
+.n-modal {
+  max-width: 95vw !important;
+}
+
+/* 移动端全局适配 */
+@media (max-width: 768px) {
+  /* 减小页面内边距 */
+  .n-layout-content {
+    padding: 12px !important;
+  }
+
+  /* 表格在移动端允许横向滚动 */
+  .n-data-table {
+    overflow-x: auto;
+  }
+
+  /* 移动端按钮组允许换行 */
+  .n-space {
+    flex-wrap: wrap !important;
+  }
+
+  /* 移动端隐藏面包屑 */
+  .n-breadcrumb {
+    display: none;
+  }
+
+  /* 移动端弹窗全屏化 */
+  .n-modal {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 10px !important;
+  }
+
+  /* 移动端描述列表单列 */
+  .n-descriptions {
+    --n-column: 1 !important;
+  }
+  .n-descriptions-table {
+    table-layout: fixed !important;
+  }
+  .n-descriptions .n-descriptions-table-content {
+    max-width: 100% !important;
+  }
+
+  /* 移动端表单标签顶部对齐 */
+  .n-form .n-form-item {
+    flex-direction: column !important;
+  }
+  .n-form .n-form-item-label {
+    width: 100% !important;
+    margin-bottom: 4px;
+  }
+  .n-form .n-form-item-blank {
+    flex: 1 !important;
+  }
 }
 </style>

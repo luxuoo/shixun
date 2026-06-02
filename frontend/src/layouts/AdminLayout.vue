@@ -1,7 +1,8 @@
 <template>
   <n-layout has-sider style="height: 100vh">
-    <!-- 深色侧边栏 -->
+    <!-- 桌面端深色侧边栏 -->
     <n-layout-sider
+      v-if="!isMobile"
       bordered
       :width="220"
       :native-scrollbar="false"
@@ -39,24 +40,59 @@
       </div>
     </n-layout-sider>
 
+    <!-- 移动端抽屉侧边栏 -->
+    <n-drawer v-model:show="showDrawer" :width="280" placement="left" :style="{ background: '#1e1e2d' }">
+      <n-drawer-content :style="{ background: '#1e1e2d' }">
+        <div class="admin-logo">
+          <div class="logo-icon">
+            <n-icon size="28" color="#6366f1">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </n-icon>
+          </div>
+          <div class="logo-text">
+            <div class="logo-title">AI 实训系统</div>
+            <div class="logo-subtitle">{{ userStore.isAdmin ? '管理后台' : '教师工作台' }}</div>
+          </div>
+        </div>
+        <div class="menu-group" v-for="group in menuGroups" :key="group.title">
+          <div class="group-title">{{ group.title }}</div>
+          <n-menu
+            :options="group.items"
+            :value="activeKey"
+            @update:value="handleDrawerMenuClick"
+            :theme-overrides="menuThemeOverrides"
+          />
+        </div>
+      </n-drawer-content>
+    </n-drawer>
+
     <!-- 主内容区 -->
     <n-layout>
       <!-- 顶部栏 -->
       <n-layout-header bordered class="admin-header">
-        <n-breadcrumb>
-          <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" @click="router.push(item.path)" style="cursor: pointer;">
-            {{ item.title }}
-          </n-breadcrumb-item>
-        </n-breadcrumb>
+        <!-- 移动端汉堡菜单 -->
+        <div style="display: flex; align-items: center;">
+          <n-button v-if="isMobile" text @click="showDrawer = true" style="margin-right: 8px;">
+            <n-icon size="22">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </n-icon>
+          </n-button>
+          <n-breadcrumb v-if="!isMobile">
+            <n-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" @click="router.push(item.path)" style="cursor: pointer;">
+              {{ item.title }}
+            </n-breadcrumb-item>
+          </n-breadcrumb>
+          <span v-if="isMobile" style="font-weight: 600; font-size: 16px;">{{ currentPageTitle }}</span>
+        </div>
 
         <n-space align="center" :size="12">
           <n-tag :type="userStore.isAdmin ? 'error' : 'warning'" size="small" round>
             {{ userStore.isAdmin ? '管理员' : '教师' }}
           </n-tag>
-          <n-divider vertical />
+          <n-divider vertical v-if="!isMobile" />
           <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
             <n-button text class="user-btn">
-              <n-icon size="16" style="margin-right: 6px;"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></n-icon>
+              <n-icon size="16" style="margin-right: 6px;" v-if="!isMobile"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></n-icon>
               {{ userStore.user?.name || userStore.user?.username }}
               <n-icon size="14" style="margin-left: 4px;"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></n-icon>
             </n-button>
@@ -65,7 +101,7 @@
       </n-layout-header>
 
       <!-- 页面内容 -->
-      <n-layout-content content-style="padding: 24px;" :native-scrollbar="false" class="admin-content">
+      <n-layout-content :content-style="isMobile ? 'padding: 12px;' : 'padding: 24px;'" :native-scrollbar="false" class="admin-content">
         <router-view />
       </n-layout-content>
     </n-layout>
@@ -73,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import type { MenuOption, GlobalThemeOverrides } from 'naive-ui'
@@ -83,6 +119,20 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const collapsed = ref(false)
+const showDrawer = ref(false)
+const isMobile = ref(window.innerWidth <= 768)
+
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 const activeKey = computed(() => route.name as string)
 
@@ -153,6 +203,25 @@ const menuGroups = computed(() => {
   return groups
 })
 
+const currentPageTitle = computed(() => {
+  const nameMap: Record<string, string> = {
+    AdminDashboard: '数据面板',
+    AdminStudents: '学生管理',
+    AdminClasses: '班级管理',
+    AdminTasks: '任务管理',
+    AdminSubmissions: '提交记录',
+    AdminAiStats: 'AI 统计',
+    AdminAiLogs: 'AI 日志',
+    AdminUsers: '用户管理',
+    AdminSystemStats: '系统统计',
+    AdminRollCall: '课堂点名',
+    AdminGrades: '成绩管理',
+    AdminGradeSettings: '成绩设置',
+    AdminAdjustScore: '加减分'
+  }
+  return nameMap[route.name as string] || '管理后台'
+})
+
 const breadcrumbs = computed(() => {
   const items = [{ path: '/admin', title: '管理后台' }]
   const nameMap: Record<string, string> = {
@@ -183,6 +252,11 @@ const userMenuOptions = [
 ]
 
 function handleMenuClick(key: string) {
+  router.push({ name: key })
+}
+
+function handleDrawerMenuClick(key: string) {
+  showDrawer.value = false
   router.push({ name: key })
 }
 
@@ -251,11 +325,17 @@ function handleUserMenu(key: string) {
 
 .admin-header {
   height: 56px;
-  padding: 0 24px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #fff;
+}
+
+@media (min-width: 769px) {
+  .admin-header {
+    padding: 0 24px;
+  }
 }
 
 .user-btn {

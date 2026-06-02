@@ -28,35 +28,29 @@
 
     <!-- 快捷入口 -->
     <div class="section-title">快捷入口</div>
-    <n-grid :cols="3" :x-gap="16" :y-gap="16">
-      <n-gi>
-        <div class="quick-card quick-blue" @click="router.push('/tasks')">
-          <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
-          <div>
-            <div class="quick-title">开始实训</div>
-            <div class="quick-desc">查看并完成编程任务</div>
-          </div>
+    <div class="quick-grid">
+      <div class="quick-card quick-blue" @click="router.push('/tasks')">
+        <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
+        <div>
+          <div class="quick-title">开始实训</div>
+          <div class="quick-desc">查看并完成编程任务</div>
         </div>
-      </n-gi>
-      <n-gi>
-        <div class="quick-card quick-green" @click="router.push('/submissions')">
-          <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></n-icon>
-          <div>
-            <div class="quick-title">提交记录</div>
-            <div class="quick-desc">查看历史提交和评分</div>
-          </div>
+      </div>
+      <div class="quick-card quick-green" @click="router.push('/submissions')">
+        <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></n-icon>
+        <div>
+          <div class="quick-title">提交记录</div>
+          <div class="quick-desc">查看历史提交和评分</div>
         </div>
-      </n-gi>
-      <n-gi>
-        <div class="quick-card quick-purple" @click="router.push('/scores')">
-          <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></n-icon>
-          <div>
-            <div class="quick-title">我的成绩</div>
-            <div class="quick-desc">查看成绩单和排名</div>
-          </div>
+      </div>
+      <div class="quick-card quick-purple" @click="router.push('/scores')">
+        <n-icon size="32"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></n-icon>
+        <div>
+          <div class="quick-title">我的成绩</div>
+          <div class="quick-desc">查看成绩单和排名</div>
         </div>
-      </n-gi>
-    </n-grid>
+      </div>
+    </div>
 
     <!-- 最近任务 -->
     <div class="section-title" style="margin-top: 32px;">最近任务</div>
@@ -80,11 +74,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { useUserStore } from '@/stores/user'
 import { taskApi, submissionApi } from '@/api'
 
 const router = useRouter()
 const userStore = useUserStore()
+const message = useMessage()
 
 const stats = ref({
   completedTasks: 0,
@@ -123,7 +119,9 @@ async function loadData() {
     if (scoredSubmissions.length > 0) {
       stats.value.averageScore = scoredSubmissions.reduce((sum: number, s: any) => sum + s.ai_score, 0) / scoredSubmissions.length
     }
-  } catch {}
+  } catch (error: any) {
+    message.error(error?.detail || '加载数据失败')
+  }
 }
 
 onMounted(() => { loadData() })
@@ -196,6 +194,12 @@ onMounted(() => { loadData() })
   color: #1e1e2d;
 }
 
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
 .quick-card {
   display: flex;
   align-items: center;
@@ -253,22 +257,80 @@ onMounted(() => { loadData() })
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 
 .task-row-title {
   font-size: 14px;
   font-weight: 500;
   color: #1e1e2d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-row-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .task-row-steps {
   font-size: 13px;
   color: #999;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .hero-banner {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .hero-text h1 {
+    font-size: 18px;
+  }
+
+  .hero-stats {
+    gap: 16px;
+  }
+
+  .hero-stat-num {
+    font-size: 22px;
+  }
+
+  .quick-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .quick-card {
+    padding: 16px;
+  }
+
+  .task-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .task-row-right {
+    align-self: flex-end;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .quick-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 </style>
