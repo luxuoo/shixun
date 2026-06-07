@@ -107,8 +107,18 @@
         </div>
       </div>
 
-      <!-- 右侧：历史和未点名 -->
+      <!-- 右侧：未点名和历史 -->
       <div class="side-panel">
+        <div class="panel-card">
+          <div class="panel-title">未点名 ({{ uncalledStudents.length }})</div>
+          <div v-if="uncalledStudents.length === 0" class="panel-empty">全部已点名</div>
+          <div v-else class="uncalled-grid">
+            <span v-for="s in uncalledStudents" :key="s.id" class="uncalled-tag">
+              {{ s.name }}
+            </span>
+          </div>
+        </div>
+
         <div class="panel-card">
           <div class="panel-title">点名历史</div>
           <div v-if="calledHistory.length === 0" class="panel-empty">暂无记录</div>
@@ -123,16 +133,6 @@
               </span>
               <span class="history-id">{{ item.student_id || '' }}</span>
             </div>
-          </div>
-        </div>
-
-        <div class="panel-card">
-          <div class="panel-title">未点名 ({{ uncalledStudents.length }})</div>
-          <div v-if="uncalledStudents.length === 0" class="panel-empty">全部已点名</div>
-          <div v-else class="uncalled-grid">
-            <span v-for="s in uncalledStudents" :key="s.id" class="uncalled-tag">
-              {{ s.name }}
-            </span>
           </div>
         </div>
       </div>
@@ -413,8 +413,8 @@ onMounted(() => {
   background: #eafaf1; padding: 1px 6px; border-radius: 4px;
 }
 .history-id { font-size: 12px; color: #999; margin-left: auto; }
-.uncalled-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; }
-.uncalled-tag { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #f5f5f9; color: #666; }
+.uncalled-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 300px; overflow-y: auto; }
+.uncalled-tag { font-size: 15px; padding: 6px 14px; border-radius: 8px; background: #f5f5f9; color: #333; font-weight: 500; }
 
 /* 加分排行 */
 .rank-section {
