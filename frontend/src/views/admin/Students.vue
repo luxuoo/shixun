@@ -95,7 +95,7 @@
             <n-input
               v-model:value="batchText"
               type="textarea"
-              placeholder="每行格式：学号 姓名&#10;例如：&#10;2024001 张三&#10;2024002 李四&#10;2024003 王五"
+              placeholder="每行格式：学号 姓名（或 姓名 学号，自动识别）&#10;例如：&#10;2024001 张三&#10;李四 2024002&#10;2024003 王五"
               :rows="10"
               style="font-family: monospace;"
             />
@@ -371,11 +371,21 @@ async function handleAddStudent() {
 async function handleBatchRegister() {
   if (!batchClassId.value || !batchText.value.trim()) return
 
-  // 解析文本
+  // 解析文本（自动识别学号和姓名，学号通常是纯数字）
   const lines = batchText.value.trim().split('\n').filter(l => l.trim())
   const students = lines.map(line => {
     const parts = line.trim().split(/\s+/)
     if (parts.length >= 2) {
+      // 判断哪部分是学号（纯数字或含数字的字符串），哪部分是姓名
+      const isId = (s: string) => /^\d+$/.test(s) || /^\d{6,}$/.test(s.replace(/[A-Za-z]/g, ''))
+      if (isId(parts[0]) && !isId(parts[1])) {
+        // 学号 姓名 格式
+        return { student_id: parts[0], name: parts.slice(1).join(' ') }
+      } else if (!isId(parts[0]) && isId(parts[parts.length - 1])) {
+        // 姓名 学号 格式
+        return { student_id: parts[parts.length - 1], name: parts.slice(0, -1).join(' ') }
+      }
+      // 默认：第一个是学号，后面是姓名
       return { student_id: parts[0], name: parts.slice(1).join(' ') }
     }
     return null
