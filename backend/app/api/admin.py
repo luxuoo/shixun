@@ -713,6 +713,52 @@ async def adjust_student_score(
             score.bonus_score = (score.bonus_score or 0) + adjustment
             score.final_score = calc_final_score(score)
 
+        # 同步更新成绩记录（GradeRecord）
+        from app.models.grade import GradeScheme, GradeItem, GradeRecord
+        if student.class_id:
+            # 查找该班级的启用方案
+            scheme_result = await db.execute(
+                select(GradeScheme).where(
+                    GradeScheme.class_id == student.class_id,
+                    GradeScheme.is_active == True
+                )
+            )
+            scheme = scheme_result.scalar_one_or_none()
+            if scheme:
+                # 查找方案中的计分项目（优先匹配"平时分"或"加分"，否则用第一个）
+                items_result = await db.execute(
+                    select(GradeItem).where(GradeItem.scheme_id == scheme.id).order_by(GradeItem.sort_order)
+                )
+                items = items_result.scalars().all()
+                target_item = None
+                for item in items:
+                    if '平时' in item.name or '加分' in item.name or '出勤' in item.name:
+                        target_item = item
+                        break
+                if not target_item and items:
+                    target_item = items[0]
+
+                if target_item:
+                    # 查找或创建成绩记录
+                    record_result = await db.execute(
+                        select(GradeRecord).where(
+                            GradeRecord.student_id == student_id,
+                            GradeRecord.item_id == target_item.id
+                        )
+                    )
+                    record = record_result.scalar_one_or_none()
+                    if record:
+                        record.score = min((record.score or 0) + adjustment, target_item.max_score)
+                        record.recorded_by = current_user.id
+                    else:
+                        record = GradeRecord(
+                            student_id=student_id,
+                            item_id=target_item.id,
+                            score=max(0, adjustment),
+                            recorded_by=current_user.id
+                        )
+                        db.add(record)
+
     await db.commit()
     return {"message": f"已{'加' if adjustment > 0 else '减'}{abs(adjustment)}分", "adjustment": adjustment}
 
