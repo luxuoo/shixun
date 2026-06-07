@@ -133,6 +133,8 @@ export const adminApi = {
     api.get('/admin/students', { params: { class_id } }),
   getStudentDetail: (id: number) =>
     api.get(`/admin/students/${id}`),
+  deleteStudent: (id: number) =>
+    api.delete(`/admin/students/${id}`),
   getSubmissions: (params?: any) =>
     api.get('/admin/submissions', { params }),
   reviewSubmission: (id: number, data: { teacher_score: number; teacher_comment?: string }) =>

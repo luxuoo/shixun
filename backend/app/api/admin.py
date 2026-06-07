@@ -146,6 +146,34 @@ async def get_students(
     return result.scalars().all()
 
 
+@router.delete("/students/{student_id}")
+async def delete_student(
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """删除学生及其所有关联数据"""
+    student = await db.get(User, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+    if student.role != "student":
+        raise HTTPException(status_code=400, detail="只能删除学生账号")
+
+    # 按顺序删除关联数据（外键无 CASCADE，需手动清理）
+    from app.models.grade import GradeRecord
+    await db.execute(delete(GradeRecord).where(
+        (GradeRecord.student_id == student_id) | (GradeRecord.recorded_by == student_id)
+    ))
+    await db.execute(delete(RollcallRecord).where(RollcallRecord.student_id == student_id))
+    await db.execute(delete(Score).where(Score.user_id == student_id))
+    await db.execute(delete(AiLog).where(AiLog.user_id == student_id))
+    await db.execute(delete(Submission).where(Submission.user_id == student_id))
+
+    await db.delete(student)
+    await db.commit()
+    return {"message": "学生已删除"}
+
+
 @router.get("/students/{student_id}")
 async def get_student_detail(
     student_id: int,

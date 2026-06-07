@@ -238,12 +238,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
 import { NButton, NTag } from 'naive-ui'
 import { adminApi, authApi } from '@/api'
 
 const message = useMessage()
+const dialog = useDialog()
 const loading = ref(false)
 const detailLoading = ref(false)
 const addLoading = ref(false)
@@ -298,7 +299,10 @@ const columns = [
   { title: '学号', key: 'student_id', sorter: (a: any, b: any) => (a.student_id || '').localeCompare(b.student_id || ''), render: (row: any) => row.student_id || '-' },
   { title: '邮箱', key: 'email', render: (row: any) => row.email || '-' },
   { title: '状态', key: 'is_active', render: (row: any) => h(NTag, { type: row.is_active ? 'success' : 'error', size: 'small' }, { default: () => row.is_active ? '正常' : '禁用' }) },
-  { title: '操作', key: 'actions', render: (row: any) => h(NButton, { type: 'primary', size: 'small', onClick: () => viewDetail(row) }, { default: () => '查看' }) }
+  { title: '操作', key: 'actions', render: (row: any) => h('div', { style: { display: 'flex', gap: '8px' } }, [
+    h(NButton, { type: 'primary', size: 'small', onClick: () => viewDetail(row) }, { default: () => '查看' }),
+    h(NButton, { type: 'error', size: 'small', onClick: () => handleDeleteStudent(row) }, { default: () => '删除' })
+  ]) }
 ]
 
 const scoreColumns = [
@@ -329,6 +333,24 @@ async function viewDetail(student: any) {
   } finally {
     detailLoading.value = false
   }
+}
+
+function handleDeleteStudent(student: any) {
+  dialog.warning({
+    title: '确认删除',
+    content: `确定要删除学生"${student.name}"（${student.username}）吗？该操作将同时删除该学生的所有提交记录、成绩、点名记录等数据，且不可恢复。`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await adminApi.deleteStudent(student.id)
+        message.success('学生已删除')
+        loadStudents()
+      } catch (error: any) {
+        message.error(error?.detail || '删除失败')
+      }
+    }
+  })
 }
 
 async function handleAddStudent() {
