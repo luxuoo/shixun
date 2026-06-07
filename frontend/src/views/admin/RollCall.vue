@@ -20,11 +20,10 @@
 
     <!-- 主体 -->
     <div class="main-area">
-      <!-- 左侧：点名核心区域 -->
+      <!-- 左侧：点名核心 + 未点名 -->
       <div class="call-zone">
         <!-- 点名展示区 -->
         <div class="call-display" :class="{ rolling: isRolling, called: calledStudent }">
-          <!-- 未开始状态 -->
           <div v-if="!calledStudent && !isRolling" class="init-state">
             <div class="init-icon">
               <n-icon size="64" color="#c0c4cc">
@@ -33,12 +32,10 @@
             </div>
             <p class="init-text">选择班级后点击按钮开始点名</p>
           </div>
-          <!-- 滚动中状态 -->
           <div v-else-if="isRolling" class="rolling-state">
             <div class="rolling-label">正在随机抽取...</div>
             <div class="rolling-name">{{ rollingName }}</div>
           </div>
-          <!-- 已点名结果 -->
           <div v-else-if="calledStudent" class="result-state">
             <div class="result-label">本次点名结果</div>
             <div class="result-avatar">{{ calledStudent.name?.charAt(0) }}</div>
@@ -105,12 +102,10 @@
           &middot; 已点名 <strong>{{ calledHistory.length }}</strong> 人
           &middot; 未点名 <strong>{{ uncalledStudents.length }}</strong> 人
         </div>
-      </div>
 
-      <!-- 右侧：未点名和历史 -->
-      <div class="side-panel">
-        <div class="panel-card">
-          <div class="panel-title">未点名 ({{ uncalledStudents.length }})</div>
+        <!-- 未点名学生列表 -->
+        <div class="uncalled-section">
+          <div class="uncalled-title">未点名 ({{ uncalledStudents.length }})</div>
           <div v-if="uncalledStudents.length === 0" class="panel-empty">全部已点名</div>
           <div v-else class="uncalled-grid">
             <span v-for="s in uncalledStudents" :key="s.id" class="uncalled-tag">
@@ -118,45 +113,31 @@
             </span>
           </div>
         </div>
+      </div>
 
-        <div class="panel-card">
-          <div class="panel-title">点名历史</div>
-          <div v-if="calledHistory.length === 0" class="panel-empty">暂无记录</div>
-          <div v-else class="history-list">
-            <div v-for="(item, index) in calledHistory" :key="index" class="history-item">
-              <span class="history-badge" :class="{ recent: index === 0 }">
-                {{ index === 0 ? '最新' : `#${calledHistory.length - index}` }}
-              </span>
-              <span class="history-name">{{ item.name }}</span>
-              <span class="history-score" v-if="sessionScores[item.id]">
-                +{{ sessionScores[item.id] }}分
-              </span>
-              <span class="history-id">{{ item.student_id || '' }}</span>
+      <!-- 右侧：加分排行 -->
+      <div class="side-panel">
+        <div class="rank-panel">
+          <div class="rank-title">加分排行</div>
+          <div v-if="rankedStudents.length === 0" class="panel-empty">暂无加分记录</div>
+          <div v-else class="rank-list">
+            <div
+              v-for="(item, index) in rankedStudents"
+              :key="item.id"
+              class="rank-item"
+              :class="{ 'rank-top': index < 3 }"
+            >
+              <span class="rank-medal" v-if="index === 0">🥇</span>
+              <span class="rank-medal" v-else-if="index === 1">🥈</span>
+              <span class="rank-medal" v-else-if="index === 2">🥉</span>
+              <span class="rank-num" v-else>{{ index + 1 }}</span>
+              <span class="rank-name">{{ item.name }}</span>
+              <span class="rank-score">+{{ item.score }}分</span>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部：加分排行 -->
-    <div class="rank-section" v-if="rankedStudents.length > 0">
-      <div class="rank-header">
-        <h3>本次会话加分排行</h3>
-        <n-tag type="warning" size="small">仅统计本次页面操作</n-tag>
-      </div>
-      <div class="rank-list">
-        <div
-          v-for="(item, index) in rankedStudents"
-          :key="item.id"
-          class="rank-item"
-          :class="{ 'rank-top': index < 3 }"
-        >
-          <span class="rank-medal" v-if="index === 0">🥇</span>
-          <span class="rank-medal" v-else-if="index === 1">🥈</span>
-          <span class="rank-medal" v-else-if="index === 2">🥉</span>
-          <span class="rank-num" v-else>{{ index + 1 }}</span>
-          <span class="rank-name">{{ item.name }}</span>
-          <span class="rank-score">+{{ item.score }}分</span>
+          <div v-if="rankedStudents.length > 0" class="rank-tip">
+            <n-tag type="warning" size="small">仅统计本次页面操作</n-tag>
+          </div>
         </div>
       </div>
     </div>
@@ -201,7 +182,6 @@ let rollTimer: ReturnType<typeof setInterval> | null = null
 async function loadStudents() {
   try {
     students.value = await adminApi.getStudents(selectedClass.value || undefined) as any
-    // 重置状态
     calledStudent.value = null
     calledHistory.value = []
     calledIds.value = new Set()
@@ -249,7 +229,6 @@ function stopRollCall() {
   }
   isRolling.value = false
 
-  // 随机选一个学生作为最终结果
   const random = students.value[Math.floor(Math.random() * students.value.length)]
   calledStudent.value = random
   calledHistory.value.unshift(random)
@@ -275,7 +254,6 @@ async function addBonusScore() {
       adjustment: 1,
       reason: '课堂点名加分'
     })
-    // 更新前端统计
     const sid = calledStudent.value.id
     sessionScores.value[sid] = (sessionScores.value[sid] || 0) + 1
     message.success(`${calledStudent.value.name} +1分`)
@@ -322,7 +300,7 @@ onMounted(() => {
 
 .call-display {
   width: 100%;
-  min-height: 300px;
+  min-height: 280px;
   background: #fff;
   border-radius: 20px;
   border: 2px dashed #d0d4dc;
@@ -377,91 +355,80 @@ onMounted(() => {
   justify-content: center;
 }
 
-.call-stats { font-size: 14px; color: #999; }
+.call-stats { font-size: 14px; color: #999; margin-bottom: 20px; }
 .call-stats strong { color: #1e1e2d; font-weight: 600; }
 
-/* 右侧面板 */
-.side-panel {
-  width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex-shrink: 0;
-}
-.panel-card {
+/* 未点名区域 */
+.uncalled-section {
+  width: 100%;
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e8e8ec;
   padding: 16px;
 }
-.panel-title { font-size: 14px; font-weight: 600; color: #1e1e2d; margin-bottom: 12px; }
+.uncalled-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e1e2d;
+  margin-bottom: 12px;
+}
 .panel-empty { color: #ccc; font-size: 13px; text-align: center; padding: 20px 0; }
-.history-list { max-height: 300px; overflow-y: auto; }
-.history-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid #f5f5f9;
-}
-.history-item:last-child { border-bottom: none; }
-.history-badge {
-  font-size: 11px; font-weight: 600; padding: 2px 8px;
-  border-radius: 10px; background: #f0f0f4; color: #666; flex-shrink: 0;
-}
-.history-badge.recent { background: #6366f1; color: white; }
-.history-name { font-size: 14px; font-weight: 500; color: #1e1e2d; }
-.history-score {
-  font-size: 12px; font-weight: 600; color: #2ecc71;
-  background: #eafaf1; padding: 1px 6px; border-radius: 4px;
-}
-.history-id { font-size: 12px; color: #999; margin-left: auto; }
 .uncalled-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 300px; overflow-y: auto; }
-.uncalled-tag { font-size: 15px; padding: 6px 14px; border-radius: 8px; background: #f5f5f9; color: #333; font-weight: 500; }
+.uncalled-tag {
+  font-size: 15px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #f5f5f9;
+  color: #333;
+  font-weight: 500;
+}
 
-/* 加分排行 */
-.rank-section {
-  margin-top: 32px;
+/* 右侧加分排行 */
+.side-panel {
+  width: 300px;
+  flex-shrink: 0;
+}
+.rank-panel {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid #e8e8ec;
-  padding: 24px;
+  padding: 16px;
+  position: sticky;
+  top: 24px;
 }
-.rank-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.rank-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e1e2d;
+  margin-bottom: 16px;
 }
-.rank-header h3 { margin: 0; font-size: 18px; color: #2c3e50; }
-
-.rank-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-}
+.rank-list { display: flex; flex-direction: column; gap: 8px; }
 .rank-item {
   display: flex;
   align-items: center;
   gap: 8px;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 10px;
-  padding: 10px 18px;
-  min-width: 140px;
+  border-radius: 8px;
+  padding: 10px 14px;
   transition: all 0.2s;
 }
 .rank-item.rank-top {
   background: #fff9e6;
   border-color: #f0d060;
 }
-.rank-medal { font-size: 20px; }
+.rank-medal { font-size: 18px; }
 .rank-num {
-  font-size: 14px; font-weight: 600; color: #999;
-  width: 20px; text-align: center;
+  font-size: 13px; font-weight: 600; color: #999;
+  width: 18px; text-align: center;
 }
-.rank-name { font-size: 14px; font-weight: 500; color: #1e1e2d; }
+.rank-name { font-size: 14px; font-weight: 500; color: #1e1e2d; flex: 1; }
 .rank-score {
-  margin-left: auto;
-  font-size: 16px; font-weight: 700; color: #e74c3c;
+  font-size: 15px; font-weight: 700; color: #e74c3c;
+}
+.rank-tip {
+  margin-top: 12px;
+  text-align: center;
 }
 
 @keyframes pulse {
@@ -473,11 +440,9 @@ onMounted(() => {
 @media (max-width: 768px) {
   .main-area { flex-direction: column; }
   .side-panel { width: 100%; }
-  .call-display { min-height: 240px; }
+  .call-display { min-height: 220px; }
   .rolling-name { font-size: 40px; }
   .result-name { font-size: 24px; }
   .result-avatar { width: 60px; height: 60px; font-size: 24px; }
-  .rank-list { flex-direction: column; }
-  .rank-item { width: 100%; }
 }
 </style>
