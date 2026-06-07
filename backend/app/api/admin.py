@@ -435,14 +435,22 @@ async def assign_students_to_class(
         raise HTTPException(status_code=404, detail="班级不存在")
 
     student_ids = data.get("student_ids", [])
-    if not student_ids:
-        raise HTTPException(status_code=400, detail="请选择学生")
 
+    # 先把该班级中原有的学生全部移除（class_id 置空）
     await db.execute(
         update(User)
-        .where(User.id.in_(student_ids), User.role == "student")
-        .values(class_id=class_id)
+        .where(User.class_id == class_id, User.role == "student")
+        .values(class_id=None)
     )
+
+    # 再把选中的学生分配到该班级
+    if student_ids:
+        await db.execute(
+            update(User)
+            .where(User.id.in_(student_ids), User.role == "student")
+            .values(class_id=class_id)
+        )
+
     await db.commit()
     return {"message": f"已分配 {len(student_ids)} 名学生到班级"}
 
