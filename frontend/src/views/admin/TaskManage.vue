@@ -25,7 +25,7 @@
     <n-modal v-model:show="showAiModal" preset="card" title="AI 智能创建任务" style="width: 700px">
       <n-space vertical :size="16">
         <n-alert type="info">
-          描述你想要的实训任务，AI 会自动分解为多个步骤。你可以预览后再发布。
+          描述你想要的教学任务，AI 会自动分解为多个步骤。你可以预览后再发布。
         </n-alert>
         <n-form label-placement="left" label-width="80">
           <n-form-item label="任务名称">

@@ -228,7 +228,7 @@ async def ai_decompose_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """AI 自动分解实训任务并可直接发布"""
+    """AI 自动分解教学任务并可直接发布"""
     title = data.get("title", "")
     description = data.get("description", "")
     category = data.get("category", "")

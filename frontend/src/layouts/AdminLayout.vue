@@ -20,7 +20,7 @@
           </n-icon>
         </div>
         <div v-if="!collapsed" class="logo-text">
-          <div class="logo-title">AI 实训系统</div>
+          <div class="logo-title">AI 教学系统</div>
           <div class="logo-subtitle">{{ userStore.isAdmin ? '管理后台' : '教师工作台' }}</div>
         </div>
       </div>
@@ -50,7 +50,7 @@
             </n-icon>
           </div>
           <div class="logo-text">
-            <div class="logo-title">AI 实训系统</div>
+            <div class="logo-title">AI 教学系统</div>
             <div class="logo-subtitle">{{ userStore.isAdmin ? '管理后台' : '教师工作台' }}</div>
           </div>
         </div>

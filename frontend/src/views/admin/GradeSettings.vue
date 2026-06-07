@@ -60,7 +60,7 @@
     <n-modal v-model:show="showItemModal" preset="card" :title="editingItem ? '编辑项目' : '添加项目'" style="width: 500px">
       <n-form label-placement="left" label-width="80">
         <n-form-item label="项目名称">
-          <n-input v-model:value="itemForm.name" placeholder="如：平时分、考试分、实训分" />
+          <n-input v-model:value="itemForm.name" placeholder="如：平时分、考试分、实践分" />
         </n-form-item>
         <n-form-item label="权重">
           <n-space align="center">

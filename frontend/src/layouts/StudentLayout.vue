@@ -17,7 +17,7 @@
             <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
         </n-icon>
-        <span v-if="!collapsed" class="logo-text">AI 实训系统</span>
+        <span v-if="!collapsed" class="logo-text">AI 教学系统</span>
       </div>
 
       <n-menu
@@ -39,7 +39,7 @@
               <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
           </n-icon>
-          <span class="logo-text">AI 实训系统</span>
+          <span class="logo-text">AI 教学系统</span>
         </div>
         <n-menu
           :options="menuOptions"
@@ -128,13 +128,13 @@ const activeKey = computed(() => route.name as string)
 const currentPageTitle = computed(() => {
   const nameMap: Record<string, string> = {
     Home: '首页',
-    TaskList: '实训任务',
+    TaskList: '教学任务',
     TaskDetail: '任务详情',
     Submissions: '提交记录',
     Scores: '我的成绩',
     AiHistory: 'AI 对话历史'
   }
-  return nameMap[route.name as string] || 'AI 实训系统'
+  return nameMap[route.name as string] || 'AI 教学系统'
 })
 
 const menuOptions: MenuOption[] = [
@@ -144,7 +144,7 @@ const menuOptions: MenuOption[] = [
     icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' })]) })
   },
   {
-    label: '实训任务',
+    label: '教学任务',
     key: 'TaskList',
     icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z' })]) })
   },
@@ -168,14 +168,14 @@ const menuOptions: MenuOption[] = [
 const breadcrumbs = computed(() => {
   const items = [{ path: '/', title: '首页' }]
   const nameMap: Record<string, string> = {
-    TaskList: '实训任务',
+    TaskList: '教学任务',
     TaskDetail: '任务详情',
     Submissions: '提交记录',
     Scores: '我的成绩',
     AiHistory: 'AI 对话历史'
   }
   if (route.name === 'TaskDetail') {
-    items.push({ path: '/tasks', title: '实训任务' })
+    items.push({ path: '/tasks', title: '教学任务' })
     items.push({ path: route.path, title: '任务详情' })
   } else if (route.name && nameMap[route.name as string]) {
     items.push({ path: route.path, title: nameMap[route.name as string] })

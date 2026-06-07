@@ -33,7 +33,7 @@
           </div>
           <div>
             <div class="stat-value">{{ stats.total_tasks }}</div>
-            <div class="stat-label">实训任务</div>
+            <div class="stat-label">教学任务</div>
           </div>
         </n-space>
       </n-card>
@@ -75,7 +75,7 @@
         <n-space vertical align="center" :size="8">
           <n-icon size="36" color="#18a058"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
           <span style="font-weight: 500;">任务管理</span>
-          <span style="font-size: 12px; color: #999;">创建和编辑实训任务</span>
+          <span style="font-size: 12px; color: #999;">创建和编辑教学任务</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminGrades' })">

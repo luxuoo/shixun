@@ -1,5 +1,5 @@
 """
-初始化数据脚本 - 创建测试账号和实训任务
+初始化数据脚本 - 创建测试账号和教学任务
 """
 import asyncio
 import sys
@@ -124,10 +124,10 @@ async def create_init_data():
         await session.flush()
         print("✓ 学生账号创建完成 (student1/student123, test/test123)")
 
-        # 5. 创建实训任务 - YOLO 智慧交通系统
+        # 5. 创建教学任务 - YOLO 智慧交通系统
         task1 = Task(
             title="YOLO 智慧交通系统",
-            description="使用 YOLO 目标检测算法实现智慧交通系统，包括视频读取、目标检测、目标跟踪、车速计算、超速检测、碰撞检测等功能。通过本实训，你将掌握计算机视觉和深度学习的实际应用。",
+            description="使用 YOLO 目标检测算法实现智慧交通系统，包括视频读取、目标检测、目标跟踪、车速计算、超速检测、碰撞检测等功能。通过本教学，你将掌握计算机视觉和深度学习的实际应用。",
             category="YOLO",
             difficulty=3,
             total_steps=9,
@@ -143,7 +143,7 @@ async def create_init_data():
             {
                 "step_order": 1,
                 "title": "环境配置",
-                "description": "配置 Python 开发环境，安装必要的依赖库。这是完成本实训的基础步骤。",
+                "description": "配置 Python 开发环境，安装必要的依赖库。这是完成本教学的基础步骤。",
                 "requirements": """1. 安装 Python 3.8 或更高版本
 2. 安装 OpenCV 库：pip install opencv-python
 3. 安装 YOLO 库：pip install ultralytics
@@ -257,7 +257,7 @@ async def create_init_data():
         await session.flush()
         print("✓ YOLO 智慧交通系统任务创建完成 (9个步骤)")
 
-        # 6. 创建第二个实训任务 - Python 数据分析
+        # 6. 创建第二个教学任务 - Python 数据分析
         task2 = Task(
             title="Python 数据分析实战",
             description="使用 Python 进行数据分析，包括数据清洗、数据可视化、统计分析等。适合初学者入门数据分析。",
@@ -329,7 +329,7 @@ async def create_init_data():
         await session.flush()
         print("✓ Python 数据分析实战任务创建完成 (6个步骤)")
 
-        # 7. 创建第三个实训任务 - Web 前端开发
+        # 7. 创建第三个教学任务 - Web 前端开发
         task3 = Task(
             title="Web 前端开发入门",
             description="学习 HTML、CSS、JavaScript 基础，完成一个简单的个人网页项目。",
@@ -410,7 +410,7 @@ async def create_init_data():
         print(f"{'学生':<10} {'student3':<15} {'student123':<15} {'张小华':<10}")
         print(f"{'学生':<10} {'test':<15} {'test123':<15} {'测试学生':<10}")
         print("-"*50)
-        print("\n实训任务：")
+        print("\n教学任务：")
         print("-"*50)
         print("1. YOLO 智慧交通系统 (9步骤, 难度3星)")
         print("2. Python 数据分析实战 (6步骤, 难度2星)")

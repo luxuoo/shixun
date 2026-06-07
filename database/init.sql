@@ -1,4 +1,4 @@
--- AI 编程实训辅助教学系统 - 数据库初始化脚本
+-- AI 编程辅助教学系统 - 数据库初始化脚本
 
 -- 班级表
 CREATE TABLE IF NOT EXISTS classes (

@@ -1,7 +1,7 @@
 <template>
   <div class="task-list-container">
     <div class="page-header">
-      <h2>实训任务</h2>
+      <h2>教学任务</h2>
       <n-space>
         <n-select v-model:value="selectedCategory" :options="categoryOptions" placeholder="分类" clearable style="width: 130px;" @update:value="loadTasks" />
         <n-select v-model:value="selectedDifficulty" :options="difficultyOptions" placeholder="难度" clearable style="width: 130px;" @update:value="loadTasks" />

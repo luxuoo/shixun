@@ -28,7 +28,7 @@ class GradeItem(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     scheme_id = Column(Integer, ForeignKey("grade_schemes.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(50), nullable=False)  # 项目名称（平时分/考试分/实训分等）
+    name = Column(String(50), nullable=False)  # 项目名称（平时分/考试分/实践分等）
     weight = Column(Float, nullable=False)  # 权重百分比（0-100）
     max_score = Column(Float, default=100)  # 满分上限
     sort_order = Column(Integer, default=0)  # 排序

@@ -109,7 +109,7 @@ class AiService:
 - 只给最核心的部分，不能给完整解决方案
 - 解释每段代码的作用"""
 
-        system_prompt = f"""你是一个编程教学助手，正在引导学生完成实训任务。
+        system_prompt = f"""你是一个编程教学助手，正在引导学生完成教学任务。
 
 ## 当前任务上下文
 - 任务名称：{task_title}
@@ -316,7 +316,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         detail_level: str = "normal",
         steps_count: int = 0
     ) -> dict:
-        """AI 自动分解实训任务为多个步骤"""
+        """AI 自动分解教学任务为多个步骤"""
 
         # 根据详细度调整提示词
         detail_instructions = {
@@ -332,7 +332,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         else:
             steps_hint = "\n根据任务复杂度自动决定步骤数量（一般4-10步）。"
 
-        system_prompt = f"""你是一个编程教学课程设计专家。根据用户给出的实训任务描述，自动将其分解为若干个循序渐进的步骤。
+        system_prompt = f"""你是一个编程教学课程设计专家。根据用户给出的教学任务描述，自动将其分解为若干个循序渐进的步骤。
 
 {detail_hint}{steps_hint}
 
@@ -362,7 +362,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
 2. 步骤之间有逻辑递进关系
 3. 难度要合理评估"""
 
-        user_prompt = f"""请分解以下实训任务：
+        user_prompt = f"""请分解以下教学任务：
 
 任务名称：{title}
 任务描述：{description}

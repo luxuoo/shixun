@@ -8,7 +8,7 @@
               <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
           </n-icon>
-          <h1>AI 编程实训辅助教学系统</h1>
+          <h1>AI 编程辅助教学系统</h1>
           <p>通过 AI 引导，掌握编程技能</p>
         </div>
 

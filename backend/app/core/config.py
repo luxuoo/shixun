@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # 应用配置
-    APP_NAME: str = "AI编程实训辅助教学系统"
+    APP_NAME: str = "AI编程辅助教学系统"
     DEBUG: bool = True
 
     # 数据库配置
