@@ -78,11 +78,11 @@
           <span style="font-size: 12px; color: #999;">创建和编辑教学任务</span>
         </n-space>
       </n-card>
-      <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminGrades' })">
+      <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminProcessEval' })">
         <n-space vertical align="center" :size="8">
           <n-icon size="36" color="#f0a020"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></n-icon>
-          <span style="font-weight: 500;">成绩管理</span>
-          <span style="font-size: 12px; color: #999;">查看和管理学生成绩</span>
+          <span style="font-weight: 500;">过程性评价</span>
+          <span style="font-size: 12px; color: #999;">查看班级评价看板</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminRollCall' })">

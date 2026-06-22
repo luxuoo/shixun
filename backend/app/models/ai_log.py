@@ -24,7 +24,7 @@ class AiLog(Base):
 
 
 class Score(Base):
-    """任务级评分记录 — 仅跟踪 AI 评分和教师评分，出勤/加分由 GradeRecord 管理"""
+    """任务级评分记录 — 仅跟踪 AI 评分和教师评分，出勤/加分由过程性评价管理"""
     __tablename__ = "scores"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

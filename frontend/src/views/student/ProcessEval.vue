@@ -65,6 +65,21 @@
           <n-empty v-if="!phaseScores.length" description="暂无阶段数据" size="small" />
         </n-card>
 
+        <!-- 阶段得分饼图 -->
+        <n-card title="阶段得分占比" style="margin-bottom: 20px;">
+          <div class="chart-wrapper">
+            <canvas
+              ref="pieCanvasRef"
+              :width="400"
+              :height="320"
+              class="pie-canvas"
+            ></canvas>
+          </div>
+          <div v-if="!hasPieData" class="chart-empty">
+            <n-empty description="暂无阶段得分数据" size="small" />
+          </div>
+        </n-card>
+
         <!-- 雷达图与趋势图 -->
         <n-grid :cols="2" :x-gap="20" style="margin-bottom: 20px;" responsive="screen" item-responsive>
           <!-- 能力维度雷达图 -->
@@ -150,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, h } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h } from 'vue'
 import { NTag } from 'naive-ui'
 import { evalApi } from '@/api'
 import { useUserStore } from '@/stores/user'
@@ -195,6 +210,7 @@ const trendPoints = ref<TrendPoint[]>([])
 
 const radarCanvasRef = ref<HTMLCanvasElement | null>(null)
 const trendCanvasRef = ref<HTMLCanvasElement | null>(null)
+const pieCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const phaseScores = ref<PhaseScore[]>([])
 const detailTableData = ref<any[]>([])
@@ -202,6 +218,16 @@ const detailTableData = ref<any[]>([])
 // AI 诊断报告相关状态
 const diagnoseLoading = ref(false)
 const diagnoseReport = ref<string | null>(null)
+
+// 是否有饼图数据
+const hasPieData = computed(() => {
+  if (!dashboardData.value?.phase_scores) return false
+  return dashboardData.value.phase_scores.some(
+    (p: any) => p.weighted_score !== undefined && p.weighted_score !== null
+  ) || dashboardData.value.phase_scores.some(
+    (p) => p.score !== null && p.score !== undefined
+  )
+})
 
 const detailColumns = [
   {
@@ -363,6 +389,130 @@ async function generateDiagnoseReport() {
     diagnoseReport.value = null
   } finally {
     diagnoseLoading.value = false
+  }
+}
+
+/**
+ * 绘制阶段得分占比饼图
+ */
+function drawPieChart() {
+  const canvas = pieCanvasRef.value
+  if (!canvas || !dashboardData.value?.phase_scores) return
+
+  const phases = dashboardData.value.phase_scores
+  // Build pie data: prefer weighted_score from API, fall back to score
+  const slices: { name: string; value: number; color: string }[] = []
+  const pieColors = ['#3B82F6', '#22C55E', '#F97316', '#8B5CF6', '#EC4899', '#14B8A6']
+
+  for (let i = 0; i < phases.length; i++) {
+    const phase: any = phases[i]
+    const val = phase.weighted_score ?? phase.score
+    if (val !== null && val !== undefined && val > 0) {
+      slices.push({
+        name: phase.phase_name || phase.name,
+        value: Number(val),
+        color: pieColors[i % pieColors.length]
+      })
+    }
+  }
+
+  if (!slices.length) return
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  const displayWidth = 400
+  const displayHeight = 320
+  canvas.width = displayWidth * dpr
+  canvas.height = displayHeight * dpr
+  canvas.style.width = displayWidth + 'px'
+  canvas.style.height = displayHeight + 'px'
+  ctx.scale(dpr, dpr)
+
+  ctx.clearRect(0, 0, displayWidth, displayHeight)
+
+  const total = slices.reduce((sum, s) => sum + s.value, 0)
+  if (total <= 0) return
+
+  const centerX = 170
+  const centerY = displayHeight / 2
+  const radius = 110
+  const innerRadius = 55 // donut chart
+  let startAngle = -Math.PI / 2
+
+  // Draw slices
+  for (const slice of slices) {
+    const sliceAngle = (slice.value / total) * 2 * Math.PI
+    const endAngle = startAngle + sliceAngle
+
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true)
+    ctx.closePath()
+    ctx.fillStyle = slice.color
+    ctx.fill()
+
+    // Slice border
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    // Percentage label on the slice
+    const midAngle = startAngle + sliceAngle / 2
+    const labelRadius = (radius + innerRadius) / 2
+    const lx = centerX + labelRadius * Math.cos(midAngle)
+    const ly = centerY + labelRadius * Math.sin(midAngle)
+    const pct = ((slice.value / total) * 100).toFixed(1)
+
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    // Only draw on-slice text if slice is large enough
+    if (sliceAngle > 0.25) {
+      ctx.fillText(pct + '%', lx, ly)
+    }
+
+    startAngle = endAngle
+  }
+
+  // Center text
+  ctx.fillStyle = '#333'
+  ctx.font = 'bold 18px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(total.toFixed(1), centerX, centerY - 8)
+  ctx.fillStyle = '#999'
+  ctx.font = '11px sans-serif'
+  ctx.fillText('总分', centerX, centerY + 12)
+
+  // Legend on the right side
+  const legendX = 300
+  let legendY = 40
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+
+  for (const slice of slices) {
+    const pct = ((slice.value / total) * 100).toFixed(1)
+
+    // Color indicator
+    ctx.fillStyle = slice.color
+    ctx.beginPath()
+    ctx.roundRect(legendX, legendY - 6, 14, 14, 3)
+    ctx.fill()
+
+    // Phase name
+    ctx.fillStyle = '#333'
+    ctx.font = '13px sans-serif'
+    ctx.fillText(slice.name, legendX + 20, legendY + 1)
+
+    // Score and percentage
+    ctx.fillStyle = '#666'
+    ctx.font = '12px sans-serif'
+    ctx.fillText(slice.value.toFixed(1) + ' (' + pct + '%)', legendX + 20, legendY + 18)
+
+    legendY += 40
   }
 }
 
@@ -652,6 +802,7 @@ async function loadData() {
     trendPoints.value = trend?.points || []
 
     await nextTick()
+    drawPieChart()
     drawRadarChart()
     drawTrendChart()
   } catch (e: any) {
@@ -668,6 +819,7 @@ async function loadData() {
 
 // Redraw on window resize
 function handleResize() {
+  drawPieChart()
   drawRadarChart()
   drawTrendChart()
 }
@@ -675,6 +827,10 @@ function handleResize() {
 onMounted(() => {
   loadData()
   window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -749,7 +905,8 @@ onMounted(() => {
 }
 
 .radar-canvas,
-.trend-canvas {
+.trend-canvas,
+.pie-canvas {
   display: block;
 }
 

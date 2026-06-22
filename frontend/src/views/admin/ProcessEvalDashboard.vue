@@ -87,6 +87,30 @@
           </n-gi>
         </n-grid>
 
+        <!-- 饼图 + 雷达图 -->
+        <n-grid :cols="2" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
+          <n-gi>
+            <n-card title="成绩分段占比">
+              <template #header-extra>
+                <n-tag type="info" size="small">饼图</n-tag>
+              </template>
+              <div class="chart-wrapper">
+                <canvas ref="pieCanvas" width="400" height="320"></canvas>
+              </div>
+            </n-card>
+          </n-gi>
+          <n-gi>
+            <n-card title="班级能力维度雷达">
+              <template #header-extra>
+                <n-tag type="info" size="small">雷达图</n-tag>
+              </template>
+              <div class="chart-wrapper">
+                <canvas ref="radarCanvas" width="400" height="320"></canvas>
+              </div>
+            </n-card>
+          </n-gi>
+        </n-grid>
+
         <!-- 成绩分布图 + 薄弱维度分析 -->
         <n-grid :cols="2" :x-gap="16" :y-gap="16" style="margin-bottom: 24px;">
           <n-gi>
@@ -231,6 +255,8 @@ const classOptions = ref<ClassOption[]>([])
 const templateOptions = ref<TemplateOption[]>([])
 const dashboard = ref<ClassDashboard | null>(null)
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
+const pieCanvas = ref<HTMLCanvasElement | null>(null)
+const radarCanvas = ref<HTMLCanvasElement | null>(null)
 const insightLoading = ref(false)
 const insightReport = ref<string | null>(null)
 
@@ -331,6 +357,16 @@ function getBarColor(label: string): string {
   if (label.includes('80')) return '#2080f0'
   if (label.includes('70')) return '#f0a020'
   if (label.includes('60')) return '#f5a623'
+  return '#d03050'
+}
+
+/** 获取分段颜色 (用于饼图和柱状图共用) */
+function getScoreRangeColor(range: string): string {
+  if (!range) return '#c0c0c0'
+  if (range.includes('90') || range.includes('100')) return '#18a058'
+  if (range.includes('80')) return '#2080f0'
+  if (range.includes('70')) return '#f0a020'
+  if (range.includes('60')) return '#f5a623'
   return '#d03050'
 }
 
@@ -448,6 +484,255 @@ function drawDistributionChart() {
   ctx.fillText('分数段', displayWidth / 2, displayHeight - 10)
 }
 
+// --- 绘制饼图 (成绩分段占比环形图) ---
+function drawPieChart() {
+  const canvas = pieCanvas.value
+  if (!canvas || !dashboard.value) return
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  const displayWidth = 400
+  const displayHeight = 320
+  canvas.width = displayWidth * dpr
+  canvas.height = displayHeight * dpr
+  canvas.style.width = displayWidth + 'px'
+  canvas.style.height = displayHeight + 'px'
+  ctx.scale(dpr, dpr)
+
+  const data = dashboard.value.distribution.score_ranges
+  if (!data || data.length === 0) return
+
+  const total = data.reduce((sum, d) => sum + d.count, 0)
+  if (total === 0) return
+
+  ctx.clearRect(0, 0, displayWidth, displayHeight)
+
+  const centerX = displayWidth / 2 - 60
+  const centerY = displayHeight / 2
+  const outerRadius = 120
+  const innerRadius = 60
+
+  // 绘制环形图各扇区
+  let startAngle = -Math.PI / 2
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i]
+    const sliceAngle = (item.count / total) * 2 * Math.PI
+    const endAngle = startAngle + sliceAngle
+    const label = item.range || item.label || ''
+    const color = getScoreRangeColor(label)
+
+    // 绘制扇区
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle)
+    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true)
+    ctx.closePath()
+    ctx.fillStyle = color
+    ctx.fill()
+
+    // 扇区之间的分隔线
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    // 在扇区上绘制百分比文字 (仅当占比大于5%时)
+    const percentage = (item.count / total) * 100
+    if (percentage >= 5) {
+      const midAngle = startAngle + sliceAngle / 2
+      const textRadius = (outerRadius + innerRadius) / 2
+      const textX = centerX + Math.cos(midAngle) * textRadius
+      const textY = centerY + Math.sin(midAngle) * textRadius
+
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(`${percentage.toFixed(0)}%`, textX, textY)
+    }
+
+    startAngle = endAngle
+  }
+
+  // 中心文字
+  ctx.fillStyle = '#333'
+  ctx.font = 'bold 18px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(`${total}`, centerX, centerY - 8)
+  ctx.fillStyle = '#999'
+  ctx.font = '12px sans-serif'
+  ctx.fillText('总人数', centerX, centerY + 12)
+
+  // 绘制图例
+  const legendX = displayWidth - 100
+  const legendStartY = 40
+  const legendItemHeight = 28
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.font = '12px sans-serif'
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i]
+    const label = item.range || item.label || ''
+    const color = getScoreRangeColor(label)
+    const y = legendStartY + i * legendItemHeight
+
+    // 色块
+    ctx.fillStyle = color
+    ctx.fillRect(legendX, y - 6, 12, 12)
+
+    // 标签文字
+    ctx.fillStyle = '#555'
+    ctx.font = '12px sans-serif'
+    ctx.fillText(`${label} (${item.count})`, legendX + 18, y)
+  }
+}
+
+// --- 绘制雷达图 (班级能力维度) ---
+function drawRadarChart() {
+  const canvas = radarCanvas.value
+  if (!canvas || !dashboard.value) return
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  const displayWidth = 400
+  const displayHeight = 320
+  canvas.width = displayWidth * dpr
+  canvas.height = displayHeight * dpr
+  canvas.style.width = displayWidth + 'px'
+  canvas.style.height = displayHeight + 'px'
+  ctx.scale(dpr, dpr)
+
+  const dims = dashboard.value.weak_dims
+  if (!dims || dims.length === 0) return
+
+  ctx.clearRect(0, 0, displayWidth, displayHeight)
+
+  const centerX = displayWidth / 2
+  const centerY = displayHeight / 2 + 10
+  const maxRadius = 120
+  const axes = dims.length
+  const angleStep = (2 * Math.PI) / axes
+  const maxValue = 100
+
+  // 绘制背景网格 (同心菱形)
+  const gridLevels = 5
+  ctx.strokeStyle = '#e8e8e8'
+  ctx.lineWidth = 1
+
+  for (let level = 1; level <= gridLevels; level++) {
+    const r = (maxRadius / gridLevels) * level
+    ctx.beginPath()
+    for (let i = 0; i <= axes; i++) {
+      const angle = -Math.PI / 2 + angleStep * (i % axes)
+      const x = centerX + Math.cos(angle) * r
+      const y = centerY + Math.sin(angle) * r
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+    ctx.stroke()
+
+    // 刻度数值
+    const labelValue = Math.round((maxValue / gridLevels) * level)
+    ctx.fillStyle = '#bbb'
+    ctx.font = '10px sans-serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'bottom'
+    ctx.fillText(String(labelValue), centerX + 4, centerY - r - 2)
+  }
+
+  // 绘制轴线
+  ctx.strokeStyle = '#ddd'
+  ctx.lineWidth = 1
+  for (let i = 0; i < axes; i++) {
+    const angle = -Math.PI / 2 + angleStep * i
+    const x = centerX + Math.cos(angle) * maxRadius
+    const y = centerY + Math.sin(angle) * maxRadius
+    ctx.beginPath()
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  // 绘制数据区域 (填充)
+  ctx.beginPath()
+  for (let i = 0; i <= axes; i++) {
+    const idx = i % axes
+    const dim = dims[idx]
+    const value = Math.min(dim.avg_score, maxValue)
+    const r = (value / maxValue) * maxRadius
+    const angle = -Math.PI / 2 + angleStep * idx
+    const x = centerX + Math.cos(angle) * r
+    const y = centerY + Math.sin(angle) * r
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(32, 128, 240, 0.18)'
+  ctx.fill()
+  ctx.strokeStyle = '#2080f0'
+  ctx.lineWidth = 2.5
+  ctx.stroke()
+
+  // 绘制数据点和数值标签
+  for (let i = 0; i < axes; i++) {
+    const dim = dims[i]
+    const value = Math.min(dim.avg_score, maxValue)
+    const r = (value / maxValue) * maxRadius
+    const angle = -Math.PI / 2 + angleStep * i
+    const x = centerX + Math.cos(angle) * r
+    const y = centerY + Math.sin(angle) * r
+
+    // 数据点
+    ctx.beginPath()
+    ctx.arc(x, y, 4, 0, 2 * Math.PI)
+    ctx.fillStyle = '#2080f0'
+    ctx.fill()
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    // 数值标签
+    const labelR = r + 18
+    const labelX = centerX + Math.cos(angle) * labelR
+    const labelY = centerY + Math.sin(angle) * labelR
+    ctx.fillStyle = '#333'
+    ctx.font = 'bold 12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(dim.avg_score.toFixed(1), labelX, labelY)
+  }
+
+  // 绘制维度名称标签
+  const labelRadius = maxRadius + 36
+  ctx.fillStyle = '#555'
+  ctx.font = '13px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (let i = 0; i < axes; i++) {
+    const dim = dims[i]
+    const angle = -Math.PI / 2 + angleStep * i
+    const x = centerX + Math.cos(angle) * labelRadius
+    const y = centerY + Math.sin(angle) * labelRadius
+
+    // 根据位置调整对齐方式
+    if (Math.abs(Math.cos(angle)) > 0.5) {
+      ctx.textAlign = Math.cos(angle) > 0 ? 'left' : 'right'
+      ctx.fillText(dim.label, x, y)
+      ctx.textAlign = 'center'
+    } else {
+      ctx.fillText(dim.label, x, y)
+    }
+  }
+}
+
 // --- 数据加载 ---
 async function loadClasses() {
   try {
@@ -502,6 +787,8 @@ async function loadDashboard() {
     }
     await nextTick()
     drawDistributionChart()
+    drawPieChart()
+    drawRadarChart()
   } catch (error: any) {
     console.error('加载班级看板失败', error)
     message.error('加载班级看板失败: ' + (error.message || '未知错误'))
@@ -560,6 +847,8 @@ onMounted(() => {
 if (typeof window !== 'undefined') {
   window.addEventListener('resize', () => {
     drawDistributionChart()
+    drawPieChart()
+    drawRadarChart()
   })
 }
 </script>
