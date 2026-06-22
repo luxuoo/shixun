@@ -186,7 +186,8 @@ const message = useMessage()
 
 // --- 类型定义 ---
 interface ScoreRange {
-  label: string
+  label?: string
+  range?: string
   count: number
 }
 
