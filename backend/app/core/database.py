@@ -27,4 +27,13 @@ async def get_db():
 
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        # 逐表创建，跳过已存在且结构不一致的表
+        for table in Base.metadata.sorted_tables:
+            try:
+                await conn.run_sync(
+                    lambda sync_conn, t=table: t.create(sync_conn, checkfirst=True)
+                )
+            except Exception as e:
+                # 表已存在但结构不同，跳过（SQLite 不支持完整 ALTER）
+                import logging
+                logging.warning(f"跳过表 {table.name}: {e}")
