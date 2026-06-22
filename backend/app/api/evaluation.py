@@ -75,7 +75,7 @@ async def validate_scorer_weights(db: AsyncSession, indicator_id: int) -> Weight
 
 
 # ==================== 评价方案模板 CRUD ====================
-@router.post("/templates", response_model=TemplateResponse)
+@router.post("/templates")
 async def create_template(
     data: TemplateCreate,
     db: AsyncSession = Depends(get_db),
@@ -91,7 +91,18 @@ async def create_template(
     db.add(template)
     await db.commit()
     await db.refresh(template)
-    return template
+    return {
+        "id": template.id,
+        "name": template.name,
+        "description": template.description,
+        "class_id": template.class_id,
+        "is_active": template.is_active,
+        "version": template.version,
+        "created_by": template.created_by,
+        "created_at": template.created_at,
+        "updated_at": template.updated_at,
+        "phases": []
+    }
 
 
 @router.get("/templates", response_model=List[TemplateListResponse])
@@ -154,7 +165,7 @@ async def get_template(
     return template
 
 
-@router.put("/templates/{template_id}", response_model=TemplateResponse)
+@router.put("/templates/{template_id}")
 async def update_template(
     template_id: int,
     data: TemplateUpdate,
@@ -162,7 +173,15 @@ async def update_template(
     current_user: User = Depends(get_current_teacher)
 ):
     """更新模板"""
-    result = await db.execute(select(EvalTemplate).where(EvalTemplate.id == template_id))
+    result = await db.execute(
+        select(EvalTemplate)
+        .where(EvalTemplate.id == template_id)
+        .options(
+            selectinload(EvalTemplate.phases)
+            .selectinload(EvalPhase.indicators)
+            .selectinload(EvalIndicator.scorer_configs)
+        )
+    )
     template = result.scalar_one_or_none()
     if not template:
         raise HTTPException(status_code=404, detail="模板不存在")
@@ -171,8 +190,17 @@ async def update_template(
         setattr(template, field, value)
 
     await db.commit()
-    await db.refresh(template)
-    return template
+    # 重新查询加载关系
+    result = await db.execute(
+        select(EvalTemplate)
+        .where(EvalTemplate.id == template_id)
+        .options(
+            selectinload(EvalTemplate.phases)
+            .selectinload(EvalPhase.indicators)
+            .selectinload(EvalIndicator.scorer_configs)
+        )
+    )
+    return result.scalar_one()
 
 
 @router.delete("/templates/{template_id}")
@@ -310,7 +338,7 @@ async def init_default_template(
 
 
 # ==================== 评价阶段 CRUD ====================
-@router.post("/templates/{template_id}/phases", response_model=PhaseResponse)
+@router.post("/templates/{template_id}/phases")
 async def create_phase(
     template_id: int,
     data: PhaseCreate,
@@ -332,10 +360,10 @@ async def create_phase(
     db.add(phase)
     await db.commit()
     await db.refresh(phase)
-    return phase
+    return {"id": phase.id, "template_id": phase.template_id, "name": phase.name, "weight": phase.weight, "sort_order": phase.sort_order, "indicators": []}
 
 
-@router.put("/phases/{phase_id}", response_model=PhaseResponse)
+@router.put("/phases/{phase_id}")
 async def update_phase(
     phase_id: int,
     data: PhaseUpdate,
@@ -343,7 +371,11 @@ async def update_phase(
     current_user: User = Depends(get_current_teacher)
 ):
     """更新阶段"""
-    result = await db.execute(select(EvalPhase).where(EvalPhase.id == phase_id))
+    result = await db.execute(
+        select(EvalPhase)
+        .where(EvalPhase.id == phase_id)
+        .options(selectinload(EvalPhase.indicators).selectinload(EvalIndicator.scorer_configs))
+    )
     phase = result.scalar_one_or_none()
     if not phase:
         raise HTTPException(status_code=404, detail="阶段不存在")
@@ -352,8 +384,12 @@ async def update_phase(
         setattr(phase, field, value)
 
     await db.commit()
-    await db.refresh(phase)
-    return phase
+    result = await db.execute(
+        select(EvalPhase)
+        .where(EvalPhase.id == phase_id)
+        .options(selectinload(EvalPhase.indicators).selectinload(EvalIndicator.scorer_configs))
+    )
+    return result.scalar_one()
 
 
 @router.delete("/phases/{phase_id}")
@@ -384,7 +420,7 @@ async def check_template_weights(
 
 
 # ==================== 评价指标 CRUD ====================
-@router.post("/phases/{phase_id}/indicators", response_model=IndicatorResponse)
+@router.post("/phases/{phase_id}/indicators")
 async def create_indicator(
     phase_id: int,
     data: IndicatorCreate,
@@ -432,7 +468,7 @@ async def create_indicator(
     return result.scalar_one()
 
 
-@router.put("/indicators/{indicator_id}", response_model=IndicatorResponse)
+@router.put("/indicators/{indicator_id}")
 async def update_indicator(
     indicator_id: int,
     data: IndicatorUpdate,
@@ -440,7 +476,11 @@ async def update_indicator(
     current_user: User = Depends(get_current_teacher)
 ):
     """更新指标"""
-    result = await db.execute(select(EvalIndicator).where(EvalIndicator.id == indicator_id))
+    result = await db.execute(
+        select(EvalIndicator)
+        .where(EvalIndicator.id == indicator_id)
+        .options(selectinload(EvalIndicator.scorer_configs))
+    )
     indicator = result.scalar_one_or_none()
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
