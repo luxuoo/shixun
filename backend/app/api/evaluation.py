@@ -114,7 +114,10 @@ async def list_templates(
     """获取评价方案模板列表"""
     query = select(EvalTemplate)
     if class_id:
-        query = query.where(EvalTemplate.class_id == class_id)
+        # 返回该班级的模板 + 全局模板（class_id 为 None）
+        query = query.where(
+            (EvalTemplate.class_id == class_id) | (EvalTemplate.class_id.is_(None))
+        )
     query = query.order_by(EvalTemplate.created_at.desc())
     result = await db.execute(query)
     templates = result.scalars().all()
