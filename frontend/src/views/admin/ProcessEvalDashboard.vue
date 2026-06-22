@@ -127,7 +127,7 @@
         </n-grid>
 
         <!-- 排名表格 -->
-        <n-card title="学生成绩排名">
+        <n-card title="学生成绩排名" style="margin-bottom: 24px;">
           <template #header-extra>
             <n-space align="center" :size="8">
               <n-tag type="success" size="small">共 {{ dashboard.ranking.length }} 名学生</n-tag>
@@ -141,6 +141,30 @@
             :max-height="400"
             striped
           />
+        </n-card>
+
+        <!-- AI 学情洞察 -->
+        <n-card title="AI 学情洞察">
+          <template #header-extra>
+            <n-button
+              type="primary"
+              :loading="insightLoading"
+              :disabled="!selectedClassId"
+              @click="handleGenerateInsight"
+            >
+              生成洞察报告
+            </n-button>
+          </template>
+          <n-spin :show="insightLoading">
+            <div v-if="insightReport" class="insight-report">
+              {{ insightReport }}
+            </div>
+            <n-empty
+              v-else
+              description="点击右上角「生成洞察报告」按钮，AI 将自动分析班级学情并生成洞察报告。"
+              style="padding: 40px 0;"
+            />
+          </n-spin>
         </n-card>
       </template>
 
@@ -206,6 +230,8 @@ const classOptions = ref<ClassOption[]>([])
 const templateOptions = ref<TemplateOption[]>([])
 const dashboard = ref<ClassDashboard | null>(null)
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
+const insightLoading = ref(false)
+const insightReport = ref<string | null>(null)
 
 // --- 表格列定义 ---
 const rankingColumns = [
@@ -486,6 +512,7 @@ function handleClassChange(classId: number | null) {
   selectedClassId.value = classId
   selectedTemplateId.value = null
   dashboard.value = null
+  insightReport.value = null
   if (classId) {
     loadTemplates()
   } else {
@@ -505,6 +532,20 @@ async function handleAutoCollect() {
     message.error('自动采集失败: ' + (error.message || '未知错误'))
   } finally {
     collecting.value = false
+  }
+}
+
+async function handleGenerateInsight() {
+  if (!selectedClassId.value) return
+  insightLoading.value = true
+  try {
+    const res = await evalApi.aiClassInsight(selectedClassId.value) as any
+    insightReport.value = typeof res === 'string' ? res : (res?.report || res?.data?.report || JSON.stringify(res))
+  } catch (error: any) {
+    console.error('生成 AI 洞察报告失败', error)
+    message.error('生成 AI 洞察报告失败: ' + (error.message || '未知错误'))
+  } finally {
+    insightLoading.value = false
   }
 }
 
@@ -577,5 +618,18 @@ if (typeof window !== 'undefined') {
   .process-eval-container h2 {
     font-size: 18px;
   }
+}
+
+.insight-report {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.8;
+  font-size: 14px;
+  color: #333;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  border-radius: 8px;
+  border: 1px solid #e0e6f6;
+  min-height: 120px;
 }
 </style>

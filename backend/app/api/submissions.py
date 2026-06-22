@@ -85,15 +85,13 @@ async def _auto_score_background(
                 completed_steps = completed_steps_result.scalar() or 0
                 score.completion_rate = (completed_steps / total_steps) * 100
 
-                # 使用统一公式计算最终分数
-                gw = _system_settings.get("grade_weights", {"ai": 40, "teacher": 30, "attendance": 20})
-                total_weight = gw["ai"] + gw["teacher"] + gw["attendance"] or 1
+                # 使用统一公式计算最终分数: AI分*0.6 + 教师分*0.4
                 ai = score.ai_total_score or 0
                 teacher = score.teacher_score or 0
-                attendance = score.attendance_score or 0
-                bonus = score.bonus_score or 0
-                base = (ai * gw["ai"] + teacher * gw["teacher"] + attendance * gw["attendance"]) / total_weight
-                score.final_score = round(base + bonus, 1)
+                if score.teacher_score is not None:
+                    score.final_score = round(ai * 0.6 + teacher * 0.4, 1)
+                else:
+                    score.final_score = round(ai, 1)
 
             await db.commit()
         except Exception as e:

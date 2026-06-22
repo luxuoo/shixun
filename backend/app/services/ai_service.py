@@ -399,6 +399,136 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             "tokens_used": tokens_used
         }
 
+    async def generate_eval_template(
+        self,
+        course_name: str,
+        course_description: str,
+        category: str = "",
+        student_count: int = 0,
+        task_count: int = 0
+    ) -> dict:
+        """AI 生成评价方案模板"""
+        from app.prompts.evaluation import GENERATE_TEMPLATE_SYSTEM, GENERATE_TEMPLATE_USER
+
+        user_prompt = GENERATE_TEMPLATE_USER.format(
+            course_name=course_name,
+            course_description=course_description,
+            category=category or "通用",
+            student_count=student_count,
+            task_count=task_count
+        )
+
+        result = await self._chat(
+            system_prompt=GENERATE_TEMPLATE_SYSTEM,
+            user_prompt=user_prompt,
+            max_tokens=4000,
+            temperature=0.5
+        )
+
+        data = self._extract_json(result["content"])
+        if data and "phases" in data:
+            return {"success": True, "data": data, "tokens_used": result["tokens_used"]}
+        return {"success": False, "error": "AI 生成失败，请重试", "raw_content": result["content"][:500], "tokens_used": result["tokens_used"]}
+
+    async def suggest_indicators(
+        self,
+        phase_name: str,
+        phase_weight: float,
+        existing_indicators: str = "",
+        category: str = "",
+        other_phases: str = ""
+    ) -> dict:
+        """AI 推荐评价指标"""
+        from app.prompts.evaluation import SUGGEST_INDICATORS_SYSTEM, SUGGEST_INDICATORS_USER
+
+        user_prompt = SUGGEST_INDICATORS_USER.format(
+            phase_name=phase_name,
+            phase_weight=phase_weight,
+            existing_indicators=existing_indicators or "无",
+            category=category or "通用",
+            other_phases=other_phases or "无"
+        )
+
+        result = await self._chat(
+            system_prompt=SUGGEST_INDICATORS_SYSTEM,
+            user_prompt=user_prompt,
+            max_tokens=3000,
+            temperature=0.5
+        )
+
+        data = self._extract_json(result["content"])
+        if data and "indicators" in data:
+            return {"success": True, "data": data["indicators"], "tokens_used": result["tokens_used"]}
+        return {"success": False, "error": "AI 推荐失败，请重试", "raw_content": result["content"][:500], "tokens_used": result["tokens_used"]}
+
+    async def diagnose_student(
+        self,
+        student_name: str,
+        class_name: str,
+        template_name: str,
+        total_score: float,
+        phase_details: str,
+        dim_details: str,
+        trend_data: str
+    ) -> dict:
+        """AI 学生个体诊断"""
+        from app.prompts.evaluation import DIAGNOSE_STUDENT_SYSTEM, DIAGNOSE_STUDENT_USER
+
+        user_prompt = DIAGNOSE_STUDENT_USER.format(
+            student_name=student_name,
+            class_name=class_name,
+            template_name=template_name,
+            total_score=total_score,
+            phase_details=phase_details,
+            dim_details=dim_details,
+            trend_data=trend_data or "暂无历史数据"
+        )
+
+        result = await self._chat(
+            system_prompt=DIAGNOSE_STUDENT_SYSTEM,
+            user_prompt=user_prompt,
+            max_tokens=3000,
+            temperature=0.6
+        )
+
+        return {"report": result["content"], "tokens_used": result["tokens_used"]}
+
+    async def class_insight(
+        self,
+        class_name: str,
+        template_name: str,
+        student_count: int,
+        avg_score: float,
+        pass_rate: float,
+        excellent_rate: float,
+        score_distribution: str,
+        dim_averages: str,
+        top_students: str
+    ) -> dict:
+        """AI 班级学情洞察"""
+        from app.prompts.evaluation import CLASS_INSIGHT_SYSTEM, CLASS_INSIGHT_USER
+
+        user_prompt = CLASS_INSIGHT_USER.format(
+            class_name=class_name,
+            template_name=template_name,
+            student_count=student_count,
+            avg_score=avg_score,
+            pass_rate=pass_rate,
+            excellent_rate=excellent_rate,
+            score_distribution=score_distribution,
+            dim_averages=dim_averages,
+            top_students=top_students
+        )
+
+        result = await self._chat(
+            system_prompt=CLASS_INSIGHT_SYSTEM,
+            user_prompt=user_prompt,
+            max_tokens=4000,
+            temperature=0.6
+        )
+
+        return {"report": result["content"], "tokens_used": result["tokens_used"]}
+
     def _extract_json(self, text: str) -> Optional[dict]:
         """从 AI 文本中提取 JSON 对象"""
         if not text:

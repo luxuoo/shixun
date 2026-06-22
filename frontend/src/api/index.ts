@@ -261,5 +261,15 @@ export const evalApi = {
   getClassDashboard: (classId: number, templateId?: number) =>
     api.get(`/evaluation/dashboard/class/${classId}`, { params: templateId ? { template_id: templateId } : {} }),
   getClassRanking: (classId: number, templateId?: number) =>
-    api.get(`/evaluation/dashboard/class/${classId}/ranking`, { params: templateId ? { template_id: templateId } : {} })
+    api.get(`/evaluation/dashboard/class/${classId}/ranking`, { params: templateId ? { template_id: templateId } : {} }),
+
+  // AI 辅助配置
+  aiGenerateTemplate: (data: { course_name: string; course_description: string; category?: string; student_count?: number; task_count?: number; class_id?: number }) =>
+    api.post('/evaluation/ai/generate-template', data),
+  aiSuggestIndicators: (data: { phase_id: number }) =>
+    api.post('/evaluation/ai/suggest-indicators', data),
+  aiDiagnoseStudent: (studentId: number, templateId?: number) =>
+    api.post(`/evaluation/ai/diagnose/${studentId}`, null, { params: templateId ? { template_id: templateId } : {} }),
+  aiClassInsight: (classId: number, templateId?: number) =>
+    api.post(`/evaluation/ai/class-insight/${classId}`, null, { params: templateId ? { template_id: templateId } : {} })
 }

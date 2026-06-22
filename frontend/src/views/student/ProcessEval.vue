@@ -102,6 +102,38 @@
           </n-gi>
         </n-grid>
 
+        <!-- AI 诊断报告 -->
+        <n-card title="AI 诊断报告" style="margin-bottom: 20px;">
+          <div style="margin-bottom: 16px;">
+            <n-button
+              type="primary"
+              :loading="diagnoseLoading"
+              :disabled="diagnoseLoading"
+              @click="generateDiagnoseReport"
+            >
+              <template #icon>
+                <n-icon>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                  </svg>
+                </n-icon>
+              </template>
+              {{ diagnoseLoading ? '正在生成...' : (diagnoseReport ? '重新生成诊断报告' : '生成诊断报告') }}
+            </n-button>
+          </div>
+
+          <n-spin :show="diagnoseLoading">
+            <div v-if="diagnoseReport" class="ai-report-content">
+              <div v-html="renderMarkdown(diagnoseReport)"></div>
+            </div>
+            <div v-else-if="!diagnoseLoading" style="text-align: center; padding: 40px 0; color: #999;">
+              点击上方按钮，AI 将根据您的过程性评价数据生成个性化诊断报告
+            </div>
+          </n-spin>
+        </n-card>
+
         <!-- 评分明细表 -->
         <n-card title="评分明细">
           <n-data-table
@@ -166,6 +198,10 @@ const trendCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const phaseScores = ref<PhaseScore[]>([])
 const detailTableData = ref<any[]>([])
+
+// AI 诊断报告相关状态
+const diagnoseLoading = ref(false)
+const diagnoseReport = ref<string | null>(null)
 
 const detailColumns = [
   {
@@ -272,6 +308,62 @@ function buildDetailTable(dashboard: DashboardData): any[] {
     }
   }
   return rows
+}
+
+/**
+ * 简易 Markdown 转 HTML，支持标题、加粗、斜体、列表、换行等基本语法
+ */
+function renderMarkdown(text: string): string {
+  if (!text) return ''
+  let html = text
+    // Escape HTML special chars
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Headings: ### / ## / #
+    .replace(/^### (.+)$/gm, '<h4 style="margin:16px 0 8px;font-size:15px;font-weight:600;color:#333;">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:18px 0 10px;font-size:16px;font-weight:700;color:#222;">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="margin:20px 0 12px;font-size:18px;font-weight:700;color:#111;">$1</h2>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:600;">$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Inline code
+    .replace(/`(.+?)`/g, '<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;font-size:13px;">$1</code>')
+    // Unordered list items
+    .replace(/^[-*] (.+)$/gm, '<li style="margin:4px 0;">$1</li>')
+    // Ordered list items
+    .replace(/^\d+\. (.+)$/gm, '<li style="margin:4px 0;">$1</li>')
+    // Paragraphs: double newline
+    .replace(/\n\n/g, '</p><p style="margin:8px 0;line-height:1.8;">')
+    // Single newline to <br>
+    .replace(/\n/g, '<br>')
+
+  // Wrap list items in <ul>
+  html = html.replace(/((?:<li[^>]*>.*?<\/li>(?:<br>)?)+)/gs, '<ul style="padding-left:20px;margin:8px 0;">$1</ul>')
+  // Clean up <br> inside <ul>
+  html = html.replace(/<ul[^>]*>(.*?)<\/ul>/gs, (match) => match.replace(/<br>/g, ''))
+
+  return '<div style="line-height:1.8;color:#333;font-size:14px;"><p style="margin:8px 0;line-height:1.8;">' + html + '</p></div>'
+}
+
+/**
+ * 生成 AI 诊断报告，已缓存则直接使用缓存
+ */
+async function generateDiagnoseReport() {
+  const studentId = userStore.user?.id
+  if (!studentId) return
+
+  diagnoseLoading.value = true
+  try {
+    const res: any = await evalApi.aiDiagnoseStudent(studentId)
+    diagnoseReport.value = res?.report || res?.data?.report || res?.content || (typeof res === 'string' ? res : JSON.stringify(res))
+  } catch (e: any) {
+    console.error('Failed to generate AI diagnose report:', e)
+    diagnoseReport.value = null
+  } finally {
+    diagnoseLoading.value = false
+  }
 }
 
 function drawRadarChart() {
@@ -666,5 +758,30 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   min-height: 200px;
+}
+
+.ai-report-content {
+  background: #f8f9fa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-height: 80px;
+}
+
+.ai-report-content :deep(h2),
+.ai-report-content :deep(h3),
+.ai-report-content :deep(h4) {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+}
+
+.ai-report-content :deep(ul) {
+  list-style-type: disc;
+}
+
+.ai-report-content :deep(code) {
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 </style>

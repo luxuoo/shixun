@@ -30,6 +30,7 @@
           @update:value="handleTemplateChange"
         />
         <n-button type="primary" @click="openCreateTemplate">新建模板</n-button>
+        <n-button type="info" @click="openAiGenerateTemplate">AI 生成模板</n-button>
         <n-popconfirm @positive-click="handleInitDefault">
           <template #trigger>
             <n-button type="warning">初始化默认模板</n-button>
@@ -134,15 +135,26 @@
                 @update:expanded-row-keys="handleExpandedRowsChange"
               />
 
-              <n-button
-                type="primary"
-                dashed
-                size="small"
-                style="margin-top: 12px; width: 100%;"
-                @click="openCreateIndicator(phase)"
-              >
-                + 添加评价指标
-              </n-button>
+              <n-space style="margin-top: 12px; width: 100%;">
+                <n-button
+                  type="primary"
+                  dashed
+                  size="small"
+                  style="flex: 1;"
+                  @click="openCreateIndicator(phase)"
+                >
+                  + 添加评价指标
+                </n-button>
+                <n-button
+                  type="info"
+                  dashed
+                  size="small"
+                  style="flex: 1;"
+                  @click="handleAiSuggestIndicators(phase)"
+                >
+                  AI 推荐
+                </n-button>
+              </n-space>
             </div>
           </n-collapse-item>
         </n-collapse>
@@ -174,6 +186,107 @@
         <n-space justify="end">
           <n-button @click="showTemplateModal = false">取消</n-button>
           <n-button type="primary" @click="handleCreateTemplate">创建</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- AI 生成模板弹窗 -->
+    <n-modal v-model:show="showAiGenerateModal" preset="card" title="AI 生成评价模板" style="width: 560px;">
+      <n-spin :show="aiGenerateLoading">
+        <n-form label-placement="left" label-width="100">
+          <n-form-item label="课程名称" required>
+            <n-input
+              v-model:value="aiGenerateForm.course_name"
+              placeholder="如：Python程序设计、Web前端开发"
+            />
+          </n-form-item>
+          <n-form-item label="课程描述">
+            <n-input
+              v-model:value="aiGenerateForm.course_description"
+              type="textarea"
+              placeholder="课程简介、教学目标等，帮助 AI 更精准生成"
+              :rows="3"
+            />
+          </n-form-item>
+          <n-form-item label="课程分类">
+            <n-select
+              v-model:value="aiGenerateForm.category"
+              :options="courseCategoryOptions"
+              placeholder="选择课程分类"
+              clearable
+            />
+          </n-form-item>
+          <n-form-item label="适用班级">
+            <n-select
+              v-model:value="aiGenerateForm.class_id"
+              :options="classOptions"
+              placeholder="选择班级（可选）"
+              clearable
+              :loading="classLoading"
+            />
+          </n-form-item>
+          <n-form-item label="学生人数">
+            <n-input-number
+              v-model:value="aiGenerateForm.student_count"
+              :min="1"
+              :max="500"
+              placeholder="预计学生人数"
+            />
+          </n-form-item>
+          <n-form-item label="任务数量">
+            <n-input-number
+              v-model:value="aiGenerateForm.task_count"
+              :min="1"
+              :max="50"
+              placeholder="课程包含的任务/项目数"
+            />
+          </n-form-item>
+        </n-form>
+      </n-spin>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showAiGenerateModal = false" :disabled="aiGenerateLoading">取消</n-button>
+          <n-button type="primary" :loading="aiGenerateLoading" @click="handleAiGenerateTemplate">生成</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- AI 推荐指标弹窗 -->
+    <n-modal v-model:show="showAiSuggestModal" preset="card" title="AI 推荐评价指标" style="width: 700px;">
+      <n-spin :show="aiSuggestLoading">
+        <template v-if="aiSuggestResult && aiSuggestResult.length > 0">
+          <n-alert type="info" size="small" style="margin-bottom: 16px;">
+            以下指标由 AI 根据阶段特点推荐，点击"采用"直接添加到当前阶段。
+          </n-alert>
+          <n-list bordered>
+            <n-list-item v-for="(item, idx) in aiSuggestResult" :key="idx">
+              <n-space align="center" justify="space-between" style="width: 100%;">
+                <div style="flex: 1;">
+                  <n-space align="center" style="margin-bottom: 4px;">
+                    <span style="font-weight: 600;">{{ item.name }}</span>
+                    <n-tag size="small" type="info">{{ capabilityDimMap[item.capability_dim] || item.capability_dim || '未分类' }}</n-tag>
+                    <n-tag size="small">{{ dataSourceMap[item.data_source] || item.data_source || '未指定' }}</n-tag>
+                    <n-tag size="small" type="warning">权重: {{ item.weight }}%</n-tag>
+                  </n-space>
+                  <div v-if="item.reason" style="color: #888; font-size: 13px; margin-top: 2px;">{{ item.reason }}</div>
+                </div>
+                <n-button
+                  type="success"
+                  size="small"
+                  :loading="adoptingIndex === idx"
+                  @click="handleAdoptIndicator(item, idx)"
+                >
+                  采用
+                </n-button>
+              </n-space>
+            </n-list-item>
+          </n-list>
+        </template>
+        <n-empty v-else-if="!aiSuggestLoading && aiSuggestFetched" description="暂无推荐指标，请尝试调整阶段信息后重试。" style="padding: 40px 0;" />
+      </n-spin>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showAiSuggestModal = false">关闭</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -305,7 +418,7 @@ import {
   NIcon,
   NPopconfirm
 } from 'naive-ui'
-import { evalApi } from '@/api'
+import { evalApi, adminApi } from '@/api'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -364,6 +477,15 @@ const scorerRoleMap: Record<string, string> = {
   enterprise: '企业导师'
 }
 
+const courseCategoryOptions = [
+  { label: 'Python', value: 'Python' },
+  { label: 'Web', value: 'Web' },
+  { label: 'YOLO', value: 'YOLO' },
+  { label: '数据分析', value: '数据分析' },
+  { label: '机器学习', value: '机器学习' },
+  { label: '通用', value: '通用' }
+]
+
 // ==================== 状态 ====================
 
 const loading = ref(false)
@@ -376,6 +498,30 @@ const expandedIndicators = ref<number[]>([])
 // 模板弹窗
 const showTemplateModal = ref(false)
 const templateForm = ref({ name: '', description: '' })
+
+// AI 生成模板弹窗
+const showAiGenerateModal = ref(false)
+const aiGenerateLoading = ref(false)
+const aiGenerateForm = ref({
+  course_name: '',
+  course_description: '',
+  category: null as string | null,
+  class_id: null as number | null,
+  student_count: undefined as number | undefined,
+  task_count: undefined as number | undefined
+})
+
+// 班级列表
+const classOptions = ref<{ label: string; value: number }[]>([])
+const classLoading = ref(false)
+
+// AI 推荐指标弹窗
+const showAiSuggestModal = ref(false)
+const aiSuggestLoading = ref(false)
+const aiSuggestFetched = ref(false)
+const aiSuggestResult = ref<any[]>([])
+const aiSuggestPhaseId = ref<number | null>(null)
+const adoptingIndex = ref<number | null>(null)
 
 // 阶段弹窗
 const showPhaseModal = ref(false)
@@ -624,6 +770,118 @@ async function handleInitDefault() {
     message.error(e?.detail || '初始化默认模板失败')
   } finally {
     loading.value = false
+  }
+}
+
+// ==================== AI 生成模板 ====================
+
+async function loadClasses() {
+  classLoading.value = true
+  try {
+    const data = await adminApi.getClasses() as any
+    classOptions.value = (Array.isArray(data) ? data : []).map((c: any) => ({
+      label: c.name || c.class_name || `班级${c.id}`,
+      value: c.id
+    }))
+  } catch (e: any) {
+    // 班级加载失败不阻塞主流程
+    classOptions.value = []
+  } finally {
+    classLoading.value = false
+  }
+}
+
+function openAiGenerateTemplate() {
+  aiGenerateForm.value = {
+    course_name: '',
+    course_description: '',
+    category: null,
+    class_id: null,
+    student_count: undefined,
+    task_count: undefined
+  }
+  showAiGenerateModal.value = true
+  loadClasses()
+}
+
+async function handleAiGenerateTemplate() {
+  if (!aiGenerateForm.value.course_name.trim()) {
+    message.warning('请输入课程名称')
+    return
+  }
+  aiGenerateLoading.value = true
+  try {
+    await evalApi.aiGenerateTemplate({
+      course_name: aiGenerateForm.value.course_name,
+      course_description: aiGenerateForm.value.course_description,
+      category: aiGenerateForm.value.category || undefined,
+      class_id: aiGenerateForm.value.class_id || undefined,
+      student_count: aiGenerateForm.value.student_count,
+      task_count: aiGenerateForm.value.task_count
+    })
+    message.success('AI 模板生成成功')
+    showAiGenerateModal.value = false
+    await loadTemplates()
+    // 自动选中最新模板
+    if (templates.value.length > 0) {
+      const latest = templates.value[0]
+      selectedTemplateId.value = latest.id
+      await loadTemplateDetail(latest.id)
+    }
+  } catch (e: any) {
+    message.error(e?.detail || 'AI 生成模板失败')
+  } finally {
+    aiGenerateLoading.value = false
+  }
+}
+
+// ==================== AI 推荐指标 ====================
+
+async function handleAiSuggestIndicators(phase: any) {
+  aiSuggestPhaseId.value = phase.id
+  aiSuggestResult.value = []
+  aiSuggestFetched.value = false
+  aiSuggestLoading.value = true
+  showAiSuggestModal.value = true
+
+  try {
+    const result = await evalApi.aiSuggestIndicators({ phase_id: phase.id }) as any
+    aiSuggestResult.value = Array.isArray(result) ? result : (result?.indicators || result?.data || [])
+    aiSuggestFetched.value = true
+  } catch (e: any) {
+    message.error(e?.detail || '获取 AI 推荐指标失败')
+    aiSuggestFetched.value = true
+  } finally {
+    aiSuggestLoading.value = false
+  }
+}
+
+async function handleAdoptIndicator(item: any, idx: number) {
+  if (!aiSuggestPhaseId.value) {
+    message.warning('未指定阶段，请重试')
+    return
+  }
+  adoptingIndex.value = idx
+  try {
+    await evalApi.createIndicator(aiSuggestPhaseId.value, {
+      name: item.name,
+      weight: item.weight || 20,
+      capability_dim: item.capability_dim || null,
+      data_source: item.data_source || null,
+      auto_collect: item.auto_collect || false,
+      description: item.reason || item.description || ''
+    })
+    message.success(`指标 "${item.name}" 已采用`)
+    // 从推荐列表中移除已采用的项
+    aiSuggestResult.value.splice(idx, 1)
+    // 刷新模板详情
+    if (selectedTemplateId.value) {
+      await loadTemplateDetail(selectedTemplateId.value)
+    }
+  } catch (e: any) {
+    message.error(e?.detail || '采用指标失败')
+  } finally {
+    adoptingIndex.value = null
   }
 }
 

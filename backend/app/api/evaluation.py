@@ -1151,3 +1151,273 @@ async def get_class_ranking(
     # 复用 class dashboard 的逻辑
     dashboard = await get_class_dashboard(class_id, template_id, db, current_user)
     return dashboard.ranking
+
+
+# ==================== AI 辅助配置 ====================
+@router.post("/ai/generate-template")
+async def ai_generate_template(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    """AI 生成评价方案模板"""
+    from app.services.ai_service import ai_service
+
+    course_name = data.get("course_name", "")
+    course_description = data.get("course_description", "")
+    category = data.get("category", "")
+    student_count = data.get("student_count", 0)
+    task_count = data.get("task_count", 0)
+
+    if not course_name:
+        raise HTTPException(status_code=400, detail="请提供课程名称")
+
+    result = await ai_service.generate_eval_template(
+        course_name=course_name,
+        course_description=course_description,
+        category=category,
+        student_count=student_count,
+        task_count=task_count
+    )
+
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    # 将 AI 生成的方案直接创建为模板
+    template_data = result["data"]
+    template = EvalTemplate(
+        name=template_data.get("name", f"{course_name}过程性评价方案"),
+        description=template_data.get("description", ""),
+        class_id=data.get("class_id"),
+        created_by=current_user.id
+    )
+    db.add(template)
+    await db.flush()
+
+    for phase_data in template_data.get("phases", []):
+        phase = EvalPhase(
+            template_id=template.id,
+            name=phase_data["name"],
+            weight=phase_data.get("weight", 0),
+            sort_order=phase_data.get("sort_order", 0)
+        )
+        db.add(phase)
+        await db.flush()
+
+        for ind_data in phase_data.get("indicators", []):
+            indicator = EvalIndicator(
+                phase_id=phase.id,
+                name=ind_data["name"],
+                weight=ind_data.get("weight", 0),
+                max_score=ind_data.get("max_score", 100),
+                score_type=ind_data.get("score_type", "value"),
+                capability_dim=ind_data.get("capability_dim", "knowledge"),
+                data_source=ind_data.get("data_source", "manual"),
+                auto_collect=ind_data.get("auto_collect", False),
+                sort_order=ind_data.get("sort_order", 0)
+            )
+            db.add(indicator)
+            await db.flush()
+
+            for sc_data in ind_data.get("scorer_configs", []):
+                scorer = EvalScorerConfig(
+                    indicator_id=indicator.id,
+                    scorer_role=sc_data["scorer_role"],
+                    weight=sc_data.get("weight", 100)
+                )
+                db.add(scorer)
+
+    await db.commit()
+
+    # 返回完整模板
+    result = await db.execute(
+        select(EvalTemplate)
+        .where(EvalTemplate.id == template.id)
+        .options(
+            selectinload(EvalTemplate.phases)
+            .selectinload(EvalPhase.indicators)
+            .selectinload(EvalIndicator.scorer_configs)
+        )
+    )
+    return result.scalar_one()
+
+
+@router.post("/ai/suggest-indicators")
+async def ai_suggest_indicators(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    """AI 推荐评价指标"""
+    from app.services.ai_service import ai_service
+
+    phase_id = data.get("phase_id")
+    if not phase_id:
+        raise HTTPException(status_code=400, detail="请提供阶段 ID")
+
+    # 获取阶段信息
+    result = await db.execute(
+        select(EvalPhase)
+        .where(EvalPhase.id == phase_id)
+        .options(selectinload(EvalPhase.indicators))
+    )
+    phase = result.scalar_one_or_none()
+    if not phase:
+        raise HTTPException(status_code=404, detail="阶段不存在")
+
+    # 获取模板信息
+    template_result = await db.execute(
+        select(EvalTemplate)
+        .where(EvalTemplate.id == phase.template_id)
+        .options(selectinload(EvalTemplate.phases).selectinload(EvalPhase.indicators))
+    )
+    template = template_result.scalar_one()
+
+    existing = [f"{i.name}(权重{i.weight}%)" for i in phase.indicators]
+    other_phases = [f"{p.name}(权重{p.weight}%)" for p in template.phases if p.id != phase_id]
+
+    # 获取课程分类
+    class_id = template.class_id
+    category = ""
+    if class_id:
+        tasks_result = await db.execute(
+            select(Task.category).distinct().limit(1)
+        )
+        cat = tasks_result.scalar_one_or_none()
+        if cat:
+            category = cat
+
+    result = await ai_service.suggest_indicators(
+        phase_name=phase.name,
+        phase_weight=phase.weight,
+        existing_indicators=", ".join(existing) if existing else "",
+        category=category,
+        other_phases=", ".join(other_phases) if other_phases else ""
+    )
+
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return {"indicators": result["data"], "tokens_used": result["tokens_used"]}
+
+
+@router.post("/ai/diagnose/{student_id}")
+async def ai_diagnose_student(
+    student_id: int,
+    template_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    """AI 学生个体诊断"""
+    from app.services.ai_service import ai_service
+
+    student = await db.get(User, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    # 获取班级名
+    class_name = ""
+    if student.class_id:
+        class_obj = await db.get(Class, student.class_id)
+        class_name = class_obj.name if class_obj else ""
+
+    # 获取活跃模板
+    if not template_id:
+        result = await db.execute(
+            select(EvalTemplate).where(
+                EvalTemplate.is_active == True,
+                (EvalTemplate.class_id == student.class_id) | (EvalTemplate.class_id.is_(None))
+            ).order_by(EvalTemplate.class_id.desc()).limit(1)
+        )
+        template = result.scalar_one_or_none()
+        if not template:
+            raise HTTPException(status_code=404, detail="没有激活的评价方案")
+        template_id = template.id
+    else:
+        template = await db.get(EvalTemplate, template_id)
+
+    # 计算学生分数
+    calc = await calculate_student_score(db, student_id, template_id)
+    if not calc:
+        raise HTTPException(status_code=404, detail="计算失败")
+
+    # 格式化阶段详情
+    phase_lines = []
+    for p in calc["phase_scores"]:
+        indicators_str = ", ".join([f"{i['name']}:{i['score']}" for i in p.indicators])
+        phase_lines.append(f"- {p.phase_name}(权重{p.phase_weight}%): {p.score}分 [{indicators_str}]")
+    phase_details = "\n".join(phase_lines)
+
+    # 格式化维度详情
+    dim_lines = [f"- {d.dim_label}: {d.score}分" for d in calc["dim_scores"]]
+    dim_details = "\n".join(dim_lines)
+
+    # 获取趋势数据
+    trend_result = await db.execute(
+        select(EvalSnapshot)
+        .where(EvalSnapshot.student_id == student_id, EvalSnapshot.template_id == template_id)
+        .order_by(EvalSnapshot.snapshot_date.desc())
+        .limit(5)
+    )
+    snapshots = trend_result.scalars().all()
+    trend_lines = []
+    for s in reversed(snapshots):
+        date_str = s.snapshot_date.strftime("%Y-%m-%d") if s.snapshot_date else "未知"
+        trend_lines.append(f"- {date_str}: 总分{s.total_score}")
+    trend_data = "\n".join(trend_lines) if trend_lines else ""
+
+    result = await ai_service.diagnose_student(
+        student_name=student.name or student.username,
+        class_name=class_name,
+        template_name=template.name,
+        total_score=calc["total_score"],
+        phase_details=phase_details,
+        dim_details=dim_details,
+        trend_data=trend_data
+    )
+
+    return {"report": result["report"], "tokens_used": result["tokens_used"]}
+
+
+@router.post("/ai/class-insight/{class_id}")
+async def ai_class_insight(
+    class_id: int,
+    template_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    """AI 班级学情洞察"""
+    from app.services.ai_service import ai_service
+
+    class_obj = await db.get(Class, class_id)
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="班级不存在")
+
+    # 获取班级看板数据
+    dashboard = await get_class_dashboard(class_id, template_id, db, current_user)
+
+    # 格式化数据
+    dist = dashboard.distribution
+    score_dist_lines = [f"- {r['range']}: {r['count']}人" for r in dist.score_ranges]
+    score_distribution = "\n".join(score_dist_lines)
+
+    dim_lines = [f"- {d['label']}: {d['avg_score']}分" for d in dashboard.weak_dims]
+    dim_averages = "\n".join(dim_lines)
+
+    top_lines = [f"{r.rank}. {r.student_name}: {r.total_score}分" for r in dashboard.ranking[:5]]
+    top_students = "\n".join(top_lines)
+
+    result = await ai_service.class_insight(
+        class_name=class_obj.name,
+        template_name=f"模板ID:{dashboard.template_id}",
+        student_count=dist.total_students,
+        avg_score=dist.average_score,
+        pass_rate=dist.pass_rate,
+        excellent_rate=dist.excellent_rate,
+        score_distribution=score_distribution,
+        dim_averages=dim_averages,
+        top_students=top_students
+    )
+
+    return {"report": result["report"], "tokens_used": result["tokens_used"]}
+    return dashboard.ranking

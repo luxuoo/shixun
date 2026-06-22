@@ -18,19 +18,12 @@ router = APIRouter(prefix="/api/admin", tags=["管理后台"])
 
 
 def calc_final_score(score) -> float:
-    """统一的最终分数计算函数"""
-    gw = _system_settings.get("grade_weights", {"ai": 40, "teacher": 30, "attendance": 20})
-    total_weight = gw["ai"] + gw["teacher"] + gw["attendance"]
-    if total_weight == 0:
-        total_weight = 1
-
+    """统一的最终分数计算函数: AI分*0.6 + 教师分*0.4"""
     ai = score.ai_total_score or 0
     teacher = score.teacher_score or 0
-    attendance = score.attendance_score or 0
-    bonus = score.bonus_score or 0
-
-    base = (ai * gw["ai"] + teacher * gw["teacher"] + attendance * gw["attendance"]) / total_weight
-    return round(base + bonus, 1)
+    if score.teacher_score is not None:
+        return round(ai * 0.6 + teacher * 0.4, 1)
+    return round(ai, 1)
 
 
 @router.get("/ai-test")
@@ -206,7 +199,6 @@ async def get_student_detail(
             "ai_total_score": round(s.ai_total_score, 1) if s.ai_total_score else None,
             "completion_rate": round(s.completion_rate, 1) if s.completion_rate else None,
             "teacher_score": round(s.teacher_score, 1) if s.teacher_score else None,
-            "bonus_score": round(s.bonus_score, 1) if s.bonus_score else None,
             "final_score": round(s.final_score, 1) if s.final_score else None,
             "ai_hint_count": s.ai_hint_count,
             "total_submissions": s.total_submissions,
@@ -690,33 +682,9 @@ async def adjust_student_score(
         raise HTTPException(status_code=400, detail="调整分数不能为0")
 
     if task_id:
-        # 针对某个任务加减分
-        score_result = await db.execute(
-            select(Score).where(Score.user_id == student_id, Score.task_id == task_id)
-        )
-        score = score_result.scalar_one_or_none()
-        if not score:
-            # 如果没有 Score 记录，创建一个
-            score = Score(user_id=student_id, task_id=task_id, total_submissions=0)
-            db.add(score)
-            await db.flush()
-
-        score.bonus_score = (score.bonus_score or 0) + adjustment
-        score.final_score = calc_final_score(score)
-    else:
-        # 全局加减分（不针对特定任务），给所有任务都加上
-        scores_result = await db.execute(
-            select(Score).where(Score.user_id == student_id)
-        )
-        scores = scores_result.scalars().all()
-        for score in scores:
-            score.bonus_score = (score.bonus_score or 0) + adjustment
-            score.final_score = calc_final_score(score)
-
-        # 同步更新成绩记录（GradeRecord）
+        # 针对某个任务加减分 — 更新该任务的 GradeRecord
         from app.models.grade import GradeScheme, GradeItem, GradeRecord
         if student.class_id:
-            # 查找该班级的启用方案
             scheme_result = await db.execute(
                 select(GradeScheme).where(
                     GradeScheme.class_id == student.class_id,
@@ -725,7 +693,6 @@ async def adjust_student_score(
             )
             scheme = scheme_result.scalar_one_or_none()
             if scheme:
-                # 查找方案中的计分项目（优先匹配"平时分"或"加分"，否则用第一个）
                 items_result = await db.execute(
                     select(GradeItem).where(GradeItem.scheme_id == scheme.id).order_by(GradeItem.sort_order)
                 )
@@ -739,7 +706,49 @@ async def adjust_student_score(
                     target_item = items[0]
 
                 if target_item:
-                    # 查找或创建成绩记录
+                    record_result = await db.execute(
+                        select(GradeRecord).where(
+                            GradeRecord.student_id == student_id,
+                            GradeRecord.item_id == target_item.id
+                        )
+                    )
+                    record = record_result.scalar_one_or_none()
+                    if record:
+                        record.score = min((record.score or 0) + adjustment, target_item.max_score)
+                        record.recorded_by = current_user.id
+                    else:
+                        record = GradeRecord(
+                            student_id=student_id,
+                            item_id=target_item.id,
+                            score=max(0, adjustment),
+                            recorded_by=current_user.id
+                        )
+                        db.add(record)
+    else:
+        # 全局加减分（不针对特定任务），更新 GradeRecord
+        from app.models.grade import GradeScheme, GradeItem, GradeRecord
+        if student.class_id:
+            scheme_result = await db.execute(
+                select(GradeScheme).where(
+                    GradeScheme.class_id == student.class_id,
+                    GradeScheme.is_active == True
+                )
+            )
+            scheme = scheme_result.scalar_one_or_none()
+            if scheme:
+                items_result = await db.execute(
+                    select(GradeItem).where(GradeItem.scheme_id == scheme.id).order_by(GradeItem.sort_order)
+                )
+                items = items_result.scalars().all()
+                target_item = None
+                for item in items:
+                    if '平时' in item.name or '加分' in item.name or '出勤' in item.name:
+                        target_item = item
+                        break
+                if not target_item and items:
+                    target_item = items[0]
+
+                if target_item:
                     record_result = await db.execute(
                         select(GradeRecord).where(
                             GradeRecord.student_id == student_id,
@@ -791,30 +800,21 @@ async def get_grades(
 
         task_scores = []
         total_weighted = 0
-        total_bonus = 0
-        total_attendance = 0
         task_count = 0
 
         for task in tasks:
             score = scores.get(task.id)
             if score:
                 final = score.final_score or 0
-                bonus = score.bonus_score or 0
-                attendance = score.attendance_score or 0
                 task_scores.append({
                     "task_id": task.id,
                     "task_title": task.title,
                     "ai_score": round(score.ai_total_score or 0, 1),
                     "teacher_score": round(score.teacher_score or 0, 1) if score.teacher_score else None,
-                    "attendance_score": round(attendance, 1),
-                    "bonus_score": round(bonus, 1),
                     "final_score": round(final, 1),
-                    "rollcall_count": score.rollcall_count or 0,
                     "status": score.status
                 })
                 total_weighted += final
-                total_bonus += bonus
-                total_attendance += attendance
                 task_count += 1
             else:
                 task_scores.append({
@@ -822,10 +822,7 @@ async def get_grades(
                     "task_title": task.title,
                     "ai_score": None,
                     "teacher_score": None,
-                    "attendance_score": 0,
-                    "bonus_score": 0,
                     "final_score": None,
-                    "rollcall_count": 0,
                     "status": "not_started"
                 })
 
@@ -844,8 +841,6 @@ async def get_grades(
             "username": student.username,
             "class_name": class_name or "",
             "task_scores": task_scores,
-            "total_bonus": round(total_bonus, 1),
-            "total_attendance": round(total_attendance, 1),
             "average_score": avg_score,
             "task_count": task_count
         })
@@ -881,22 +876,8 @@ async def record_rollcall(
     record = RollcallRecord(student_id=student_id, class_id=class_id)
     db.add(record)
 
-    # 更新所有 Score 记录的 rollcall_count
-    scores_result = await db.execute(select(Score).where(Score.user_id == student_id))
-    scores = scores_result.scalars().all()
-    for score in scores:
-        score.rollcall_count = (score.rollcall_count or 0) + 1
-
-    # 如果开启自动出勤分
-    rollcall_score = _system_settings.get("rollcall_score", 5)
-    auto_score = _system_settings.get("rollcall_auto_score", False)
-    if auto_score and rollcall_score > 0:
-        for score in scores:
-            score.attendance_score = (score.attendance_score or 0) + rollcall_score
-            score.final_score = calc_final_score(score)
-
     await db.commit()
-    return {"message": f"已记录 {student.name} 的出勤", "rollcall_count": (scores[0].rollcall_count if scores else 1)}
+    return {"message": f"已记录 {student.name} 的出勤"}
 
 
 @router.get("/rollcall/today")
@@ -921,33 +902,70 @@ async def set_attendance_score(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """手动设置学生出勤分"""
+    """手动设置学生出勤分 — 更新 GradeRecord"""
     student_id = data.get("student_id")
-    task_id = data.get("task_id")
     score_value = data.get("score", 0)
 
     if not student_id:
         raise HTTPException(status_code=400, detail="请选择学生")
 
-    if task_id:
-        # 针对特定任务
-        score_result = await db.execute(
-            select(Score).where(Score.user_id == student_id, Score.task_id == task_id)
+    # 查找学生
+    student_result = await db.execute(select(User).where(User.id == student_id, User.role == "student"))
+    student = student_result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    from app.models.grade import GradeScheme, GradeItem, GradeRecord
+
+    if not student.class_id:
+        raise HTTPException(status_code=400, detail="该学生未分配班级，无法设置出勤分")
+
+    # 查找该班级的启用方案
+    scheme_result = await db.execute(
+        select(GradeScheme).where(
+            GradeScheme.class_id == student.class_id,
+            GradeScheme.is_active == True
         )
-        score = score_result.scalar_one_or_none()
-        if not score:
-            score = Score(user_id=student_id, task_id=task_id, total_submissions=0)
-            db.add(score)
-            await db.flush()
-        score.attendance_score = score_value
-        score.final_score = calc_final_score(score)
+    )
+    scheme = scheme_result.scalar_one_or_none()
+    if not scheme:
+        raise HTTPException(status_code=400, detail="该班级未配置成绩方案")
+
+    # 查找"出勤"或"平时"类计分项目
+    items_result = await db.execute(
+        select(GradeItem).where(GradeItem.scheme_id == scheme.id).order_by(GradeItem.sort_order)
+    )
+    items = items_result.scalars().all()
+    target_item = None
+    for item in items:
+        if '出勤' in item.name or '平时' in item.name:
+            target_item = item
+            break
+    if not target_item and items:
+        target_item = items[0]
+
+    if not target_item:
+        raise HTTPException(status_code=400, detail="成绩方案中没有可设置的计分项目")
+
+    # 查找或创建 GradeRecord
+    record_result = await db.execute(
+        select(GradeRecord).where(
+            GradeRecord.student_id == student_id,
+            GradeRecord.item_id == target_item.id
+        )
+    )
+    record = record_result.scalar_one_or_none()
+    if record:
+        record.score = score_value
+        record.recorded_by = current_user.id
     else:
-        # 所有任务
-        scores_result = await db.execute(select(Score).where(Score.user_id == student_id))
-        scores = scores_result.scalars().all()
-        for score in scores:
-            score.attendance_score = score_value
-            score.final_score = calc_final_score(score)
+        record = GradeRecord(
+            student_id=student_id,
+            item_id=target_item.id,
+            score=score_value,
+            recorded_by=current_user.id
+        )
+        db.add(record)
 
     await db.commit()
     return {"message": f"出勤分已设置为 {score_value}"}
