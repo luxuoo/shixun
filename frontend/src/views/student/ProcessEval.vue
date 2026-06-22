@@ -548,9 +548,9 @@ async function loadData() {
   loading.value = true
   try {
     const [dashboard, radar, trend] = await Promise.all([
-      evalApi.getStudentDashboard(studentId) as Promise<DashboardData>,
-      evalApi.getStudentRadar(studentId) as Promise<RadarItem[]>,
-      evalApi.getStudentTrend(studentId) as Promise<TrendData>
+      evalApi.getStudentDashboard(studentId) as any,
+      evalApi.getStudentRadar(studentId) as any,
+      evalApi.getStudentTrend(studentId) as any
     ])
 
     dashboardData.value = dashboard
