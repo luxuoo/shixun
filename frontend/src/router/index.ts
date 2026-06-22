@@ -49,6 +49,11 @@ const router = createRouter({
           path: 'ai-history',
           name: 'AiHistory',
           component: () => import('@/views/student/AiHistory.vue')
+        },
+        {
+          path: 'process-eval',
+          name: 'ProcessEval',
+          component: () => import('@/views/student/ProcessEval.vue')
         }
       ]
     },
@@ -123,6 +128,16 @@ const router = createRouter({
           path: 'grade-settings',
           name: 'AdminGradeSettings',
           component: () => import('@/views/admin/GradeSettings.vue')
+        },
+        {
+          path: 'process-eval',
+          name: 'AdminProcessEval',
+          component: () => import('@/views/admin/ProcessEvalDashboard.vue')
+        },
+        {
+          path: 'process-eval-config',
+          name: 'AdminProcessEvalConfig',
+          component: () => import('@/views/admin/ProcessEvalConfig.vue')
         }
       ]
     }

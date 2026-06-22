@@ -194,3 +194,72 @@ export const adminApi = {
   exportGrades: (params?: any) => api.get('/admin/grades/export', { params }),
   getStudentGrades: () => api.get('/admin/student/grades')
 }
+
+// 过程性评价接口
+export const evalApi = {
+  // 模板管理
+  getTemplates: (classId?: number) =>
+    api.get('/evaluation/templates', { params: classId ? { class_id: classId } : {} }),
+  getTemplate: (id: number) =>
+    api.get(`/evaluation/templates/${id}`),
+  createTemplate: (data: { name: string; description?: string; class_id?: number }) =>
+    api.post('/evaluation/templates', data),
+  updateTemplate: (id: number, data: any) =>
+    api.put(`/evaluation/templates/${id}`, data),
+  deleteTemplate: (id: number) =>
+    api.delete(`/evaluation/templates/${id}`),
+  activateTemplate: (id: number) =>
+    api.post(`/evaluation/templates/${id}/activate`),
+  initDefaultTemplate: (classId?: number) =>
+    api.post('/evaluation/templates/init-default', null, { params: classId ? { class_id: classId } : {} }),
+  checkTemplateWeights: (templateId: number) =>
+    api.get(`/evaluation/templates/${templateId}/weight-validation`),
+
+  // 阶段管理
+  createPhase: (templateId: number, data: { name: string; weight: number; sort_order?: number }) =>
+    api.post(`/evaluation/templates/${templateId}/phases`, data),
+  updatePhase: (phaseId: number, data: any) =>
+    api.put(`/evaluation/phases/${phaseId}`, data),
+  deletePhase: (phaseId: number) =>
+    api.delete(`/evaluation/phases/${phaseId}`),
+
+  // 指标管理
+  createIndicator: (phaseId: number, data: any) =>
+    api.post(`/evaluation/phases/${phaseId}/indicators`, data),
+  updateIndicator: (indicatorId: number, data: any) =>
+    api.put(`/evaluation/indicators/${indicatorId}`, data),
+  deleteIndicator: (indicatorId: number) =>
+    api.delete(`/evaluation/indicators/${indicatorId}`),
+  checkIndicatorWeights: (phaseId: number) =>
+    api.post(`/evaluation/phases/${phaseId}/indicators/weight-validation`),
+
+  // 评分主体
+  addScorer: (indicatorId: number, data: { scorer_role: string; weight: number }) =>
+    api.post(`/evaluation/indicators/${indicatorId}/scorers`, data),
+  deleteScorer: (scorerId: number) =>
+    api.delete(`/evaluation/scorers/${scorerId}`),
+
+  // 评价记录
+  createRecord: (data: any) =>
+    api.post('/evaluation/records', data),
+  batchCreateRecords: (data: any) =>
+    api.post('/evaluation/records/batch', data),
+  getRecords: (params?: { template_id?: number; student_id?: number; indicator_id?: number }) =>
+    api.get('/evaluation/records', { params }),
+  autoCollect: (templateId: number, classId?: number) =>
+    api.post(`/evaluation/records/auto-collect/${templateId}`, null, { params: classId ? { class_id: classId } : {} }),
+
+  // 学生看板
+  getStudentDashboard: (studentId: number, templateId?: number) =>
+    api.get(`/evaluation/dashboard/student/${studentId}`, { params: templateId ? { template_id: templateId } : {} }),
+  getStudentRadar: (studentId: number, templateId?: number) =>
+    api.get(`/evaluation/dashboard/student/${studentId}/radar`, { params: templateId ? { template_id: templateId } : {} }),
+  getStudentTrend: (studentId: number, templateId?: number) =>
+    api.get(`/evaluation/dashboard/student/${studentId}/trend`, { params: templateId ? { template_id: templateId } : {} }),
+
+  // 班级看板
+  getClassDashboard: (classId: number, templateId?: number) =>
+    api.get(`/evaluation/dashboard/class/${classId}`, { params: templateId ? { template_id: templateId } : {} }),
+  getClassRanking: (classId: number, templateId?: number) =>
+    api.get(`/evaluation/dashboard/class/${classId}/ranking`, { params: templateId ? { template_id: templateId } : {} })
+}

@@ -132,7 +132,8 @@ const currentPageTitle = computed(() => {
     TaskDetail: '任务详情',
     Submissions: '提交记录',
     Scores: '我的成绩',
-    AiHistory: 'AI 对话历史'
+    AiHistory: 'AI 对话历史',
+    ProcessEval: '过程性评价'
   }
   return nameMap[route.name as string] || 'AI 教学系统'
 })
@@ -162,6 +163,11 @@ const menuOptions: MenuOption[] = [
     label: 'AI 对话历史',
     key: 'AiHistory',
     icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z' })]) })
+  },
+  {
+    label: '过程性评价',
+    key: 'ProcessEval',
+    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z' })]) })
   }
 ]
 
@@ -172,7 +178,8 @@ const breadcrumbs = computed(() => {
     TaskDetail: '任务详情',
     Submissions: '提交记录',
     Scores: '我的成绩',
-    AiHistory: 'AI 对话历史'
+    AiHistory: 'AI 对话历史',
+    ProcessEval: '过程性评价'
   }
   if (route.name === 'TaskDetail') {
     items.push({ path: '/tasks', title: '教学任务' })

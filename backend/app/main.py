@@ -6,8 +6,11 @@ import os
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api import auth, tasks, submissions, ai, admin
-from app.models import User, Class, Task, TaskStep, Submission, AiLog, Score
+from app.api import auth, tasks, submissions, ai, admin, evaluation
+from app.models import (
+    User, Class, Task, TaskStep, Submission, AiLog, Score,
+    EvalTemplate, EvalPhase, EvalIndicator, EvalScorerConfig, EvalRecord, EvalSnapshot
+)
 
 
 @asynccontextmanager
@@ -46,6 +49,7 @@ app.include_router(tasks.router)
 app.include_router(submissions.router)
 app.include_router(ai.router)
 app.include_router(admin.router)
+app.include_router(evaluation.router)
 
 
 @app.get("/")
