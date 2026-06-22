@@ -325,6 +325,7 @@ function getDimRailColor(score: number): string {
 }
 
 function getBarColor(label: string): string {
+  if (!label) return '#d03050'
   if (label.includes('90') || label.includes('100')) return '#18a058'
   if (label.includes('80')) return '#2080f0'
   if (label.includes('70')) return '#f0a020'
@@ -394,7 +395,7 @@ function drawDistributionChart() {
     const barHeight = (item.count / niceMax) * chartHeight
     const x = padding.left + barGroupWidth * i + barGap
     const y = padding.top + chartHeight - barHeight
-    const color = getBarColor(item.label)
+    const color = getBarColor(item.range || item.label || '')
 
     // 绘制渐变柱体
     const gradient = ctx.createLinearGradient(x, y, x, y + barHeight)
@@ -424,7 +425,7 @@ function drawDistributionChart() {
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
-    ctx.fillText(item.label, x + barWidth / 2, padding.top + chartHeight + 10)
+    ctx.fillText(item.range || item.label || '', x + barWidth / 2, padding.top + chartHeight + 10)
   }
 
   // Y 轴标题
