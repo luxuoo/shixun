@@ -245,18 +245,14 @@ function stopRollCall() {
   }).catch(() => {})
 }
 
-// +1分
+// +1分（记录到本地会话）
 async function addBonusScore() {
   if (!calledStudent.value) return
   addScoreLoading.value = true
   try {
-    await adminApi.adjustScore(calledStudent.value.id, {
-      adjustment: 1,
-      reason: '课堂点名加分'
-    })
     const sid = calledStudent.value.id
     sessionScores.value[sid] = (sessionScores.value[sid] || 0) + 1
-    message.success(`${calledStudent.value.name} +1分`)
+    message.success(`${calledStudent.value.name} +1分（会话记录）`)
   } catch (error: any) {
     message.error(error?.detail || '加分失败')
   } finally {
