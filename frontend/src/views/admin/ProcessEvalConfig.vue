@@ -437,6 +437,7 @@ const dataSourceOptions = [
   { label: '代码提交', value: 'submission' },
   { label: '出勤', value: 'attendance' },
   { label: 'AI评分', value: 'ai_score' },
+  { label: '任务综合分', value: 'task_score' },
   { label: 'API', value: 'api' }
 ]
 
@@ -452,6 +453,7 @@ const dataSourceMap: Record<string, string> = {
   submission: '代码提交',
   attendance: '出勤',
   ai_score: 'AI评分',
+  task_score: '任务综合分',
   api: 'API'
 }
 

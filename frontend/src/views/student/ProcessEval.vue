@@ -3,7 +3,11 @@
     <h2 class="page-title">过程性评价</h2>
 
     <n-spin :show="loading">
-      <template v-if="!loading && !dashboardData">
+      <template v-if="!loading && !gradesVisible">
+        <n-empty description="成绩暂未开放查看，请等待教师开放" style="padding: 60px 0;" />
+      </template>
+
+      <template v-else-if="!loading && !dashboardData">
         <n-empty description="暂无过程性评价数据" style="padding: 60px 0;" />
       </template>
 
@@ -88,8 +92,8 @@
               <div class="chart-wrapper">
                 <canvas
                   ref="radarCanvasRef"
-                  :width="360"
-                  :height="360"
+                  :width="480"
+                  :height="380"
                   class="radar-canvas"
                 ></canvas>
               </div>
@@ -167,7 +171,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h } from 'vue'
 import { NTag } from 'naive-ui'
-import { evalApi } from '@/api'
+import { evalApi, authApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 
 interface PhaseScore {
@@ -180,7 +184,7 @@ interface PhaseScore {
 interface DashboardData {
   total_score: number | null
   phase_scores: PhaseScore[]
-  dim_scores: Record<string, number>
+  dim_scores: RadarItem[]
   template_name: string
 }
 
@@ -204,6 +208,7 @@ interface TrendData {
 
 const userStore = useUserStore()
 const loading = ref(false)
+const gradesVisible = ref(true)
 const dashboardData = ref<DashboardData | null>(null)
 const radarData = ref<RadarItem[]>([])
 const trendPoints = ref<TrendPoint[]>([])
@@ -317,19 +322,13 @@ function buildDetailTable(dashboard: DashboardData): any[] {
     }
   }
   if (dashboard.dim_scores) {
-    for (const [dim, score] of Object.entries(dashboard.dim_scores)) {
-      const labelMap: Record<string, string> = {
-        knowledge: '知识基础',
-        craft: '工法能力',
-        professional: '职业素养',
-        innovation: '创新贡献'
-      }
+    for (const item of dashboard.dim_scores) {
       rows.push({
-        indicator_name: labelMap[dim] || dim,
+        indicator_name: item.dim_label || item.dimension,
         phase_name: '维度',
         weight: 25,
-        score: score,
-        dimension_label: labelMap[dim] || dim
+        score: item.score,
+        dimension_label: item.dim_label || item.dimension
       })
     }
   }
@@ -524,8 +523,8 @@ function drawRadarChart() {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const displayWidth = 360
-  const displayHeight = 360
+  const displayWidth = 480
+  const displayHeight = 380
   canvas.width = displayWidth * dpr
   canvas.height = displayHeight * dpr
   canvas.style.width = displayWidth + 'px'
@@ -533,7 +532,7 @@ function drawRadarChart() {
   ctx.scale(dpr, dpr)
 
   const centerX = displayWidth / 2
-  const centerY = displayHeight / 2
+  const centerY = displayHeight / 2 + 5
   const maxRadius = 130
   const axes = radarData.value.length
 
@@ -789,6 +788,19 @@ async function loadData() {
 
   loading.value = true
   try {
+    // 检查成绩可见性
+    try {
+      const settings = await authApi.getSettings() as any
+      gradesVisible.value = settings.student_view_grades !== false
+    } catch {
+      gradesVisible.value = true
+    }
+
+    if (!gradesVisible.value) {
+      loading.value = false
+      return
+    }
+
     const [dashboard, radar, trend] = await Promise.all([
       evalApi.getStudentDashboard(studentId) as any,
       evalApi.getStudentRadar(studentId) as any,

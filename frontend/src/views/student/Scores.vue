@@ -3,8 +3,15 @@
     <h2 class="page-title">我的成绩</h2>
 
     <n-spin :show="loading">
+      <!-- 成绩未开放 -->
+      <template v-if="!loading && !gradesVisible">
+        <n-card>
+          <n-empty description="成绩暂未开放查看，请等待教师开放" style="padding: 60px 0;" />
+        </n-card>
+      </template>
+
       <!-- Empty state -->
-      <template v-if="!loading && !dashboardData">
+      <template v-else-if="!loading && !dashboardData">
         <n-card>
           <n-empty description="暂无过程性评价成绩数据" style="padding: 60px 0;" />
         </n-card>
@@ -89,7 +96,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
 import { NTag, NProgress } from 'naive-ui'
-import { evalApi } from '@/api'
+import { evalApi, authApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 
 interface Indicator {
@@ -125,6 +132,7 @@ interface DashboardData {
 
 const userStore = useUserStore()
 const loading = ref(false)
+const gradesVisible = ref(true)
 const dashboardData = ref<DashboardData | null>(null)
 const phaseScores = ref<PhaseScore[]>([])
 const radarData = ref<DimScore[]>([])
@@ -448,6 +456,19 @@ async function loadData() {
 
   loading.value = true
   try {
+    // 检查成绩可见性
+    try {
+      const settings = await authApi.getSettings() as any
+      gradesVisible.value = settings.student_view_grades !== false
+    } catch {
+      gradesVisible.value = true
+    }
+
+    if (!gradesVisible.value) {
+      loading.value = false
+      return
+    }
+
     const dashboard = await evalApi.getStudentDashboard(studentId) as any as DashboardData
 
     dashboardData.value = dashboard

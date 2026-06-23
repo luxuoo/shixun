@@ -67,7 +67,7 @@ class IndicatorBase(BaseModel):
     @field_validator("data_source")
     @classmethod
     def validate_source(cls, v):
-        allowed = {"manual", "submission", "attendance", "ai_score", "api"}
+        allowed = {"manual", "submission", "attendance", "ai_score", "task_score", "api"}
         if v not in allowed:
             raise ValueError(f"数据来源必须是 {allowed} 之一")
         return v

@@ -928,6 +928,17 @@ async def auto_collect(
                     score = min(100.0, count * 10.0)
                     evidence_type = "attendance"
 
+                elif indicator.data_source == "task_score":
+                    # 从教学任务综合分采集 (Score.final_score = AI*权重 + 教师*权重)
+                    task_score_result = await db.execute(
+                        select(func.avg(Score.final_score))
+                        .where(Score.user_id == student.id, Score.final_score.isnot(None))
+                    )
+                    avg_score = task_score_result.scalar()
+                    if avg_score is not None:
+                        score = round(avg_score, 1)
+                        evidence_type = "task_score"
+
                 if score is not None:
                     # 根据数据源和评分主体配置确定 scorer_role
                     scorer_role = "system"
@@ -935,6 +946,7 @@ async def auto_collect(
                         "ai_score": "ai",
                         "submission": "teacher",
                         "attendance": "teacher",
+                        "task_score": "teacher",
                     }
                     candidate_role = data_source_role_map.get(indicator.data_source)
                     if candidate_role and any(
@@ -1085,6 +1097,11 @@ async def get_student_dashboard(
     if current_user.role == "student" and current_user.id != student_id:
         raise HTTPException(status_code=403, detail="权限不足")
 
+    # 成绩可见性检查
+    from app.api.auth import _system_settings
+    if current_user.role == "student" and not _system_settings.get("student_view_grades", True):
+        raise HTTPException(status_code=403, detail="成绩暂未开放查看")
+
     # 获取活跃模板
     if not template_id:
         student = await db.get(User, student_id)
@@ -1144,6 +1161,10 @@ async def get_student_radar(
     if current_user.role == "student" and current_user.id != student_id:
         raise HTTPException(status_code=403, detail="权限不足")
 
+    from app.api.auth import _system_settings
+    if current_user.role == "student" and not _system_settings.get("student_view_grades", True):
+        raise HTTPException(status_code=403, detail="成绩暂未开放查看")
+
     if not template_id:
         student = await db.get(User, student_id)
         result = await db.execute(
@@ -1175,6 +1196,10 @@ async def get_student_trend(
     """成长趋势数据"""
     if current_user.role == "student" and current_user.id != student_id:
         raise HTTPException(status_code=403, detail="权限不足")
+
+    from app.api.auth import _system_settings
+    if current_user.role == "student" and not _system_settings.get("student_view_grades", True):
+        raise HTTPException(status_code=403, detail="成绩暂未开放查看")
 
     if not template_id:
         student = await db.get(User, student_id)
