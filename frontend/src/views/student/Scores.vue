@@ -61,8 +61,8 @@
           <div class="chart-wrapper">
             <canvas
               ref="radarCanvasRef"
-              :width="360"
-              :height="360"
+              :width="480"
+              :height="380"
               class="radar-canvas"
             ></canvas>
           </div>
@@ -320,8 +320,8 @@ function drawRadarChart() {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const displayWidth = 360
-  const displayHeight = 360
+  const displayWidth = 480
+  const displayHeight = 380
   canvas.width = displayWidth * dpr
   canvas.height = displayHeight * dpr
   canvas.style.width = displayWidth + 'px'
@@ -329,7 +329,7 @@ function drawRadarChart() {
   ctx.scale(dpr, dpr)
 
   const centerX = displayWidth / 2
-  const centerY = displayHeight / 2
+  const centerY = displayHeight / 2 + 5
   const maxRadius = 130
   const axes = radarData.value.length
 
