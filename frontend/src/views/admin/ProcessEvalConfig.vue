@@ -13,8 +13,8 @@
         所有阶段权重合计 100%，配置正确。
       </template>
       <template v-else>
-        <div>阶段权重合计 {{ weightValidation.phase_total }}%，需为 100%。</div>
-        <div v-for="(msg, idx) in weightValidation.messages" :key="idx">{{ msg }}</div>
+        <div>阶段权重合计 {{ weightValidation.total_weight }}%，需为 100%。</div>
+        <div>{{ weightValidation.message }}</div>
       </template>
     </n-alert>
 
@@ -549,10 +549,10 @@ const scorerConfigs = ref<any[]>([])
 const newScorer = ref({ scorer_role: null as string | null, weight: 50 })
 
 // 权重校验
-const weightValidation = ref<{ valid: boolean; phase_total: number; messages: string[] }>({
+const weightValidation = ref<{ valid: boolean; total_weight: number; message: string }>({
   valid: false,
-  phase_total: 0,
-  messages: []
+  total_weight: 0,
+  message: ''
 })
 
 // ==================== 计算属性 ====================
@@ -688,7 +688,7 @@ async function loadTemplates() {
 async function handleTemplateChange(id: number | null) {
   if (!id) {
     currentTemplate.value = null
-    weightValidation.value = { valid: false, phase_total: 0, messages: [] }
+    weightValidation.value = { valid: false, total_weight: 0, message: '' }
     return
   }
   await loadTemplateDetail(id)
@@ -895,8 +895,8 @@ async function checkWeights() {
     const result = await evalApi.checkTemplateWeights(selectedTemplateId.value) as any
     weightValidation.value = {
       valid: result.valid ?? false,
-      phase_total: result.phase_total ?? 0,
-      messages: result.messages ?? []
+      total_weight: result.total_weight ?? 0,
+      message: result.message ?? ''
     }
   } catch (e: any) {
     // 如果接口不存在或出错，本地计算
@@ -914,8 +914,8 @@ async function checkWeights() {
       }
       weightValidation.value = {
         valid: total === 100 && messages.length === 0,
-        phase_total: total,
-        messages
+        total_weight: total,
+        message: messages.join('; ')
       }
     }
   }

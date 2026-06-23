@@ -158,9 +158,19 @@ async function loadData() {
   if (!studentId) return
   loading.value = true
   try {
-    // 获取活跃模板
-    const tplRes = await evalApi.getStudentDashboard(studentId) as any
-    const tplId = tplRes.template_id
+    // 获取活跃模板（通过看板接口获取 template_id）
+    let tplId: number | null = null
+    try {
+      const tplRes = await evalApi.getStudentDashboard(studentId) as any
+      tplId = tplRes.template_id
+    } catch (e: any) {
+      // 如果看板接口失败（如成绩未开放），尝试直接获取模板列表
+      try {
+        const templates = await evalApi.getTemplates() as any
+        const activeTpl = (Array.isArray(templates) ? templates : []).find((t: any) => t.is_active)
+        if (activeTpl) tplId = activeTpl.id
+      } catch {}
+    }
     if (!tplId) {
       loading.value = false
       return

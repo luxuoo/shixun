@@ -275,7 +275,7 @@ async def init_default_template(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """初始化默认评价模板（课前10%+课中35%+课后10%）"""
+    """初始化默认评价模板（课前20%+课中60%+课后20%）"""
     template = EvalTemplate(
         name="默认过程性评价方案",
         description="基于教学实施报告的默认评价体系，包含课前/课中/课后三阶段",
@@ -285,8 +285,8 @@ async def init_default_template(
     db.add(template)
     await db.flush()
 
-    # 课前阶段
-    phase_pre = EvalPhase(template_id=template.id, name="课前", weight=10, sort_order=1)
+    # 课前阶段（权重 20%）
+    phase_pre = EvalPhase(template_id=template.id, name="课前", weight=20, sort_order=1)
     db.add(phase_pre)
     await db.flush()
 
@@ -297,8 +297,8 @@ async def init_default_template(
     ]
     db.add_all(indicators_pre)
 
-    # 课中阶段
-    phase_mid = EvalPhase(template_id=template.id, name="课中", weight=35, sort_order=2)
+    # 课中阶段（权重 60%）
+    phase_mid = EvalPhase(template_id=template.id, name="课中", weight=60, sort_order=2)
     db.add(phase_mid)
     await db.flush()
 
@@ -309,8 +309,8 @@ async def init_default_template(
     ]
     db.add_all(indicators_mid)
 
-    # 课后阶段
-    phase_post = EvalPhase(template_id=template.id, name="课后", weight=10, sort_order=3)
+    # 课后阶段（权重 20%）
+    phase_post = EvalPhase(template_id=template.id, name="课后", weight=20, sort_order=3)
     db.add(phase_post)
     await db.flush()
 
@@ -703,6 +703,23 @@ async def student_self_eval(
     if not has_self:
         raise HTTPException(status_code=400, detail="该指标未配置学生自评")
 
+    # 防止重复自评：检查是否已经给该指标自评过
+    existing_result = await db.execute(
+        select(EvalRecord).where(
+            EvalRecord.student_id == current_user.id,
+            EvalRecord.indicator_id == indicator_id,
+            EvalRecord.template_id == template_id,
+            EvalRecord.scorer_role == "self"
+        ).limit(1)
+    )
+    existing_self = existing_result.scalar_one_or_none()
+    if existing_self:
+        # 更新已有记录
+        existing_self.score = score
+        existing_self.remark = remark
+        await db.commit()
+        return {"message": "自评已更新", "record_id": existing_self.id}
+
     record = EvalRecord(
         student_id=current_user.id,
         indicator_id=indicator_id,
@@ -765,6 +782,24 @@ async def student_peer_eval(
         raise HTTPException(status_code=404, detail="目标学生不存在")
     if target.class_id != current_user.class_id:
         raise HTTPException(status_code=403, detail="只能评价同班同学")
+
+    # 防止重复互评：检查是否已经给该同学该指标打过分
+    existing_result = await db.execute(
+        select(EvalRecord).where(
+            EvalRecord.student_id == target_student_id,
+            EvalRecord.indicator_id == indicator_id,
+            EvalRecord.template_id == template_id,
+            EvalRecord.scorer_id == current_user.id,
+            EvalRecord.scorer_role == "peer"
+        ).limit(1)
+    )
+    existing_peer = existing_result.scalar_one_or_none()
+    if existing_peer:
+        # 更新已有记录而非重复创建
+        existing_peer.score = score
+        existing_peer.remark = remark
+        await db.commit()
+        return {"message": "互评已更新", "record_id": existing_peer.id}
 
     record = EvalRecord(
         student_id=target_student_id,
@@ -864,13 +899,14 @@ async def auto_collect(
     current_user: User = Depends(get_current_teacher)
 ):
     """触发自动采集（从提交/AI评分/出勤拉取数据）"""
-    # 获取模板及所有自动采集指标
+    # 获取模板及所有自动采集指标（含评分主体配置）
     result = await db.execute(
         select(EvalTemplate)
         .where(EvalTemplate.id == template_id)
         .options(
             selectinload(EvalTemplate.phases)
             .selectinload(EvalPhase.indicators)
+            .selectinload(EvalIndicator.scorer_configs)
         )
     )
     template = result.scalar_one_or_none()
@@ -894,7 +930,7 @@ async def auto_collect(
                 if not indicator.auto_collect:
                     continue
 
-                # 检查是否已有该指标的最新记录
+                # 如果已有该指标的记录则更新（覆盖旧数据）
                 existing = await db.execute(
                     select(EvalRecord).where(
                         EvalRecord.student_id == student.id,
@@ -902,10 +938,7 @@ async def auto_collect(
                         EvalRecord.template_id == template_id
                     ).order_by(EvalRecord.created_at.desc()).limit(1)
                 )
-                # 如果最近24小时内已有记录则跳过
-                recent = existing.scalar_one_or_none()
-                if recent and recent.created_at and (datetime.utcnow() - recent.created_at).total_seconds() < 86400:
-                    continue
+                existing_record = existing.scalar_one_or_none()
 
                 score = None
                 evidence_type = None
@@ -971,16 +1004,23 @@ async def auto_collect(
                     ):
                         scorer_role = candidate_role
 
-                    record = EvalRecord(
-                        student_id=student.id,
-                        indicator_id=indicator.id,
-                        template_id=template_id,
-                        score=score,
-                        scorer_role=scorer_role,
-                        evidence_type=evidence_type,
-                        evidence_id=evidence_id
-                    )
-                    db.add(record)
+                    if existing_record:
+                        # 更新已有记录
+                        existing_record.score = score
+                        existing_record.evidence_type = evidence_type
+                        existing_record.scorer_role = scorer_role
+                    else:
+                        # 创建新记录
+                        record = EvalRecord(
+                            student_id=student.id,
+                            indicator_id=indicator.id,
+                            template_id=template_id,
+                            score=score,
+                            scorer_role=scorer_role,
+                            evidence_type=evidence_type,
+                            evidence_id=evidence_id
+                        )
+                        db.add(record)
                     collected_count += 1
 
     await db.commit()
@@ -1031,20 +1071,28 @@ async def calculate_student_score(
             records = records_result.scalars().all()
 
             if records:
-                # 如果有多个评分主体，按配置权重加权平均
+                # 按 scorer_role 分组取平均
+                role_avgs = {}
+                for r in records:
+                    role = r.scorer_role or "teacher"
+                    if role not in role_avgs:
+                        role_avgs[role] = []
+                    role_avgs[role].append(r.score or 0)
+                for role in role_avgs:
+                    role_avgs[role] = sum(role_avgs[role]) / len(role_avgs[role])
+
                 if indicator.scorer_configs:
+                    # 有评分主体配置：按配置权重加权
                     weighted_sum = 0
                     weight_total = 0
                     for sc in indicator.scorer_configs:
-                        role_records = [r for r in records if r.scorer_role == sc.scorer_role]
-                        if role_records:
-                            avg = sum(r.score or 0 for r in role_records) / len(role_records)
-                            weighted_sum += avg * sc.weight
+                        if sc.scorer_role in role_avgs:
+                            weighted_sum += role_avgs[sc.scorer_role] * sc.weight
                             weight_total += sc.weight
                     indicator_score = weighted_sum / weight_total if weight_total > 0 else 0
                 else:
-                    # 无主体配置，取所有记录平均值
-                    indicator_score = sum(r.score or 0 for r in records) / len(records)
+                    # 无主体配置：按角色等权平均
+                    indicator_score = sum(role_avgs.values()) / len(role_avgs)
             else:
                 indicator_score = 0
 
@@ -1143,15 +1191,29 @@ async def get_student_dashboard(
 
     student = await db.get(User, student_id)
 
-    # 保存快照
-    snapshot = EvalSnapshot(
-        student_id=student_id,
-        template_id=template_id,
-        total_score=calc_result["total_score"],
-        phase_scores=json.dumps({p.phase_name: p.score for p in calc_result["phase_scores"]}),
-        dim_scores=json.dumps({d.dimension: d.score for d in calc_result["dim_scores"]})
+    # 保存快照（同一天同一学生同一模板只保留一条，更新而非重复创建）
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    existing_snapshot = await db.execute(
+        select(EvalSnapshot).where(
+            EvalSnapshot.student_id == student_id,
+            EvalSnapshot.template_id == template_id,
+            EvalSnapshot.snapshot_date >= today_start
+        ).limit(1)
     )
-    db.add(snapshot)
+    snapshot = existing_snapshot.scalar_one_or_none()
+    if snapshot:
+        snapshot.total_score = calc_result["total_score"]
+        snapshot.phase_scores = json.dumps({p.phase_name: p.score for p in calc_result["phase_scores"]})
+        snapshot.dim_scores = json.dumps({d.dimension: d.score for d in calc_result["dim_scores"]})
+    else:
+        snapshot = EvalSnapshot(
+            student_id=student_id,
+            template_id=template_id,
+            total_score=calc_result["total_score"],
+            phase_scores=json.dumps({p.phase_name: p.score for p in calc_result["phase_scores"]}),
+            dim_scores=json.dumps({d.dimension: d.score for d in calc_result["dim_scores"]})
+        )
+        db.add(snapshot)
     await db.commit()
 
     return StudentDashboard(

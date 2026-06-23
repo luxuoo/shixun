@@ -47,13 +47,13 @@
         <!-- 阶段分数 -->
         <n-card title="阶段得分" style="margin-bottom: 20px;">
           <n-grid :cols="3" :x-gap="16" responsive="screen" item-responsive>
-            <n-gi v-for="phase in phaseScores" :key="phase.name">
+            <n-gi v-for="phase in phaseScores" :key="phase.phase_id || phase.phase_name">
               <div class="phase-card">
-                <div class="phase-name">{{ phase.name }}</div>
+                <div class="phase-name">{{ phase.phase_name }}</div>
                 <div class="phase-score" :style="{ color: getScoreColor(phase.score) }">
                   {{ phase.score ?? '--' }}
                 </div>
-                <div class="phase-weight">权重: {{ phase.weight }}%</div>
+                <div class="phase-weight">权重: {{ phase.phase_weight }}%</div>
                 <div class="phase-bar">
                   <div
                     class="phase-bar-fill"
@@ -175,10 +175,12 @@ import { evalApi, authApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 
 interface PhaseScore {
-  name: string
+  phase_id: number
+  phase_name: string
+  phase_weight: number
   score: number | null
-  weight: number
-  phase_id?: number
+  weighted_score: number
+  indicators: Array<{ id: number; name: string; score: number; max_score: number; weight: number; normalized_score: number }>
 }
 
 interface DashboardData {
@@ -308,13 +310,28 @@ function getScoreLevel(score: number | null | undefined): string {
 
 function buildDetailTable(dashboard: DashboardData): any[] {
   const rows: any[] = []
+  const dimMap: Record<string, string> = {
+    knowledge: '知识基础', skill: '工法能力', quality: '职业素养', innovation: '创新贡献'
+  }
   if (dashboard.phase_scores) {
     for (const phase of dashboard.phase_scores) {
-      if (phase.score !== null && phase.score !== undefined) {
+      // 展示指标级别明细
+      if (phase.indicators && phase.indicators.length > 0) {
+        for (const ind of phase.indicators) {
+          rows.push({
+            indicator_name: ind.name,
+            phase_name: phase.phase_name,
+            weight: ind.weight,
+            score: ind.normalized_score ?? ind.score,
+            dimension_label: '--'
+          })
+        }
+      } else if (phase.score !== null && phase.score !== undefined) {
+        // 无指标明细时展示阶段汇总
         rows.push({
-          indicator_name: phase.name + ' (阶段汇总)',
-          phase_name: phase.name,
-          weight: phase.weight,
+          indicator_name: phase.phase_name + ' (阶段汇总)',
+          phase_name: phase.phase_name,
+          weight: phase.phase_weight,
           score: phase.score,
           dimension_label: '--'
         })
@@ -408,7 +425,7 @@ function drawPieChart() {
     const val = phase.weighted_score ?? phase.score
     if (val !== null && val !== undefined && val > 0) {
       slices.push({
-        name: phase.phase_name || phase.name,
+        name: phase.phase_name,
         value: Number(val),
         color: pieColors[i % pieColors.length]
       })
