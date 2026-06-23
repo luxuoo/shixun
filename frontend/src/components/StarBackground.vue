@@ -10,17 +10,19 @@ const themeStore = useThemeStore()
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let animId: number | null = null
 let stars: { x: number; y: number; r: number; a: number; da: number }[] = []
+let cssW = 0
+let cssH = 0
 
-function initStars(width: number, height: number) {
+function initStars() {
   stars = []
-  const count = Math.floor((width * height) / 8000) // 密度：每 8000px 一颗星
+  const count = Math.floor((cssW * cssH) / 6000)
   for (let i = 0; i < count; i++) {
     stars.push({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: Math.random() * 1.2 + 0.3,       // 半径 0.3 ~ 1.5
-      a: Math.random() * 0.5 + 0.1,        // 透明度 0.1 ~ 0.6
-      da: (Math.random() - 0.5) * 0.008    // 闪烁速度
+      x: Math.random() * cssW,
+      y: Math.random() * cssH,
+      r: Math.random() * 1.2 + 0.3,
+      a: Math.random() * 0.5 + 0.1,
+      da: (Math.random() - 0.5) * 0.008
     })
   }
 }
@@ -31,9 +33,7 @@ function draw() {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  const w = canvas.width
-  const h = canvas.height
-  ctx.clearRect(0, 0, w, h)
+  ctx.clearRect(0, 0, cssW, cssH)
 
   for (const s of stars) {
     s.a += s.da
@@ -53,13 +53,17 @@ function resize() {
   const canvas = canvasRef.value
   if (!canvas) return
   const dpr = window.devicePixelRatio || 1
-  canvas.width = window.innerWidth * dpr
-  canvas.height = window.innerHeight * dpr
-  canvas.style.width = window.innerWidth + 'px'
-  canvas.style.height = window.innerHeight + 'px'
+  cssW = window.innerWidth
+  cssH = window.innerHeight
+  canvas.width = cssW * dpr
+  canvas.height = cssH * dpr
+  canvas.style.width = cssW + 'px'
+  canvas.style.height = cssH + 'px'
   const ctx = canvas.getContext('2d')
-  if (ctx) ctx.scale(dpr, dpr)
-  initStars(window.innerWidth, window.innerHeight)
+  if (ctx) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  }
+  initStars()
 }
 
 function start() {
@@ -72,14 +76,17 @@ function stop() {
   if (animId) cancelAnimationFrame(animId)
   animId = null
   window.removeEventListener('resize', resize)
+  // 清空画布
+  const canvas = canvasRef.value
+  if (canvas) {
+    const ctx = canvas.getContext('2d')
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+  }
 }
 
 watch(() => themeStore.isDark, (dark) => {
-  if (dark) {
-    start()
-  } else {
-    stop()
-  }
+  if (dark) start()
+  else stop()
 })
 
 onMounted(() => {
@@ -96,8 +103,6 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
   pointer-events: none;
   z-index: 0;
 }
