@@ -687,7 +687,12 @@ async def student_self_eval(
         raise HTTPException(status_code=400, detail="请提供 indicator_id、template_id 和 score")
 
     # 验证指标存在且配置了 self 评分主体
-    indicator = await db.get(EvalIndicator, indicator_id)
+    result = await db.execute(
+        select(EvalIndicator)
+        .where(EvalIndicator.id == indicator_id)
+        .options(selectinload(EvalIndicator.scorer_configs))
+    )
+    indicator = result.scalar_one_or_none()
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
 
@@ -738,7 +743,12 @@ async def student_peer_eval(
         raise HTTPException(status_code=400, detail="互评不能给自己打分，请使用自评功能")
 
     # 验证指标配置了 peer 评分主体
-    indicator = await db.get(EvalIndicator, indicator_id)
+    result = await db.execute(
+        select(EvalIndicator)
+        .where(EvalIndicator.id == indicator_id)
+        .options(selectinload(EvalIndicator.scorer_configs))
+    )
+    indicator = result.scalar_one_or_none()
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
 
@@ -779,7 +789,13 @@ async def get_indicator_students(
     current_user: User = Depends(get_current_user)
 ):
     """获取指标对应班级的所有学生及其评分记录"""
-    indicator = await db.get(EvalIndicator, indicator_id)
+    # 使用 selectinload 加载关联关系（async 下 lazy loading 会报错）
+    result = await db.execute(
+        select(EvalIndicator)
+        .where(EvalIndicator.id == indicator_id)
+        .options(selectinload(EvalIndicator.scorer_configs))
+    )
+    indicator = result.scalar_one_or_none()
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
 
