@@ -77,8 +77,8 @@ export const authApi = {
 
 // 任务接口
 export const taskApi = {
-  getList: (category?: string) =>
-    api.get('/tasks', { params: { category } }),
+  getList: (category?: string, showAll?: boolean) =>
+    api.get('/tasks', { params: { category, show_all: showAll || undefined } }),
   getDetail: (id: number) =>
     api.get(`/tasks/${id}`),
   getSteps: (taskId: number) =>

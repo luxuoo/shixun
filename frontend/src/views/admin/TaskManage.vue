@@ -331,7 +331,7 @@ async function manageSteps(task: any) {
 async function loadTasks() {
   loading.value = true
   try {
-    const data = await taskApi.getList() as any
+    const data = await taskApi.getList(undefined, true) as any
     tasks.value = data
   } catch (error) {
     console.error('加载任务列表失败', error)

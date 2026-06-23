@@ -25,12 +25,17 @@ router = APIRouter(prefix="/api/tasks", tags=["任务"])
 @router.get("", response_model=list[TaskResponse])
 async def get_tasks(
     category: str = None,
+    show_all: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = select(Task).where(Task.is_active == True)
+    query = select(Task)
+    # 学生只看启用的任务，教师/管理员传 show_all=true 可看全部
+    if not (show_all and current_user.role in ("teacher", "admin")):
+        query = query.where(Task.is_active == True)
     if category:
         query = query.where(Task.category == category)
+    query = query.order_by(Task.id.desc())
     result = await db.execute(query)
     return result.scalars().all()
 
