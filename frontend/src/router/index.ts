@@ -120,6 +120,11 @@ const router = createRouter({
           component: () => import('@/views/admin/RollCall.vue')
         },
         {
+          path: 'grade-manage',
+          name: 'AdminGradeManage',
+          component: () => import('@/views/admin/GradeManage.vue')
+        },
+        {
           path: 'process-eval',
           name: 'AdminProcessEval',
           component: () => import('@/views/admin/ProcessEvalDashboard.vue')
