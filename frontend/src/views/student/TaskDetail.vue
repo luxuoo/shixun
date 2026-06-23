@@ -323,7 +323,7 @@ function startPolling() {
     attempts++
     await loadSubmissions()
     const latest = submissions.value[0]
-    if (latest && latest.status !== 'pending' || attempts >= maxAttempts) {
+    if ((latest && latest.status !== 'pending') || attempts >= maxAttempts) {
       if (pollTimer) {
         clearInterval(pollTimer)
         pollTimer = null

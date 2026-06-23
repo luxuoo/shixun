@@ -12,7 +12,7 @@ class ScorerConfigBase(BaseModel):
     @field_validator("scorer_role")
     @classmethod
     def validate_role(cls, v):
-        allowed = {"student", "teacher", "mentor", "peer"}
+        allowed = {"student", "teacher", "mentor", "peer", "ai", "self", "enterprise"}
         if v not in allowed:
             raise ValueError(f"评分主体必须是 {allowed} 之一")
         return v

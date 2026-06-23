@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, h } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
 import { NTag, NProgress } from 'naive-ui'
 import { evalApi } from '@/api'
 import { useUserStore } from '@/stores/user'
@@ -475,6 +475,10 @@ function handleResize() {
 onMounted(() => {
   loadData()
   window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 

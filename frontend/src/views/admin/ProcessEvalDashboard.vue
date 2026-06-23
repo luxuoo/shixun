@@ -202,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, h } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, h } from 'vue'
 import { NTag, NIcon, useMessage } from 'naive-ui'
 import { evalApi, adminApi } from '@/api'
 
@@ -838,19 +838,22 @@ async function handleGenerateInsight() {
   }
 }
 
+// --- 窗口大小变化时重绘图表 ---
+function handleResize() {
+  drawDistributionChart()
+  drawPieChart()
+  drawRadarChart()
+}
+
 // --- 生命周期 ---
 onMounted(() => {
   loadClasses()
+  window.addEventListener('resize', handleResize)
 })
 
-// 窗口大小变化时重绘图表
-if (typeof window !== 'undefined') {
-  window.addEventListener('resize', () => {
-    drawDistributionChart()
-    drawPieChart()
-    drawRadarChart()
-  })
-}
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <style scoped>

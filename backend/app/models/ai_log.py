@@ -24,7 +24,7 @@ class AiLog(Base):
 
 
 class Score(Base):
-    """任务级评分记录 — 仅跟踪 AI 评分和教师评分，出勤/加分由过程性评价管理"""
+    """任务级评分记录 — AI 评分、教师评分、出勤加分等综合计算"""
     __tablename__ = "scores"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -33,9 +33,12 @@ class Score(Base):
     ai_total_score = Column(Float)  # AI 总评分
     completion_rate = Column(Float)  # 完成率
     teacher_score = Column(Float)  # 老师评分
-    final_score = Column(Float)  # 最终综合评分 = ai*0.6 + teacher*0.4
+    attendance_score = Column(Float, default=0)  # 出勤加分
+    bonus_score = Column(Float, default=0)  # 其他加分
+    final_score = Column(Float)  # 最终综合评分
     ai_hint_count = Column(Integer)  # AI 提示使用次数
     total_submissions = Column(Integer)  # 总提交次数
+    rollcall_count = Column(Integer, default=0)  # 点名出勤次数
     status = Column(String(20), default="in_progress")  # in_progress/completed/reviewed
     completed_at = Column(DateTime)
     reviewed_at = Column(DateTime)

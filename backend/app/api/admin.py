@@ -17,12 +17,31 @@ router = APIRouter(prefix="/api/admin", tags=["管理后台"])
 
 
 def calc_final_score(score) -> float:
-    """统一的最终分数计算函数: AI分*0.6 + 教师分*0.4"""
+    """统一的最终分数计算函数，使用 grade_weights 配置
+
+    grade_weights 示例: {"ai": 40, "teacher": 30, "attendance": 20}
+    剩余权重归入 bonus_score。各项按满分100标准化后加权。
+    """
+    from app.api.auth import _system_settings
+
+    weights = _system_settings.get("grade_weights", {"ai": 60, "teacher": 40, "attendance": 0})
+    w_ai = weights.get("ai", 60)
+    w_teacher = weights.get("teacher", 40)
+    w_attendance = weights.get("attendance", 0)
+
     ai = score.ai_total_score or 0
     teacher = score.teacher_score or 0
-    if score.teacher_score is not None:
-        return round(ai * 0.6 + teacher * 0.4, 1)
-    return round(ai, 1)
+    attendance = score.attendance_score or 0
+    bonus = score.bonus_score or 0
+
+    # 如果教师未评分，教师权重归入 AI
+    if score.teacher_score is None:
+        w_ai_total = w_ai + w_teacher
+        weighted = ai * (w_ai_total / 100) + attendance * (w_attendance / 100) + bonus
+    else:
+        weighted = ai * (w_ai / 100) + teacher * (w_teacher / 100) + attendance * (w_attendance / 100) + bonus
+
+    return round(min(100, weighted), 1)
 
 
 @router.get("/ai-test")
@@ -237,7 +256,24 @@ async def get_all_submissions(
         query = query.where(Submission.status == status)
     query = query.order_by(Submission.submitted_at.desc())
     result = await db.execute(query)
-    return result.scalars().all()
+    submissions = result.scalars().all()
+
+    # 补充关联信息（用户名、任务标题）
+    enriched = []
+    for sub in submissions:
+        resp = SubmissionResponse.model_validate(sub)
+        # 获取用户名
+        user_result = await db.execute(select(User.name, User.username).where(User.id == sub.user_id))
+        user_row = user_result.first()
+        if user_row:
+            resp.user_name = user_row[0]
+            resp.username = user_row[1]
+        # 获取任务标题
+        task_result = await db.execute(select(Task.title).where(Task.id == sub.task_id))
+        resp.task_title = task_result.scalar()
+        enriched.append(resp)
+
+    return enriched
 
 
 @router.put("/submissions/{submission_id}/score")
@@ -259,12 +295,13 @@ async def review_submission(
     submission.teacher_score = review_data.teacher_score
     submission.teacher_comment = review_data.teacher_comment
     submission.status = "reviewed"
+    submission.reviewed_at = datetime.now(timezone.utc)
 
-    # 计算最终分数（AI 60% + 老师 40%）
+    # 计算提交级最终分数（AI 60% + 老师 40%）
     if submission.ai_score:
-        submission.final_score = submission.ai_score * 0.6 + review_data.teacher_score * 0.4
+        submission.final_score = round(submission.ai_score * 0.6 + review_data.teacher_score * 0.4, 1)
     else:
-        submission.final_score = review_data.teacher_score
+        submission.final_score = round(review_data.teacher_score, 1)
 
     # 更新评分记录
     score_result = await db.execute(
@@ -467,10 +504,11 @@ async def batch_score_submissions(
             submission.teacher_score = teacher_score
             submission.teacher_comment = teacher_comment
             submission.status = "reviewed"
+            submission.reviewed_at = datetime.now(timezone.utc)
             if submission.ai_score:
-                submission.final_score = submission.ai_score * 0.6 + teacher_score * 0.4
+                submission.final_score = round(submission.ai_score * 0.6 + teacher_score * 0.4, 1)
             else:
-                submission.final_score = teacher_score
+                submission.final_score = round(teacher_score, 1)
 
             # 更新评分记录
             score_result = await db.execute(
@@ -664,6 +702,8 @@ async def record_rollcall(
     current_user: User = Depends(get_current_teacher)
 ):
     """记录点名并可选自动加分"""
+    from app.api.auth import _system_settings
+
     student_id = data.get("student_id")
     class_id = data.get("class_id")
 
@@ -679,6 +719,19 @@ async def record_rollcall(
     # 记录点名
     record = RollcallRecord(student_id=student_id, class_id=class_id)
     db.add(record)
+
+    # 如果开启了自动出勤加分，更新该学生所有任务的 Score 记录
+    if _system_settings.get("rollcall_auto_score", False):
+        rollcall_score = _system_settings.get("rollcall_score", 5)
+        scores_result = await db.execute(
+            select(Score).where(Score.user_id == student_id)
+        )
+        scores = scores_result.scalars().all()
+        for score in scores:
+            score.attendance_score = (score.attendance_score or 0) + rollcall_score
+            score.rollcall_count = (score.rollcall_count or 0) + 1
+            # 重新计算最终分数
+            score.final_score = calc_final_score(score)
 
     await db.commit()
     return {"message": f"已记录 {student.name} 的出勤"}

@@ -85,13 +85,10 @@ async def _auto_score_background(
                 completed_steps = completed_steps_result.scalar() or 0
                 score.completion_rate = (completed_steps / total_steps) * 100
 
-                # 使用统一公式计算最终分数: AI分*0.6 + 教师分*0.4
-                ai = score.ai_total_score or 0
-                teacher = score.teacher_score or 0
-                if score.teacher_score is not None:
-                    score.final_score = round(ai * 0.6 + teacher * 0.4, 1)
-                else:
-                    score.final_score = round(ai, 1)
+                # 使用统一公式计算最终分数
+                from app.api.admin import calc_final_score
+                score.final_score = calc_final_score(score)
+                score.status = "completed"
 
             await db.commit()
         except Exception as e:

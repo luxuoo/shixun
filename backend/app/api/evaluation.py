@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from app.core.database import get_db
 from app.core.security import get_current_user, get_current_teacher, get_current_admin
 from app.models.user import User, Class
+from app.models.task import Task
 from app.models.evaluation import (
     EvalTemplate, EvalPhase, EvalIndicator,
     EvalScorerConfig, EvalRecord, EvalSnapshot
@@ -242,12 +243,6 @@ async def activate_template(
 
     # 取消同班级其他激活模板
     if template.class_id:
-        await db.execute(
-            select(EvalTemplate).where(
-                EvalTemplate.class_id == template.class_id,
-                EvalTemplate.id != template_id
-            )
-        )
         others = await db.execute(
             select(EvalTemplate).where(
                 EvalTemplate.class_id == template.class_id,
@@ -1423,4 +1418,3 @@ async def ai_class_insight(
     )
 
     return {"report": result["report"], "tokens_used": result["tokens_used"]}
-    return dashboard.ranking

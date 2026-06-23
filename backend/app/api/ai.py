@@ -189,6 +189,10 @@ async def score_submission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # 检查 AI 对话是否启用
+    if not _system_settings.get("ai_chat_enabled", True):
+        raise HTTPException(status_code=403, detail="AI 功能已被管理员禁用")
+
     # 获取任务和步骤信息
     task_result = await db.execute(select(Task).where(Task.id == request.task_id))
     task = task_result.scalar_one_or_none()
@@ -291,10 +295,9 @@ async def score_submission(
         score.completion_rate = (completed_steps / total_steps) * 100
 
         # 计算最终分数
-        if score.teacher_score:
-            score.final_score = (score.ai_total_score * 0.6 + score.teacher_score * 0.4)
-        else:
-            score.final_score = score.ai_total_score
+        from app.api.admin import calc_final_score
+        score.final_score = calc_final_score(score)
+        score.status = "completed"
 
     await db.commit()
 
