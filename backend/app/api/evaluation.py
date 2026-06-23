@@ -1503,10 +1503,16 @@ async def ai_generate_template(
     )
 
     if not result["success"]:
-        raise HTTPException(status_code=500, detail=result["error"])
+        error_msg = result.get("error", "AI 生成失败")
+        raw = result.get("raw_content", "")
+        raise HTTPException(status_code=500, detail=f"{error_msg}{'：' + raw[:200] if raw else ''}")
 
     # 将 AI 生成的方案直接创建为模板
     template_data = result["data"]
+
+    # 允许的 data_source 和 scorer_role 值（防止 AI 返回不合法值）
+    VALID_DATA_SOURCES = {"manual", "submission", "attendance", "ai_score", "task_score", "api"}
+    VALID_SCORER_ROLES = {"student", "teacher", "mentor", "peer", "ai", "self", "enterprise"}
     template = EvalTemplate(
         name=template_data.get("name", f"{course_name}过程性评价方案"),
         description=template_data.get("description", ""),
@@ -1527,14 +1533,22 @@ async def ai_generate_template(
         await db.flush()
 
         for ind_data in phase_data.get("indicators", []):
+            # 清理 AI 返回的不合法值
+            ds = ind_data.get("data_source", "manual")
+            if ds not in VALID_DATA_SOURCES:
+                ds = "manual"
+            dim = ind_data.get("capability_dim", "knowledge")
+            if dim not in {"knowledge", "skill", "quality", "innovation"}:
+                dim = "knowledge"
+
             indicator = EvalIndicator(
                 phase_id=phase.id,
                 name=ind_data["name"],
                 weight=ind_data.get("weight", 0),
                 max_score=ind_data.get("max_score", 100),
                 score_type=ind_data.get("score_type", "value"),
-                capability_dim=ind_data.get("capability_dim", "knowledge"),
-                data_source=ind_data.get("data_source", "manual"),
+                capability_dim=dim,
+                data_source=ds,
                 auto_collect=ind_data.get("auto_collect", False),
                 sort_order=ind_data.get("sort_order", 0)
             )
@@ -1542,14 +1556,21 @@ async def ai_generate_template(
             await db.flush()
 
             for sc_data in ind_data.get("scorer_configs", []):
+                role = sc_data.get("scorer_role", "teacher")
+                if role not in VALID_SCORER_ROLES:
+                    role = "teacher"
                 scorer = EvalScorerConfig(
                     indicator_id=indicator.id,
-                    scorer_role=sc_data["scorer_role"],
+                    scorer_role=role,
                     weight=sc_data.get("weight", 100)
                 )
                 db.add(scorer)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"保存模板失败: {str(e)[:300]}")
 
     # 返回完整模板
     result = await db.execute(
