@@ -213,12 +213,35 @@ async def delete_template(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """删除模板"""
+    """删除模板及其所有关联数据"""
     result = await db.execute(select(EvalTemplate).where(EvalTemplate.id == template_id))
     template = result.scalar_one_or_none()
     if not template:
         raise HTTPException(status_code=404, detail="模板不存在")
 
+    # 手动删除关联记录（兼容旧数据库无 ON DELETE CASCADE 的情况）
+    # 1. 删除评价记录
+    await db.execute(delete(EvalRecord).where(EvalRecord.template_id == template_id))
+    # 2. 删除快照
+    await db.execute(delete(EvalSnapshot).where(EvalSnapshot.template_id == template_id))
+    # 3. 获取所有阶段 ID
+    phases_result = await db.execute(select(EvalPhase.id).where(EvalPhase.template_id == template_id))
+    phase_ids = [row[0] for row in phases_result]
+    if phase_ids:
+        # 4. 获取所有指标 ID
+        indicators_result = await db.execute(select(EvalIndicator.id).where(EvalIndicator.phase_id.in_(phase_ids)))
+        indicator_ids = [row[0] for row in indicators_result]
+        if indicator_ids:
+            # 5. 删除评分主体配置
+            await db.execute(delete(EvalScorerConfig).where(EvalScorerConfig.indicator_id.in_(indicator_ids)))
+            # 6. 删除指标关联的评价记录（冗余安全）
+            await db.execute(delete(EvalRecord).where(EvalRecord.indicator_id.in_(indicator_ids)))
+            # 7. 删除指标
+            await db.execute(delete(EvalIndicator).where(EvalIndicator.id.in_(indicator_ids)))
+        # 8. 删除阶段
+        await db.execute(delete(EvalPhase).where(EvalPhase.id.in_(phase_ids)))
+
+    # 9. 删除模板
     await db.delete(template)
     await db.commit()
     return {"message": "删除成功"}
@@ -396,11 +419,19 @@ async def delete_phase(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """删除阶段"""
+    """删除阶段及其所有关联数据"""
     result = await db.execute(select(EvalPhase).where(EvalPhase.id == phase_id))
     phase = result.scalar_one_or_none()
     if not phase:
         raise HTTPException(status_code=404, detail="阶段不存在")
+
+    # 手动删除关联记录
+    indicator_ids_result = await db.execute(select(EvalIndicator.id).where(EvalIndicator.phase_id == phase_id))
+    indicator_ids = [row[0] for row in indicator_ids_result]
+    if indicator_ids:
+        await db.execute(delete(EvalScorerConfig).where(EvalScorerConfig.indicator_id.in_(indicator_ids)))
+        await db.execute(delete(EvalRecord).where(EvalRecord.indicator_id.in_(indicator_ids)))
+        await db.execute(delete(EvalIndicator).where(EvalIndicator.id.in_(indicator_ids)))
 
     await db.delete(phase)
     await db.commit()
@@ -503,11 +534,15 @@ async def delete_indicator(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_teacher)
 ):
-    """删除指标"""
+    """删除指标及其关联数据"""
     result = await db.execute(select(EvalIndicator).where(EvalIndicator.id == indicator_id))
     indicator = result.scalar_one_or_none()
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
+
+    # 手动删除关联记录
+    await db.execute(delete(EvalScorerConfig).where(EvalScorerConfig.indicator_id == indicator_id))
+    await db.execute(delete(EvalRecord).where(EvalRecord.indicator_id == indicator_id))
 
     await db.delete(indicator)
     await db.commit()

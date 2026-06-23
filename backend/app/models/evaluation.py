@@ -82,8 +82,8 @@ class EvalRecord(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    indicator_id = Column(Integer, ForeignKey("eval_indicators.id"), nullable=False)
-    template_id = Column(Integer, ForeignKey("eval_templates.id"), nullable=False)
+    indicator_id = Column(Integer, ForeignKey("eval_indicators.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(Integer, ForeignKey("eval_templates.id", ondelete="CASCADE"), nullable=False)
     score = Column(Float, nullable=True)  # 得分
     scorer_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 评分人
     scorer_role = Column(String(20), nullable=True)  # student/teacher/mentor/peer/system
