@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme-overrides="themeOverrides">
+  <n-config-provider :theme="themeStore.theme" :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
         <router-view />
@@ -11,6 +11,9 @@
 <script setup lang="ts">
 import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import type { GlobalThemeOverrides } from 'naive-ui'
+import { useThemeStore } from './stores/theme'
+
+const themeStore = useThemeStore()
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
@@ -39,6 +42,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 #app {
@@ -74,36 +78,78 @@ body {
   max-width: 95vw !important;
 }
 
+/* 暗黑模式全局适配 */
+html.dark body {
+  background-color: #101014;
+  color: #e0e0e6;
+}
+
+html.dark .hero-banner {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%) !important;
+}
+
+html.dark .card-section,
+html.dark .task-list,
+html.dark .quick-card {
+  background: #1a1a2e;
+  border-color: #2a2a3e;
+}
+
+html.dark .concept-card.blue {
+  background: #1a1a2e;
+  border-color: #2a3a5e;
+}
+
+html.dark .concept-card.green {
+  background: #1a2a1e;
+  border-color: #2a4a2e;
+}
+
+html.dark .formula-box {
+  background: #1a1a2e;
+  border-color: #2a2a3e;
+}
+
+html.dark .formula-example {
+  background: #141420;
+  border-color: #2a2a3e;
+}
+
+html.dark .flow-item {
+  background: #1a1a2e;
+}
+
+html.dark .eval-item {
+  border-color: #2a2a3e;
+}
+
+html.dark .phase-card {
+  background: #1a1a2e;
+}
+
+html.dark .progress-fill {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+
 /* 移动端全局适配 */
 @media (max-width: 768px) {
-  /* 减小页面内边距 */
   .n-layout-content {
     padding: 12px !important;
   }
-
-  /* 表格在移动端允许横向滚动 */
   .n-data-table {
     overflow-x: auto;
   }
-
-  /* 移动端按钮组允许换行 */
   .n-space {
     flex-wrap: wrap !important;
   }
-
-  /* 移动端隐藏面包屑 */
   .n-breadcrumb {
     display: none;
   }
-
-  /* 移动端弹窗全屏化 */
   .n-modal {
     width: 95vw !important;
     max-width: 95vw !important;
     margin: 10px !important;
   }
-
-  /* 移动端描述列表单列 */
   .n-descriptions {
     --n-column: 1 !important;
   }
@@ -113,8 +159,6 @@ body {
   .n-descriptions .n-descriptions-table-content {
     max-width: 100% !important;
   }
-
-  /* 移动端表单标签顶部对齐 */
   .n-form .n-form-item {
     flex-direction: column !important;
   }
