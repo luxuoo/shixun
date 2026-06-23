@@ -667,6 +667,178 @@ async def list_records(
     return out
 
 
+# ==================== 学生自评/互评 ====================
+@router.post("/records/self-eval")
+async def student_self_eval(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """学生自评 — 学生给自己打分"""
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="仅学生可使用自评功能")
+
+    indicator_id = data.get("indicator_id")
+    template_id = data.get("template_id")
+    score = data.get("score")
+    remark = data.get("remark", "")
+
+    if not indicator_id or not template_id or score is None:
+        raise HTTPException(status_code=400, detail="请提供 indicator_id、template_id 和 score")
+
+    # 验证指标存在且配置了 self 评分主体
+    indicator = await db.get(EvalIndicator, indicator_id)
+    if not indicator:
+        raise HTTPException(status_code=404, detail="指标不存在")
+
+    has_self = any(
+        sc.scorer_role == "self"
+        for sc in (indicator.scorer_configs or [])
+    )
+    if not has_self:
+        raise HTTPException(status_code=400, detail="该指标未配置学生自评")
+
+    record = EvalRecord(
+        student_id=current_user.id,
+        indicator_id=indicator_id,
+        template_id=template_id,
+        score=score,
+        scorer_id=current_user.id,
+        scorer_role="self",
+        evidence_type="self_eval",
+        remark=remark
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+    return {"message": "自评提交成功", "record_id": record.id}
+
+
+@router.post("/records/peer-eval")
+async def student_peer_eval(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """学生互评 — 学生给同班同学打分"""
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="仅学生可使用互评功能")
+
+    indicator_id = data.get("indicator_id")
+    template_id = data.get("template_id")
+    target_student_id = data.get("student_id")
+    score = data.get("score")
+    remark = data.get("remark", "")
+
+    if not indicator_id or not template_id or not target_student_id or score is None:
+        raise HTTPException(status_code=400, detail="请提供完整参数")
+
+    # 不能给自己互评
+    if target_student_id == current_user.id:
+        raise HTTPException(status_code=400, detail="互评不能给自己打分，请使用自评功能")
+
+    # 验证指标配置了 peer 评分主体
+    indicator = await db.get(EvalIndicator, indicator_id)
+    if not indicator:
+        raise HTTPException(status_code=404, detail="指标不存在")
+
+    has_peer = any(
+        sc.scorer_role == "peer"
+        for sc in (indicator.scorer_configs or [])
+    )
+    if not has_peer:
+        raise HTTPException(status_code=400, detail="该指标未配置学生互评")
+
+    # 验证被评学生与当前用户同班
+    target = await db.get(User, target_student_id)
+    if not target or target.role != "student":
+        raise HTTPException(status_code=404, detail="目标学生不存在")
+    if target.class_id != current_user.class_id:
+        raise HTTPException(status_code=403, detail="只能评价同班同学")
+
+    record = EvalRecord(
+        student_id=target_student_id,
+        indicator_id=indicator_id,
+        template_id=template_id,
+        score=score,
+        scorer_id=current_user.id,
+        scorer_role="peer",
+        evidence_type="peer_eval",
+        remark=remark
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+    return {"message": "互评提交成功", "record_id": record.id}
+
+
+@router.get("/indicators/{indicator_id}/students")
+async def get_indicator_students(
+    indicator_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取指标对应班级的所有学生及其评分记录"""
+    indicator = await db.get(EvalIndicator, indicator_id)
+    if not indicator:
+        raise HTTPException(status_code=404, detail="指标不存在")
+
+    # 获取阶段和模板
+    phase = await db.get(EvalPhase, indicator.phase_id)
+    if not phase:
+        raise HTTPException(status_code=404, detail="阶段不存在")
+    template = await db.get(EvalTemplate, phase.template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="模板不存在")
+
+    # 获取目标学生
+    student_query = select(User).where(User.role == "student")
+    if current_user.role == "student":
+        # 学生只能看同班同学
+        student_query = student_query.where(User.class_id == current_user.class_id)
+    elif template.class_id:
+        student_query = student_query.where(User.class_id == template.class_id)
+    students_result = await db.execute(student_query.order_by(User.id))
+    students = students_result.scalars().all()
+
+    # 获取每个学生的最新评分记录
+    result = []
+    for student in students:
+        record_result = await db.execute(
+            select(EvalRecord)
+            .where(
+                EvalRecord.student_id == student.id,
+                EvalRecord.indicator_id == indicator_id,
+                EvalRecord.template_id == template.id
+            )
+            .order_by(EvalRecord.created_at.desc())
+            .limit(1)
+        )
+        latest_record = record_result.scalar_one_or_none()
+        result.append({
+            "student_id": student.id,
+            "student_name": student.name or student.username,
+            "username": student.username,
+            "class_id": student.class_id,
+            "latest_score": latest_record.score if latest_record else None,
+            "latest_scorer_role": latest_record.scorer_role if latest_record else None,
+            "latest_remark": latest_record.remark if latest_record else None,
+            "latest_record_id": latest_record.id if latest_record else None,
+        })
+
+    return {
+        "indicator_id": indicator_id,
+        "indicator_name": indicator.name,
+        "template_id": template.id,
+        "template_name": template.name,
+        "scorer_configs": [
+            {"scorer_role": sc.scorer_role, "weight": sc.weight}
+            for sc in (indicator.scorer_configs or [])
+        ],
+        "students": result
+    }
+
+
 # ==================== 自动采集 ====================
 @router.post("/records/auto-collect/{template_id}")
 async def auto_collect(
@@ -757,12 +929,26 @@ async def auto_collect(
                     evidence_type = "attendance"
 
                 if score is not None:
+                    # 根据数据源和评分主体配置确定 scorer_role
+                    scorer_role = "system"
+                    data_source_role_map = {
+                        "ai_score": "ai",
+                        "submission": "teacher",
+                        "attendance": "teacher",
+                    }
+                    candidate_role = data_source_role_map.get(indicator.data_source)
+                    if candidate_role and any(
+                        sc.scorer_role == candidate_role
+                        for sc in (indicator.scorer_configs or [])
+                    ):
+                        scorer_role = candidate_role
+
                     record = EvalRecord(
                         student_id=student.id,
                         indicator_id=indicator.id,
                         template_id=template_id,
                         score=score,
-                        scorer_role="system",
+                        scorer_role=scorer_role,
                         evidence_type=evidence_type,
                         evidence_id=evidence_id
                     )

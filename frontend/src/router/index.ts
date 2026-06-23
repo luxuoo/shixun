@@ -49,6 +49,16 @@ const router = createRouter({
           path: 'ai-history',
           name: 'AiHistory',
           component: () => import('@/views/student/AiHistory.vue')
+        },
+        {
+          path: 'process-eval',
+          name: 'ProcessEval',
+          component: () => import('@/views/student/ProcessEval.vue')
+        },
+        {
+          path: 'self-eval',
+          name: 'SelfEval',
+          component: () => import('@/views/student/SelfEval.vue')
         }
       ]
     },
@@ -118,6 +128,11 @@ const router = createRouter({
           path: 'process-eval-config',
           name: 'AdminProcessEvalConfig',
           component: () => import('@/views/admin/ProcessEvalConfig.vue')
+        },
+        {
+          path: 'score-entry',
+          name: 'AdminScoreEntry',
+          component: () => import('@/views/admin/ScoreEntry.vue')
         }
       ]
     }

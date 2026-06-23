@@ -238,6 +238,14 @@ export const evalApi = {
   getClassRanking: (classId: number, templateId?: number) =>
     api.get(`/evaluation/dashboard/class/${classId}/ranking`, { params: templateId ? { template_id: templateId } : {} }),
 
+  // 学生自评/互评
+  studentSelfEval: (data: { indicator_id: number; template_id: number; score: number; remark?: string }) =>
+    api.post('/evaluation/records/self-eval', data),
+  studentPeerEval: (data: { indicator_id: number; template_id: number; student_id: number; score: number; remark?: string }) =>
+    api.post('/evaluation/records/peer-eval', data),
+  getIndicatorStudents: (indicatorId: number) =>
+    api.get(`/evaluation/indicators/${indicatorId}/students`),
+
   // AI 辅助配置
   aiGenerateTemplate: (data: { course_name: string; course_description: string; category?: string; student_count?: number; task_count?: number; class_id?: number }) =>
     api.post('/evaluation/ai/generate-template', data),
