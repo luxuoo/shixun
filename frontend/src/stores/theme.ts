@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { darkTheme } from 'naive-ui'
-import type { Theme } from 'naive-ui'
 
 export const useThemeStore = defineStore('theme', () => {
   const isDark = ref(localStorage.getItem('theme') === 'dark')
@@ -20,7 +19,7 @@ export const useThemeStore = defineStore('theme', () => {
     }
   }
 
-  const theme = ref<Theme | null>(isDark.value ? darkTheme : null)
+  const theme = ref(isDark.value ? darkTheme : null)
 
   watch(isDark, (val) => {
     theme.value = val ? darkTheme : null
