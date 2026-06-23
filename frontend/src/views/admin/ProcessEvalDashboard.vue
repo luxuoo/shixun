@@ -105,7 +105,7 @@
                 <n-tag type="info" size="small">雷达图</n-tag>
               </template>
               <div class="chart-wrapper">
-                <canvas ref="radarCanvas" width="400" height="320"></canvas>
+                <canvas ref="radarCanvas" width="520" height="320"></canvas>
               </div>
             </n-card>
           </n-gi>
@@ -600,7 +600,7 @@ function drawRadarChart() {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const displayWidth = 400
+  const displayWidth = 520
   const displayHeight = 320
   canvas.width = displayWidth * dpr
   canvas.height = displayHeight * dpr
@@ -613,7 +613,7 @@ function drawRadarChart() {
 
   ctx.clearRect(0, 0, displayWidth, displayHeight)
 
-  const centerX = displayWidth / 2
+  const centerX = displayWidth / 2  // 260, 左右各留 110px 给标签
   const centerY = displayHeight / 2 + 10
   const maxRadius = 120
   const axes = dims.length
