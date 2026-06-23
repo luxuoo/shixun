@@ -63,6 +63,20 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
         )
 
     user.last_login = datetime.now(timezone.utc)
+
+    # 学生登录自动记录考勤（每天只记一次）
+    if user.role == "student":
+        from app.models.ai_log import LoginRecord
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        existing = await db.execute(
+            select(LoginRecord).where(
+                LoginRecord.user_id == user.id,
+                LoginRecord.login_date == today_str
+            )
+        )
+        if not existing.scalar_one_or_none():
+            db.add(LoginRecord(user_id=user.id, login_date=today_str))
+
     await db.commit()
     await db.refresh(user)
 

@@ -19,7 +19,13 @@
     </n-alert>
 
     <!-- 顶部操作栏 -->
-    <n-card title="模板管理" style="margin-bottom: 20px;">
+    <n-card style="margin-bottom: 20px;">
+      <template #header>
+        <n-space align="center" :size="4">
+          <span>模板管理</span>
+          <help-icon>评价模板是整个过程性评价的框架。一个模板包含多个阶段（如课前/课中/课后），每个阶段包含多个评价指标。选择或创建模板后，在下方配置阶段和指标。</help-icon>
+        </n-space>
+      </template>
       <n-space align="center" wrap>
         <n-select
           v-model:value="selectedTemplateId"
@@ -72,8 +78,9 @@
             :name="phase.id"
           >
             <template #header>
-              <n-space align="center">
+              <n-space align="center" :size="4">
                 <span style="font-weight: 600; font-size: 15px;">{{ phase.name }}</span>
+                <help-icon :size="14">阶段是评价的时间段划分。每个阶段有独立的权重（所有阶段权重合计应为 100%），每个阶段下可添加多个评价指标。</help-icon>
                 <n-tag :type="getPhaseWeightTagType(phase)" size="small">
                   权重: {{ phase.weight }}%
                 </n-tag>
@@ -590,7 +597,7 @@ const indicatorColumns = [
       ])
     }
   },
-  { title: '指标名称', key: 'name', minWidth: 120 },
+  { title: '指标名称', key: 'name', minWidth: 120, render: (row: any) => h('span', {}, row.name) },
   {
     title: '权重',
     key: 'weight',

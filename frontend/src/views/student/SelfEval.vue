@@ -1,6 +1,9 @@
 <template>
   <div class="self-eval-container">
-    <h2 style="margin: 0 0 24px; font-size: 20px;">自评互评</h2>
+    <n-space align="center" :size="4" style="margin-bottom: 24px;">
+      <h2 style="margin: 0; font-size: 20px;">自评互评</h2>
+      <help-icon>自我评价：给自己打分，培养自我反思能力。同学互评：给同班同学打分，促进相互学习。只有教师在评价配置中开启了对应的评分主体，这里才会显示对应的指标。</help-icon>
+    </n-space>
 
     <n-spin :show="loading">
       <template v-if="!loading && !template">

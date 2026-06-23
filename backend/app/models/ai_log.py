@@ -58,3 +58,16 @@ class RollcallRecord(Base):
 
     # 关系
     student = relationship("User")
+
+
+class LoginRecord(Base):
+    """登录考勤记录 — 学生每次登录自动记录，用于考勤统计"""
+    __tablename__ = "login_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    login_date = Column(String(10), nullable=False)  # YYYY-MM-DD，用于去重
+    created_at = Column(DateTime, server_default=func.now())
+
+    # 关系
+    user = relationship("User")

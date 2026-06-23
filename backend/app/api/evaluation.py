@@ -16,7 +16,7 @@ from app.models.evaluation import (
     EvalScorerConfig, EvalRecord, EvalSnapshot
 )
 from app.models.submission import Submission
-from app.models.ai_log import Score, RollcallRecord
+from app.models.ai_log import Score, RollcallRecord, LoginRecord
 from app.schemas.evaluation import (
     TemplateCreate, TemplateUpdate, TemplateResponse, TemplateListResponse,
     PhaseCreate, PhaseUpdate, PhaseResponse,
@@ -1002,14 +1002,14 @@ async def auto_collect(
                         evidence_type = "ai_score"
 
                 elif indicator.data_source == "attendance":
-                    # 从出勤记录采集
-                    rollcall_result = await db.execute(
-                        select(func.count(RollcallRecord.id))
-                        .where(RollcallRecord.student_id == student.id)
+                    # 从登录考勤采集（统计学生登录系统的天数）
+                    login_result = await db.execute(
+                        select(func.count(func.distinct(LoginRecord.login_date)))
+                        .where(LoginRecord.user_id == student.id)
                     )
-                    count = rollcall_result.scalar() or 0
-                    # 出勤分 = min(100, 出勤次数 * 10)
-                    score = min(100.0, count * 10.0)
+                    login_days = login_result.scalar() or 0
+                    # 出勤分 = min(100, 登录天数 × 5)
+                    score = min(100.0, login_days * 5.0)
                     evidence_type = "attendance"
 
                 elif indicator.data_source == "task_score":

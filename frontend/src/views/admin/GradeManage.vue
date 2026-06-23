@@ -98,7 +98,7 @@
                     <tbody>
                       <tr><td><n-tag size="small" type="info">自动采集</n-tag> 任务综合分</td><td>点击「自动采集」按钮，从任务成绩自动拉取</td><td>编程作业成绩直接算入评价</td></tr>
                       <tr><td><n-tag size="small" type="info">自动采集</n-tag> 代码提交</td><td>点击「自动采集」按钮，从提交记录拉取</td><td>只看提交分数</td></tr>
-                      <tr><td><n-tag size="small" type="info">自动采集</n-tag> 出勤</td><td>点击「自动采集」按钮，从点名记录拉取</td><td>出勤自动计分</td></tr>
+                      <tr><td><n-tag size="small" type="info">自动采集</n-tag> 出勤</td><td>点击「自动采集」按钮，从学生登录记录自动统计</td><td>出勤自动计分（学生登录系统即算出勤）</td></tr>
                       <tr><td><n-tag size="small" type="info">自动采集</n-tag> AI评分</td><td>点击「自动采集」按钮，从 AI 评分拉取</td><td>只看 AI 评分</td></tr>
                       <tr><td><n-tag size="small" type="warning">手动录入</n-tag></td><td>进入 <n-button text type="primary" @click="$router.push({name:'AdminScoreEntry'})">评分明录</n-button>，逐个学生打分</td><td>课堂表现、答辩等</td></tr>
                       <tr><td><n-tag size="small" type="success">学生自评</n-tag></td><td>学生在「自评互评」页面给自己打分</td><td>自我反思</td></tr>
@@ -137,7 +137,7 @@
                 <ol>
                   <li>创建评价模板，添加「出勤」指标（数据来源选「出勤」，开启自动采集）</li>
                   <li>添加「课堂表现」指标（数据来源选手动录入）</li>
-                  <li>课堂点名后，点「自动采集」拉取出勤分</li>
+                  <li>学生登录系统学习自动记录考勤，点「自动采集」拉取出勤分</li>
                   <li>在「评分明录」页给课堂表现打分</li>
                 </ol>
               </div>

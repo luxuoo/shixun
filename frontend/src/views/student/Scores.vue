@@ -1,6 +1,9 @@
 <template>
   <div class="scores-container">
-    <h2 class="page-title">我的成绩</h2>
+    <n-space align="center" :size="4">
+      <h2 class="page-title" style="margin-bottom: 0;">我的成绩</h2>
+      <help-icon>这里展示你的过程性评价成绩，包含各阶段得分、能力维度雷达图和成长趋势。总分由多个评价指标按权重加权计算得出。</help-icon>
+    </n-space>
 
     <n-spin :show="loading">
       <!-- 成绩未开放 -->

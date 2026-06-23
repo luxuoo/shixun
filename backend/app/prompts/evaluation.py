@@ -42,8 +42,9 @@ GENERATE_TEMPLATE_SYSTEM = """你是一个教学评价设计专家。根据教�
 ## 数据来源
 - manual：手动录入
 - submission：从代码提交自动采集
-- attendance：从出勤记录自动采集
+- attendance：从学生登录考勤自动采集（学生登录系统即算出勤）
 - ai_score：从 AI 评分自动采集
+- task_score：从教学任务综合分自动采集
 
 ## 评分主体
 - student：学生自评

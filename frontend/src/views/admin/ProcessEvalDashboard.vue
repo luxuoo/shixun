@@ -1,7 +1,10 @@
 <template>
   <div class="process-eval-container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-      <h2>过程性评价看板</h2>
+      <n-space align="center" :size="4">
+        <h2 style="margin: 0;">过程性评价看板</h2>
+        <help-icon>展示班级的过程性评价数据。先选择班级和评价模板，点击「自动采集」从系统已有数据拉取分数，或到「评分明录」手动打分。</help-icon>
+      </n-space>
       <n-space>
         <n-select
           v-model:value="selectedClassId"
@@ -20,14 +23,19 @@
           :disabled="!selectedClassId"
           @update:value="loadDashboard"
         />
-        <n-button
-          type="primary"
-          :loading="collecting"
-          :disabled="!selectedClassId || !selectedTemplateId"
-          @click="handleAutoCollect"
-        >
-          自动采集
-        </n-button>
+        <n-tooltip trigger="hover" placement="bottom">
+          <template #trigger>
+            <n-button
+              type="primary"
+              :loading="collecting"
+              :disabled="!selectedClassId || !selectedTemplateId"
+              @click="handleAutoCollect"
+            >
+              自动采集
+            </n-button>
+          </template>
+          从系统已有数据自动拉取评价分数：任务综合分、AI评分、代码提交分、登录考勤等。每个学生每个指标 24 小时内只采集一次。
+        </n-tooltip>
       </n-space>
     </div>
 

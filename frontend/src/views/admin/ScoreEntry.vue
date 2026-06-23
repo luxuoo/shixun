@@ -1,6 +1,9 @@
 <template>
   <div class="score-entry-container">
-    <h2 style="margin: 0 0 24px; font-size: 20px;">评分明录</h2>
+    <n-space align="center" :size="4" style="margin-bottom: 24px;">
+      <h2 style="margin: 0; font-size: 20px;">评分明录</h2>
+      <help-icon>教师手动给学生打分。选择模板→阶段→指标后，显示该班级所有学生的列表，输入分数后点击「批量保存」。适合课堂表现、答辩等无法自动采集的评价项。</help-icon>
+    </n-space>
 
     <!-- 选择区域 -->
     <n-card style="margin-bottom: 20px;">
