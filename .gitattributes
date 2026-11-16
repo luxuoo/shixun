@@ -1,0 +1,23 @@
+# 统一换行符 —— shell 脚本在服务器上必须是 LF，
+# 否则会报 "bash\r: No such file or directory"（Windows 检出后带 CRLF 导致）
+*.sh            text eol=lf
+ops/*.sh        text eol=lf
+*.py            text eol=lf
+*.conf          text eol=lf
+Dockerfile      text eol=lf
+*.md            text eol=lf
+*.ts            text eol=lf
+*.vue           text eol=lf
+*.json          text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.txt           text eol=lf
+
+# 二进制/资源不参与换行转换
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.ico           binary
+*.woff          binary
+*.woff2         binary
+*.db            binary
