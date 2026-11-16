@@ -25,11 +25,12 @@ class Settings(BaseSettings):
     MIMO_API_URL: str = "https://token-plan-cn.xiaomimimo.com/v1"
     MIMO_MODEL: str = "mimo-v2.5-pro"
 
-    # DeepSeek API（OpenAI 兼容格式）
-    # 可选模型：deepseek-chat（通用对话）/ deepseek-reasoner（深度思考）
+    # DeepSeek API（OpenAI 兼容格式，base_url 无需 /v1 后缀）
+    # 可选模型：deepseek-flash（轻量快速）/ deepseek-v4-pro（更强）
+    # 新一代模型默认开启思考模式，ai_service 已默认关闭以保持旧版 deepseek-chat 的低延迟行为
     DEEPSEEK_API_KEY: str = ""
-    DEEPSEEK_API_URL: str = "https://api.deepseek.com/v1"
-    DEEPSEEK_MODEL: str = "deepseek-chat"
+    DEEPSEEK_API_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_MODEL: str = "deepseek-flash"
 
     # 安全配置
     SECRET_KEY: str = "your-secret-key-change-in-production"

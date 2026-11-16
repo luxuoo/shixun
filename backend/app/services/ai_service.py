@@ -18,7 +18,10 @@ from app.services import app_settings
 # 各服务商的能力差异
 PROVIDER_CAPS = {
     "mimo": {"json_mode": False},
-    "deepseek": {"json_mode": True},
+    # DeepSeek 新一代模型（deepseek-flash / deepseek-v4-pro）默认开启思考模式
+    # （thinking=enabled, effort=high），评分/问答类任务不需要思维链，
+    # 显式关闭以保持旧版 deepseek-chat 的低延迟低成本行为
+    "deepseek": {"json_mode": True, "disable_thinking": True},
 }
 
 
@@ -132,6 +135,10 @@ class AiService:
         }
         if force_json and PROVIDER_CAPS.get(provider, {}).get("json_mode"):
             kwargs["response_format"] = {"type": "json_object"}
+        # DeepSeek 官方文档：思考模式需通过 extra_body 传入 thinking 参数关闭；
+        # MiMo 不识别该参数，仅对 deepseek 附加
+        if PROVIDER_CAPS.get(provider, {}).get("disable_thinking"):
+            kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
         response = await self._request_with_retry(kwargs)
 
@@ -139,7 +146,15 @@ class AiService:
         content = (msg.content or "").strip()
         tokens_used = response.usage.total_tokens if getattr(response, "usage", None) else 0
 
-        # 推理模型（deepseek-reasoner / mimo-v2.5-pro）会先输出 reasoning_content，
+        # 官方文档警告：JSON Output 模式下输出无法识别为 JSON 时，
+        # 非法内容会被替换成空格（content 可能为空但 finish_reason=stop），建议重试
+        if not content and force_json:
+            response = await self._request_with_retry(kwargs)
+            msg = response.choices[0].message
+            content = (msg.content or "").strip()
+            tokens_used += response.usage.total_tokens if getattr(response, "usage", None) else 0
+
+        # 推理模型（mimo-v2.5-pro / 手动开启思考的 DeepSeek）会先输出 reasoning_content，
         # 若最终 content 为空则退回使用思考内容，避免前端拿到空白回复
         if not content:
             content = (self._extract_reasoning(msg) or "").strip()
