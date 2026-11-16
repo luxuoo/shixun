@@ -24,13 +24,17 @@
       </n-space>
     </header>
 
-    <n-alert v-if="!status.enabled" type="warning" :bordered="false" class="hint">
+    <n-alert v-if="!status.enabled && !offline" type="warning" :bordered="false" class="hint">
       部署运维未开启。在服务器 <code>.deploy/shared/.env</code>（或 <code>backend/.env</code>）中设置
       <code>OPS_ENABLED=true</code> 后重启后端即可启用；在此之前请用命令行：
       <code>bash ops/deploy.sh</code> / <code>bash ops/rollback.sh</code>。
     </n-alert>
     <n-alert v-else-if="!status.platform_ok" type="info" :bordered="false" class="hint">
       当前环境不支持在线发布（需要 Linux + bash）。本页仅展示状态，部署请在服务器上执行 ops 脚本。
+    </n-alert>
+
+    <n-alert v-if="offline" type="warning" :bordered="false" class="hint">
+      连接不上后端（服务多半正在重启）。页面会自动重连并保留上次状态，不需要手动刷新。
     </n-alert>
 
     <n-alert v-if="drift" type="error" :bordered="false" class="hint">
@@ -236,6 +240,7 @@ const dialog = useDialog()
 
 const loading = ref(false)
 const checking = ref(false)
+const offline = ref(false)
 const checkResult = ref<any>(null)
 const deploying = ref(false)
 const rollingBack = ref(false)
@@ -311,11 +316,14 @@ async function loadStatus(silent = false) {
   try {
     const data = await opsApi.getStatus(80) as any
     status.value = data
+    offline.value = false
     await nextTick()
     if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight
   } catch (e: any) {
-    // 发布过程中后端会重启，短暂不可用属正常
-    if (!silent) message.error(e?.detail || '无法获取部署状态，服务可能正在重启')
+    // 发布/回滚会重启服务，这几秒连不上是正常现象：标记断线并继续重试，
+    // 不清空已有数据，也不再弹 toast 干扰操作
+    offline.value = true
+    if (!silent && !running.value) message.error(e?.detail || '无法获取部署状态')
   } finally {
     loading.value = false
   }
@@ -324,7 +332,7 @@ async function loadStatus(silent = false) {
 function schedule() {
   if (timer) clearInterval(timer)
   // 执行中 2 秒一刷，空闲 10 秒一刷
-  const interval = running.value ? 2000 : 10000
+  const interval = running.value || offline.value ? 2000 : 10000
   timer = setInterval(() => loadStatus(true), interval)
 }
 

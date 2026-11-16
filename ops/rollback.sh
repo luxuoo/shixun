@@ -59,7 +59,21 @@ state_set \
 
 log "========== 开始回滚：${CURRENT_NAME:-无} → $TARGET =========="
 
-if ! switch_to "$TARGET_DIR"; then
+SW=0
+switch_to "$TARGET_DIR" || SW=$?
+
+if [ "$SW" -eq 1 ]; then
+    # 软链已经切过去了，只是服务没重启：不要切回原版本（同样起不来）
+    DUR="$(($(date +%s) - START_TS))"
+    state_set "status=failed" "step=已切换但未重启" \
+              "error=服务未能重启，请执行：sudo systemctl restart $SERVICE" \
+              "release=$TARGET" "finished_at=$(date '+%Y-%m-%d %H:%M:%S')" "duration_sec=$DUR"
+    history_add rollback "$TARGET" "" failed "$ACTOR" "已切换，服务重启失败"
+    log "软链已切到 $TARGET，但服务没重启。手动执行：sudo systemctl restart $SERVICE"
+    exit 1
+fi
+
+if [ "$SW" -ne 0 ]; then
     log "回滚后的版本未通过健康检查"
     if [ -n "$CURRENT_DIR" ] && [ -d "$CURRENT_DIR" ]; then
         log "  尝试切回原版本 $(basename "$CURRENT_DIR")…"

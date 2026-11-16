@@ -16,6 +16,7 @@ export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('token') || '')
   const user = ref<User | null>(null)
   const loading = ref(false)
+  const lastError = ref('')
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
@@ -36,10 +37,19 @@ export const useUserStore = defineStore('user', () => {
     try {
       const data = await authApi.getMe() as any
       user.value = data
-    } catch (error) {
-      token.value = ''
-      user.value = null
-      localStorage.removeItem('token')
+      lastError.value = ''
+    } catch (error: any) {
+      // 关键：只有 401 才算登录失效。发布时服务会重启几秒，
+      // 期间 /auth/me 会 502 —— 之前这里一律清 token，导致「更新完被踢回登录页」。
+      if (error?.status === 401) {
+        token.value = ''
+        user.value = null
+        localStorage.removeItem('token')
+        lastError.value = '登录已过期，请重新登录'
+      } else {
+        lastError.value = error?.detail || '暂时无法连接服务器'
+        // 保留 token 与已缓存的用户信息，页面继续可用
+      }
     } finally {
       loading.value = false
     }
@@ -59,6 +69,7 @@ export const useUserStore = defineStore('user', () => {
     isAdmin,
     isTeacher,
     isStudent,
+    lastError,
     login,
     fetchUser,
     logout

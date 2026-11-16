@@ -446,6 +446,21 @@ python3 /www/wwwroot/learning-system/ops/webhook.py
 > 私有仓库需要服务器有拉取权限：`git remote set-url origin git@github.com:用户名/仓库.git`
 > 并把部署公钥（`~/.ssh/id_ed25519.pub`）加到仓库 Deploy keys。
 
+### 10.3.1 增量构建（默认开启）
+
+发布时会对比上一版与目标提交的文件差异：
+
+| 变化 | 行为 |
+|---|---|
+| `backend/requirements.txt` 没变 | 直接复用上一版的虚拟环境，**跳过 pip 安装** |
+| `frontend/` 下没有文件变化 | 直接复用上一版的 `dist`，**跳过 npm 与构建** |
+
+所以只改后端代码时通常是秒级完成。要强制全量重建：
+
+```bash
+bash ops/deploy.sh --force-rebuild
+```
+
 ### 10.4 回滚
 
 ```bash
@@ -625,3 +640,39 @@ bash ops/status.sh                                      # 当前版本与健康�
 journalctl -u learning-system -n 50                     # 后端启动报错
 ```
 构建失败时线上仍跑旧版本，`.deploy/releases/` 里会留下失败版本的目录，确认无用可手动删掉。
+
+### 10. 更新卡在「安装 Python 依赖」或「安装前端依赖」
+
+国内服务器直连 PyPI / npmjs 经常极慢甚至卡死。脚本默认已走清华镜像与 npmmirror，
+单个安装步骤超过 `INSTALL_TIMEOUT`（默认 900 秒）会直接判失败并回滚，不会无限挂着。
+
+改源（写在 `.deploy/shared/.env`，命令行执行也会读到）：
+
+```ini
+PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
+NPM_REGISTRY=https://registry.npmmirror.com
+INSTALL_TIMEOUT=900
+```
+
+用官方源：`PIP_INDEX_URL=official` / `NPM_REGISTRY=official`。
+装依赖的真实输出在 `.deploy/ops.log`，`tail -50` 即可看到卡在哪个包。
+
+### 11. 更新后页面打不开，或莫名其妙回到登录页
+
+- 「回到登录页」是旧版前端的 bug：发布时服务重启，`/auth/me` 返回 502 被当成登录失效，
+  于是清掉 token 跳登录页。**已修复**：只有 401 才算登录失效，其余情况保留登录态。
+- 「页面打不开」先看服务是否起来：
+
+```bash
+sudo systemctl status learning-system
+sudo journalctl -u learning-system -n 50 --no-pager
+```
+
+- 起不来时用应急恢复（不折腾二次回滚，直接把软链指到能跑的版本并拉起服务）：
+
+```bash
+bash ops/recover.sh --list          # 看有哪些版本
+bash ops/recover.sh                 # 切到上一个版本并重启
+bash ops/recover.sh --to <版本名>    # 指定版本
+bash ops/recover.sh --fix-unit      # 顺带重装 systemd 单元
+```

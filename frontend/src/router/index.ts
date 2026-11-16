@@ -173,14 +173,18 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
+  // 服务重启期间 /auth/me 会失败，此时角色未知：放行让页面渲染，
+  // 由后端接口继续做权限校验，避免在守卫里来回重定向（表现为页面空白/打转）
+  const roleUnknown = !userStore.user && !!userStore.lastError
+
   // 需要教师权限的页面
-  if (to.meta.requiresTeacher && !userStore.isTeacher) {
+  if (to.meta.requiresTeacher && !userStore.isTeacher && !roleUnknown) {
     next('/')
     return
   }
 
   // 需要管理员权限的页面
-  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+  if (to.meta.requiresAdmin && !userStore.isAdmin && !roleUnknown) {
     next('/admin')
     return
   }

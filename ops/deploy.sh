@@ -14,6 +14,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 REF="$REMOTE/$BRANCH"
 FORCE=0
 KEEP_FAILED=0
+FORCE_REBUILD=0
 ACTOR="${OPS_ACTOR:-$(whoami 2>/dev/null || echo unknown)}"
 NO_RESTART="${NO_RESTART:-0}"
 SKIP_HEALTH="${SKIP_HEALTH:-0}"
@@ -24,6 +25,7 @@ while [ $# -gt 0 ]; do
         --force) FORCE=1; shift ;;
         --actor) ACTOR="${2:?--actor 需要参数}"; shift 2 ;;
         --keep-failed) KEEP_FAILED=1; shift ;;
+        --force-rebuild) FORCE_REBUILD=1; shift ;;
         --no-restart) NO_RESTART=1; shift ;;
         --skip-health) SKIP_HEALTH=1; shift ;;
         -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
@@ -128,12 +130,40 @@ actor=$ACTOR
 subject=$SUBJECT
 EOF
 
-# ---------- 5. 构建 ----------
+# ---------- 5. 增量判断 ----------
+# requirements / 前端源码没变就复用上一版产物，把最容易卡住的 pip / npm 整段跳过
+REUSE_VENV=0
+REUSE_DIST=0
+if [ -n "$PREV_DIR" ] && [ -d "$PREV_DIR" ] && [ "${FORCE_REBUILD:-0}" != "1" ] && [ -n "$CURRENT_SHA" ]; then
+    CHANGED="$(git -C "$APP_DIR" diff --name-only "${CURRENT_SHA}..${SHA}" 2>/dev/null || true)"
+    if [ -n "$CHANGED" ]; then
+        TOTAL_CHANGES="$(printf '%s\n' "$CHANGED" | grep -c . || true)"
+        log "  本次变更 $TOTAL_CHANGES 个文件"
+        printf '%s\n' "$CHANGED" | grep -qE '^backend/requirements\.txt$' || REUSE_VENV=1
+        printf '%s\n' "$CHANGED" | grep -qE '^frontend/' || REUSE_DIST=1
+    else
+        log "  未检测到文件差异，全部复用上一版产物"
+        REUSE_VENV=1
+        REUSE_DIST=1
+    fi
+    [ "$REUSE_VENV" = "1" ] && log "  后端依赖无变化"
+    [ "$REUSE_DIST" = "1" ] && log "  前端源码无变化"
+fi
+[ "${FORCE_REBUILD:-0}" = "1" ] && log "  已指定 --force-rebuild，全部重新构建"
+export REUSE_VENV REUSE_DIST
+
+# ---------- 6. 构建 ----------
 step "安装后端依赖"
-build_backend "$RELEASE"
+if ! build_backend "$RELEASE"; then
+    FAIL_REASON="后端依赖安装失败"
+    die "后端依赖安装失败（线上仍是 ${PREV_NAME:-未发布}）"
+fi
 
 step "构建前端"
-build_frontend "$RELEASE"
+if ! build_frontend "$RELEASE"; then
+    FAIL_REASON="前端构建失败"
+    die "前端构建失败（线上仍是 ${PREV_NAME:-未发布}）"
+fi
 
 # ---------- 6. 产物自检 ----------
 step "校验构建产物"
@@ -145,7 +175,23 @@ log "  ✓ 产物完整"
 
 # ---------- 7. 切换并验证 ----------
 step "切换版本"
-if ! switch_to "$RELEASE"; then
+SW=0
+switch_to "$RELEASE" || SW=$?
+
+if [ "$SW" -eq 1 ]; then
+    # 重启失败：版本已经切过去了，回滚同样需要重启，所以不回滚
+    KEEP_RELEASE=1
+    DUR="$(($(date +%s) - START_TS))"
+    state_set "status=failed" "step=已切换但未重启" \
+              "error=服务未能重启，请执行：sudo systemctl restart $SERVICE" \
+              "release=$NAME" "sha=$SHORT" \
+              "finished_at=$(date '+%Y-%m-%d %H:%M:%S')" "duration_sec=$DUR"
+    history_add deploy "$NAME" "$SHORT" failed "$ACTOR" "已切换，服务重启失败"
+    log "版本已切换，但服务没能重启。手动执行：sudo systemctl restart $SERVICE"
+    exit 1
+fi
+
+if [ "$SW" -ne 0 ]; then
     log "新版本启动失败，尝试回滚到上一个版本…"
     if [ -n "$PREV_DIR" ] && [ -d "$PREV_DIR" ]; then
         switch_to "$PREV_DIR" || log "  ✗ 回滚后仍未通过健康检查，需要人工介入"

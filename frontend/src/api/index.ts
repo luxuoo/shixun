@@ -30,16 +30,27 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status, data } = error.response
+      // 只有明确 401 才代表登录失效；502/503 是服务重启中，不能把用户踢出去
       if (status === 401) {
         localStorage.removeItem('token')
-        // 使用 router 跳转而不是 window.location
         if (window.location.pathname !== '/login') {
           window.location.replace('/login')
         }
       }
-      return Promise.reject(data || error.message)
+      const detail =
+        data && typeof data === 'object' && data.detail
+          ? data.detail
+          : status === 502 || status === 503 || status === 504
+            ? '服务正在重启或暂时不可用，请稍后重试'
+            : typeof data === 'string' && data
+              ? data
+              : error.message
+      // 统一成对象，调用方既可以用 e.detail，也可以用 e.message
+      return Promise.reject({ status, detail, message: detail, data })
     }
-    return Promise.reject(error)
+    // 网络层错误（断网、连接被拒）：同样不当作登录失效
+    const detail = '无法连接服务器，服务可能正在重启'
+    return Promise.reject({ status: 0, detail, message: detail, original: error })
   }
 )
 
