@@ -115,6 +115,12 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         },
         {
+          path: 'ops',
+          name: 'AdminOps',
+          component: () => import('@/views/admin/Ops.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
           path: 'roll-call',
           name: 'AdminRollCall',
           component: () => import('@/views/admin/RollCall.vue')

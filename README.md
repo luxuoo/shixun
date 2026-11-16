@@ -59,10 +59,17 @@ shixun/
 │   │   └── prompts/        # AI 提示词模板
 │   ├── init_data.py        # 数据库初始化脚本
 │   └── requirements.txt
+├── ops/                    # 发布运维脚本
+│   ├── deploy.sh           #   一键更新（构建新版本 → 切软链 → 重启，失败自动回滚）
+│   ├── rollback.sh         #   一键回滚（切回历史版本，几秒完成）
+│   ├── status.sh           #   查看当前版本与历史
+│   ├── install-service.sh  #   首次安装 systemd 服务
+│   ├── webhook.py          #   GitHub push 自动发布
+│   └── nginx.snippet.conf  #   配合发布目录的 Nginx 片段
 ├── database/               # 数据库 SQL 脚本
 ├── docker-compose.yml      # Docker 编排
 ├── nginx.conf              # Nginx 配置参考
-├── deploy.sh               # 部署脚本
+├── deploy.sh               # 首次部署脚本（宝塔）
 └── DEPLOY.md               # 部署教程
 ```
 
@@ -268,7 +275,24 @@ AI 评分从四个维度进行：
 
 ## 部署
 
-详细的宝塔面板部署教程请查看 [DEPLOY.md](./DEPLOY.md)
+详细的宝塔面板部署教程请查看 [DEPLOY.md](./DEPLOY.md)。
+
+### 更新与回滚
+
+代码在 GitHub 上更新后，服务器有三种发布方式：
+
+```bash
+cd /www/wwwroot/learning-system
+bash ops/deploy.sh          # 命令行一键更新
+bash ops/rollback.sh        # 回滚到上一个版本
+bash ops/status.sh          # 查看当前版本
+```
+
+也可以在管理后台「系统设置 → 部署运维」点按钮（需在 `.env` 设置 `OPS_ENABLED=true`），
+或配置 GitHub Webhook 让 `git push` 后自动发布。
+
+发布方式是「新版本独立目录 + 软链切换」：构建失败不影响线上，切换后健康检查不通过会自动回滚。
+数据库、上传文件、`.env` 都在 `.deploy/shared`，不随版本切换丢失。
 
 ## 许可证
 

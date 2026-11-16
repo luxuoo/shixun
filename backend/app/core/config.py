@@ -40,6 +40,16 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 10485760  # 10MB
 
+    # ===== 部署运维 =====
+    # 是否允许后台「部署运维」页面触发更新/回滚（生产环境按需打开）
+    OPS_ENABLED: bool = False
+    # systemd 服务名，与 ops/install-service.sh 保持一致
+    OPS_SERVICE: str = "learning-system"
+    # 发布后用于判活的后端地址
+    OPS_HEALTH_URL: str = "http://127.0.0.1:8000/health"
+    # 项目根目录；留空则按 backend/app/api/ops.py 的位置自动推断
+    OPS_PROJECT_DIR: str = ""
+
     # CORS 配置
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:5173"]
 

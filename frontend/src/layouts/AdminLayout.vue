@@ -214,7 +214,8 @@ const menuGroups = computed(() => {
       title: '系统设置',
       items: [
         { label: '用户管理', key: 'AdminUsers', icon: botIcon('cat', 'orange') },
-        { label: '系统统计', key: 'AdminSystemStats', icon: botIcon('planet', 'blue') }
+        { label: '系统统计', key: 'AdminSystemStats', icon: botIcon('planet', 'blue') },
+        { label: '部署运维', key: 'AdminOps', icon: botIcon('ghost', 'cyan') }
       ]
     })
   }
@@ -233,6 +234,7 @@ const currentPageTitle = computed(() => {
     AdminAiLogs: 'AI 日志',
     AdminUsers: '用户管理',
     AdminSystemStats: '系统统计',
+    AdminOps: '部署运维',
     AdminRollCall: '课堂点名',
     AdminGradeManage: '成绩管理',
     AdminProcessEval: '过程性评价',
@@ -256,6 +258,7 @@ const breadcrumbs = computed(() => {
     AdminAiLogs: 'AI 日志',
     AdminUsers: '用户管理',
     AdminSystemStats: '系统统计',
+    AdminOps: '部署运维',
     AdminRollCall: '课堂点名',
     AdminGradeManage: '成绩管理',
     AdminProcessEval: '过程性评价',

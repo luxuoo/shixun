@@ -345,22 +345,117 @@ systemctl restart learning-system
 
 ---
 
-## 十、更新部署
+## 十、更新部署（一键更新 + 一键回滚）
 
-当代码有更新时：
+更新不再直接改工作目录，而是「构建到新版本目录 → 切换软链 → 重启」。
+好处是**构建失败不影响线上**，切换失败**自动回滚**，历史版本可随时切回。
+
+### 10.1 目录结构（了解即可，不用手动建）
+
+```
+/www/wwwroot/learning-system/          # git 仓库，只负责拉代码
+├── .deploy/
+│   ├── releases/
+│   │   ├── 20261116-201533-1d36261/   # 每个版本独立目录（含各自 venv 与 dist）
+│   │   ├── 20261115-143022-9a2c1f0/
+│   │   └── ...
+│   ├── current -> releases/20261116-201533-1d36261   # 软链，切换即生效
+│   ├── shared/
+│   │   ├── .env                       # 环境变量（只维护这一份）
+│   │   ├── data/teaching.db           # 数据库
+│   │   └── uploads/                   # 上传文件
+│   ├── state.json                     # 最近一次发布状态（后台页面读它）
+│   └── ops.log                        # 发布日志
+└── ops/                               # 发布脚本
+```
+
+首次发布会自动把老的 `backend/data`、`backend/uploads`、`backend/.env` 迁到 `.deploy/shared`。
+
+### 10.2 一次性准备（3 步）
+
+```bash
+cd /www/wwwroot/learning-system
+
+# 1) 先跑一次发布，生成 current 软链与共享目录
+git config --global --add safe.directory /www/wwwroot/learning-system   # 非 root 用户需要
+bash ops/deploy.sh
+
+# 2) 注册 systemd 服务（脚本自动指向 .deploy/current，并提供免密重启）
+sudo bash ops/install-service.sh
+
+# 3) 把 Nginx 指到发布目录（片段见 ops/nginx.snippet.conf）
+#    root /www/wwwroot/learning-system/.deploy/current/frontend/dist;
+#    location /uploads/ { alias /www/wwwroot/learning-system/.deploy/shared/uploads/; }
+nginx -t && nginx -s reload
+```
+
+> 用宝塔「Python 项目管理器」启动后端的话，跳过第 2 步，改为在 `.env` 里设置
+> `RESTART_CMD="bt restart 你的项目名"`，发布脚本会调它重启。
+
+### 10.3 日常更新（三种方式任选）
+
+**方式 A：命令行（最稳）**
+
+```bash
+cd /www/wwwroot/learning-system
+bash ops/deploy.sh              # 更新到 origin/main
+bash ops/deploy.sh --ref v1.2   # 更新到指定分支/标签/提交
+bash ops/status.sh              # 看当前版本与历史
+```
+
+**方式 B：管理后台点按钮**
+
+服务器 `.env` 里设置 `OPS_ENABLED=true` 并重启后端，然后
+管理后台 → 系统设置 → **部署运维** → 「一键更新」。页面会实时显示进度、构建日志和历史版本。
+
+**方式 C：git push 后自动发布**
+
+```bash
+# 在服务器上，用 .env 里的密钥启动 webhook 接收器
+set -a; . /www/wwwroot/learning-system/.deploy/shared/.env; set +a
+python3 /www/wwwroot/learning-system/ops/webhook.py
+
+# 建议做成常驻服务（可选）
+# /etc/systemd/system/learning-webhook.service
+#   [Service]
+#   EnvironmentFile=/www/wwwroot/learning-system/.deploy/shared/.env
+#   ExecStart=/usr/bin/python3 /www/wwwroot/learning-system/ops/webhook.py
+#   Restart=always
+```
+
+然后在 GitHub 仓库 → Settings → Webhooks 添加：
+
+| 项 | 值 |
+|---|---|
+| Payload URL | `https://你的域名/hooks/github` |
+| Content type | `application/json` |
+| Secret | 与 `.env` 的 `OPS_WEBHOOK_SECRET` 一致 |
+| Events | Just the push event |
+
+之后 `git push origin main` 就会自动发布（同分支连续推送会合并，不会并发打架）。
+
+> 私有仓库需要服务器有拉取权限：`git remote set-url origin git@github.com:用户名/仓库.git`
+> 并把部署公钥（`~/.ssh/id_ed25519.pub`）加到仓库 Deploy keys。
+
+### 10.4 回滚
+
+```bash
+bash ops/rollback.sh                    # 回到上一个版本（不重建，约 5 秒）
+bash ops/rollback.sh --list             # 列出所有可用版本
+bash ops/rollback.sh --to 20261115-143022-9a2c1f0   # 回到指定版本
+```
+
+后台「部署运维」页面同样可以点「一键回滚」，或在版本历史里对某个版本点「回滚到此版本」。
+
+回滚只是切换软链 + 重启，**不重新构建**，所以很快；回滚后若想回到最新版，再点一次「一键更新」即可。
+
+### 10.5 手动流程（不使用脚本时）
 
 ```bash
 cd /www/wwwroot/learning-system
 git pull origin main
-
-# 重新构建前端
-cd frontend
-npm install
-npm run build
-
-# 重启后端
-cd ../backend
-pip3 install -r requirements.txt  # 如果有新依赖
+cd frontend && npm ci && npm run build
+cd ../backend && pip3 install -r requirements.txt
 systemctl restart learning-system
 ```
 
@@ -438,3 +533,30 @@ journalctl -u learning-system -n 50
 ### 5. 上传文件失败
 - 检查 `backend/uploads/` 目录权限：`chmod 755 backend/uploads/`
 - 检查 Nginx 的 `/uploads/` location 配置是否正确
+
+### 6. 后台「部署运维」提示未开启
+- 服务器 `.env`（实际读的是 `.deploy/shared/.env`）里设置 `OPS_ENABLED=true`，然后 `systemctl restart learning-system`
+- 页面右上角状态卡应显示「服务状态：运行中」；若显示「无响应」，检查 `OPS_HEALTH_URL` 是否指向真实端口
+
+### 7. 一键更新报「服务重启失败」
+发布脚本用非 root 用户跑，需要免密 sudo：
+
+```bash
+# 重新执行安装脚本会自动配置；或手动添加
+echo 'www ALL=(root) NOPASSWD: /bin/systemctl restart learning-system, /bin/systemctl is-active learning-system' \
+  | sudo tee /etc/sudoers.d/learning-system-deploy
+sudo chmod 440 /etc/sudoers.d/learning-system-deploy
+```
+
+### 8. 更新后页面还是旧版本
+- 浏览器缓存：`Ctrl+F5` 强刷；Nginx 里 `index.html` 应为 `no-store`（见 `nginx.conf`）
+- Nginx 仍指向老路径：确认 `root` 已改为 `.deploy/current/frontend/dist` 并 `nginx -s reload`
+- 软链未生效：`readlink -f /www/wwwroot/learning-system/.deploy/current` 看指向哪个版本
+
+### 9. 发布失败怎么排查
+```bash
+tail -50 /www/wwwroot/learning-system/.deploy/ops.log   # 发布日志
+bash ops/status.sh                                      # 当前版本与健康状态
+journalctl -u learning-system -n 50                     # 后端启动报错
+```
+构建失败时线上仍跑旧版本，`.deploy/releases/` 里会留下失败版本的目录，确认无用可手动删掉。

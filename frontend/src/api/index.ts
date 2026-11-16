@@ -130,6 +130,18 @@ export const aiApi = {
 }
 
 // 管理接口
+// 部署运维（仅管理员，需服务端开启 OPS_ENABLED）
+export const opsApi = {
+  getStatus: (lines = 60) =>
+    api.get('/admin/ops/status', { params: { lines } }),
+  deploy: (payload: { ref?: string; force?: boolean } = {}) =>
+    api.post('/admin/ops/deploy', payload, { timeout: 30000 }),
+  rollback: (release?: string) =>
+    api.post('/admin/ops/rollback', release ? { release } : {}, { timeout: 30000 }),
+  getLog: (lines = 300) =>
+    api.get('/admin/ops/log', { params: { lines } })
+}
+
 export const adminApi = {
   getDashboard: () =>
     api.get('/admin/dashboard'),

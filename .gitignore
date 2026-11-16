@@ -45,3 +45,6 @@ Thumbs.db
 
 # 本地 AI 助手工作区（记忆/缓存）
 .workbuddy/
+
+# 发布产物与运行数据（由 ops/deploy.sh 生成）
+.deploy/
