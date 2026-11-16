@@ -1,10 +1,10 @@
 <template>
-  <div class="auth" :class="{ dark: themeStore.isDark }">
+  <div class="auth mono-theme" :class="{ dark: themeStore.isDark }">
     <!-- 背景角色：大、在下、跟随鼠标，不抢内容 -->
     <div class="bg-bot" aria-hidden="true">
       <AoraBot
         shape="circle"
-        color="black"
+        :color="bgBotColor"
         state="reading"
         face="eyes"
         :sizePx="400"
@@ -204,6 +204,10 @@ const themeStore = useThemeStore()
 
 const REMEMBER_KEY = 'remembered_username'
 
+// 角色是「白底 + 墨线」：main.ts 里已把 ivory 色板覆写为纯白，
+// 两种主题统一用 ivory（--bot-opacity 由 mono.css 按主题微调），五官始终用墨色（--aora-fg）
+const bgBotColor = computed(() => 'ivory')
+
 const registerFormRef = ref<FormInst | null>(null)
 const loading = ref(false)
 const registerLoading = ref(false)
@@ -358,16 +362,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* ================= 基础 ================= */
+/* 配色统一由 src/styles/mono.css 的 .mono-theme 提供，这里只管布局 */
 .auth {
-  --paper: #f4f4f1;
-  --ink: #16171a;
-  --muted: #545a63;
-  --faint: #767c86;
-  --hair: rgba(22, 23, 26, 0.18);
-  --accent: #1c6b52;
-  --btn-bg: #16171a;
-  --btn-ink: #f4f4f1;
-
   display: flex;
   min-height: 100vh;
   background: var(--paper);
@@ -375,37 +371,44 @@ onBeforeUnmount(() => {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.auth.dark {
-  --paper: #0e0e10;
-  --ink: #e9e9e6;
-  --muted: #a8acb4;
-  --faint: #868a93;
-  --hair: rgba(233, 233, 230, 0.2);
-  --accent: #63bfa1;
-  --btn-bg: #e9e9e6;
-  --btn-ink: #101012;
-}
-
-/* 背景大角色：贴底、半透明，眼睛跟随指针；内容层 z-index 在其上 */
+/* 背景大角色：贴底、眼睛跟随指针；内容层 z-index 在其上
+   亮色=白底黑线，暗色=深底浅线，颜色来自 --bot-* 变量 */
 .bg-bot {
   position: absolute;
-  right: -70px;
-  bottom: -130px;
+  right: -90px;
+  bottom: -150px;
   z-index: 0;
-  opacity: 0.15;
+  width: 520px;
+  height: 520px;
+  display: grid;
+  place-items: center;
+  /* 两层：贴着身体轮廓的细线 + 外圈柔光，让白底角色从纸面里“浮”出来 */
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 197px, var(--bot-ring) 198px, transparent 200px),
+    var(--bot-plate);
+  opacity: var(--bot-opacity);
   pointer-events: none;
   line-height: 0;
-}
-
-.auth.dark .bg-bot {
-  opacity: 0.11;
+  /* 库里角色的身体取色板 ink（暖白/米白），这里用滤镜推成纯白：
+     墨色五官（#2B2420）几乎不受影响，身体则收敛到接近 #fff */
+  filter: saturate(0.3) brightness(1.05);
+  /* 边缘淡出，避免与内容抢注意力；中间部分保持清晰 */
+  -webkit-mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
+  mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
+  transition: opacity 0.3s ease, background 0.3s ease;
+  /* 角色内部的线条/纸色，跟随主题 */
+  --aora-fg: var(--bot-fg);
+  --aora-paper: var(--bot-paper);
+  --aora-bg-base: transparent;
 }
 
 @media (max-width: 900px) {
   .bg-bot {
-    right: -110px;
-    bottom: -150px;
-    opacity: 0.09;
+    right: -130px;
+    bottom: -170px;
+    width: 460px;
+    height: 460px;
+    opacity: calc(var(--bot-opacity) * 0.8);
   }
 }
 
