@@ -37,6 +37,13 @@
       连接不上后端（服务多半正在重启）。页面会自动重连并保留上次状态，不需要手动刷新。
     </n-alert>
 
+    <n-alert v-if="scriptsStale" type="warning" :bordered="false" class="hint">
+      面板执行的是项目目录里的脚本，而目录当前检出 <code>{{ status.repo_head }}</code>，
+      与线上运行的 <code>{{ status.current_commit }}</code> 不一致。
+      先在服务器执行 <code>cd {{ status.project_dir }} &amp;&amp; git pull</code>，
+      否则点按钮跑的是旧脚本（可能不认识新参数或带着已修的问题）。
+    </n-alert>
+
     <n-alert v-if="drift" type="error" :bordered="false" class="hint">
       进程仍在运行 <code>{{ runningCommit }}</code>，但当前版本目录是
       <code>{{ status.current_commit }}</code> —— 说明服务没重启到新代码。
@@ -255,6 +262,8 @@ const status = ref<any>({
   health_ok: false,
   current: '',
   current_commit: '',
+  repo_head: '',
+  scripts_stale: false,
   running_info: {},
   drift: false,
   releases: [],
@@ -269,6 +278,7 @@ const history = computed<any[]>(() => status.value.history || [])
 const runningInfo = computed<any>(() => status.value.running_info || {})
 const runningCommit = computed(() => runningInfo.value.commit || '')
 const drift = computed(() => Boolean(status.value.drift))
+const scriptsStale = computed(() => Boolean(status.value.scripts_stale))
 const state = computed<any>(() => status.value.state || {})
 const running = computed(() => Boolean(status.value.running))
 const canOperate = computed(() => status.value.enabled && status.value.platform_ok)

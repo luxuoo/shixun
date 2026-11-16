@@ -263,8 +263,13 @@ def _read_history(limit: int = 15) -> list:
     return items
 
 
-def _spawn(script: str, extra_args: list) -> None:
-    """以独立会话启动脚本（不受后端重启影响）"""
+def _spawn(script: str, extra_args: list, actor: str = "") -> None:
+    """以独立会话启动脚本（不受后端重启影响）
+
+    操作者通过环境变量 OPS_ACTOR 传递，而不是命令行参数 —— 服务器上的
+    ops/ 脚本可能比正在运行的后端旧（还没 git pull），旧脚本不认识新参数会直接
+    退出（报「未知参数: --actor」）。环境变量对任何版本都无害。
+    """
     DEPLOY_DIR.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     # systemd 下 PATH 很短，补齐常见目录，避免找不到 npm / python3
@@ -272,6 +277,8 @@ def _spawn(script: str, extra_args: list) -> None:
     env["APP_DIR"] = str(PROJECT_ROOT)
     env["SERVICE"] = settings.OPS_SERVICE
     env["HEALTH_URL"] = settings.OPS_HEALTH_URL
+    if actor:
+        env["OPS_ACTOR"] = actor
 
     with LOG_FILE.open("a", encoding="utf-8") as out:
         subprocess.Popen(
@@ -342,6 +349,20 @@ def _git_check() -> dict:
         return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
 
 
+def _repo_head() -> str:
+    """仓库工作区当前检出的提交（面板执行的就是这份脚本）"""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "rev-parse", "--short=7", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return (out.stdout or "").strip() if out.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
 def _current_release_commit() -> str:
     link = DEPLOY_DIR / "current"
     try:
@@ -394,6 +415,11 @@ async def ops_status(
 
     state["duration_sec"] = _duration(state)
 
+    # 面板执行的是仓库工作区的 ops 脚本；工作区没 git pull 就会出现
+    # 「线上是新版、按钮跑的是旧脚本」，旧脚本可能不认识新参数或带已修的 bug
+    repo_head = _repo_head()
+    scripts_stale = bool(repo_head and current_commit and repo_head != current_commit)
+
     return {
         "enabled": settings.OPS_ENABLED,
         "platform_ok": _platform_ok(),
@@ -412,6 +438,8 @@ async def ops_status(
         "state": state,
         "current": current,
         "current_commit": current_commit,
+        "repo_head": repo_head,
+        "scripts_stale": scripts_stale,
         "releases": releases,
         "disk_mb": round(sum(r["size_mb"] for r in releases), 1),
         "history": _read_history(15),
@@ -444,8 +472,7 @@ async def ops_deploy(
     if payload.force:
         args += ["--force"]
 
-    args += ["--actor", current_user.username]
-    _spawn("deploy.sh", args)
+    _spawn("deploy.sh", args, actor=current_user.username)
     return {
         "ok": True,
         "message": "已开始发布，页面会在完成后自动刷新状态",
@@ -471,8 +498,7 @@ async def ops_rollback(
     if not payload.release and len(_list_releases()) < 2:
         raise HTTPException(status_code=400, detail="没有可回滚的历史版本")
 
-    args += ["--actor", current_user.username]
-    _spawn("rollback.sh", args)
+    _spawn("rollback.sh", args, actor=current_user.username)
     return {"ok": True, "message": "已开始回滚", "action": "rollback", "to": payload.release or "上一个版本"}
 
 

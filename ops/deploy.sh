@@ -29,7 +29,12 @@ while [ $# -gt 0 ]; do
         --no-restart) NO_RESTART=1; shift ;;
         --skip-health) SKIP_HEALTH=1; shift ;;
         -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
-        *) die "未知参数: $1" ;;
+        *)
+            # 兼容版本错位：后端可能比脚本新，传了旧脚本不认识的参数。
+            # 这里只告警并忽略，不要直接退出（否则面板一按就失败）。
+            log "  ⚠ 忽略未知参数：$1（ops 脚本可能比后端旧，建议 git pull）"
+            shift
+            ;;
     esac
 done
 export NO_RESTART SKIP_HEALTH
