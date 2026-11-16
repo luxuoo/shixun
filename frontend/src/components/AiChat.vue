@@ -150,7 +150,7 @@ watch(() => props.messages.length, () => {
 
 .message-time {
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
   margin-top: 4px;
   display: block;
 }

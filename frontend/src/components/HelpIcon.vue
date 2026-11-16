@@ -23,7 +23,7 @@ withDefaults(defineProps<{
 
 <style scoped>
 .help-icon {
-  color: #bbb;
+  color: #8a919e;
   cursor: help;
   transition: color 0.2s;
   vertical-align: middle;

@@ -13,11 +13,7 @@
       @expand="collapsed = false"
     >
       <div class="logo">
-        <n-icon size="32" color="#2080f0">
-          <svg viewBox="0 0 24 24">
-            <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </n-icon>
+        <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="26" :lineWeight="1.15" seed="logo-student" />
         <span v-if="!collapsed" class="logo-text">AI 教学系统</span>
       </div>
 
@@ -35,11 +31,7 @@
     <n-drawer v-model:show="showDrawer" :width="260" placement="left">
       <n-drawer-content>
         <div class="logo">
-          <n-icon size="32" color="#2080f0">
-            <svg viewBox="0 0 24 24">
-              <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </n-icon>
+          <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="26" :lineWeight="1.15" seed="logo-student" />
           <span class="logo-text">AI 教学系统</span>
         </div>
         <n-menu
@@ -79,10 +71,11 @@
           <n-divider vertical v-if="!isMobile" />
           <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
             <n-button text>
-              {{ userStore.user?.name || userStore.user?.username }}
               <template #icon>
-                <n-icon><ChevronDown /></n-icon>
+                <BotAvatar :name="userStore.user?.username || 'guest'" :sizePx="26" />
               </template>
+              {{ userStore.user?.name || userStore.user?.username }}
+              <n-icon size="14" style="margin-left: 4px;"><ChevronDown /></n-icon>
             </n-button>
           </n-dropdown>
         </n-space>
@@ -94,6 +87,8 @@
       </n-layout-content>
     </n-layout>
   </n-layout>
+
+  <ChangePassword v-model:show="showPwd" />
 </template>
 
 <script setup lang="ts">
@@ -103,7 +98,9 @@ import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
+import AoraBot from '@/components/AoraBot'
 import StarBackground from '@/components/StarBackground.vue'
+import ChangePassword from '@/components/ChangePassword.vue'
 
 const ChevronDown = {
   render() {
@@ -119,6 +116,7 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 const collapsed = ref(false)
 const showDrawer = ref(false)
+const showPwd = ref(false)
 const isMobile = ref(window.innerWidth <= 768)
 
 function handleResize() {
@@ -146,45 +144,31 @@ const currentPageTitle = computed(() => {
     ProcessEval: '过程性评价',
     SelfEval: '自评互评'
   }
-  return nameMap[route.name as string] || 'AI 教学系统'
+  const name = route.name as string
+  const title = nameMap[name]
+  return title || 'AI 教学系统'
 })
 
+/** 菜单图标 = 小角色：豆豆眼 + 各自形状；浅色侧边栏上用配色区分，更易辨认 */
+function botIcon(shape: string, color = 'black') {
+  return () => h(AoraBot, {
+    shape,
+    color,
+    face: 'eyes',
+    sizePx: 24,
+    lineWeight: 1.2,
+    seed: `menu-${shape}`
+  })
+}
+
 const menuOptions: MenuOption[] = [
-  {
-    label: '首页',
-    key: 'Home',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' })]) })
-  },
-  {
-    label: '教学任务',
-    key: 'TaskList',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z' })]) })
-  },
-  {
-    label: '提交记录',
-    key: 'Submissions',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' })]) })
-  },
-  {
-    label: '成绩总览',
-    key: 'Scores',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z' })]) })
-  },
-  {
-    label: 'AI 对话历史',
-    key: 'AiHistory',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z' })]) })
-  },
-  {
-    label: '过程性评价',
-    key: 'ProcessEval',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z' })]) })
-  },
-  {
-    label: '自评互评',
-    key: 'SelfEval',
-    icon: () => h(NIcon, null, { default: () => h('svg', { viewBox: '0 0 24 24' }, [h('path', { fill: 'currentColor', d: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' })]) })
-  }
+  { label: '首页', key: 'Home', icon: botIcon('cottage', 'blue') },
+  { label: '教学任务', key: 'TaskList', icon: botIcon('bulb', 'yellow') },
+  { label: '提交记录', key: 'Submissions', icon: botIcon('drop', 'cyan') },
+  { label: '成绩总览', key: 'Scores', icon: botIcon('star', 'orange') },
+  { label: 'AI 对话历史', key: 'AiHistory', icon: botIcon('chat', 'green') },
+  { label: '过程性评价', key: 'ProcessEval', icon: botIcon('gem', 'violet') },
+  { label: '自评互评', key: 'SelfEval', icon: botIcon('clover', 'green') }
 ]
 
 const breadcrumbs = computed(() => {
@@ -198,11 +182,12 @@ const breadcrumbs = computed(() => {
     ProcessEval: '过程性评价',
     SelfEval: '自评互评'
   }
-  if (route.name === 'TaskDetail') {
+  const name = route.name as string
+  if (name === 'TaskDetail') {
     items.push({ path: '/tasks', title: '教学任务' })
     items.push({ path: route.path, title: '任务详情' })
-  } else if (route.name && nameMap[route.name as string]) {
-    items.push({ path: route.path, title: nameMap[route.name as string] })
+  } else if (name && nameMap[name]) {
+    items.push({ path: route.path, title: nameMap[name] })
   }
   return items
 })
@@ -210,6 +195,8 @@ const breadcrumbs = computed(() => {
 const userMenuOptions = [
   { label: '管理后台', key: 'admin', show: userStore.isTeacher },
   { type: 'divider', key: 'd1' },
+  { label: '修改密码', key: 'password' },
+  { type: 'divider', key: 'd2' },
   { label: '退出登录', key: 'logout' }
 ]
 
@@ -223,7 +210,9 @@ function handleDrawerMenuClick(key: string) {
 }
 
 function handleUserMenu(key: string) {
-  if (key === 'logout') {
+  if (key === 'password') {
+    showPwd.value = true
+  } else if (key === 'logout') {
     userStore.logout()
     router.push('/login')
   } else if (key === 'admin') {
@@ -238,8 +227,21 @@ function handleUserMenu(key: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid var(--n-border-color);
+}
+
+.logo-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.menu-emoji {
+  font-size: 17px;
+  line-height: 1;
+  display: inline-flex;
+  width: 22px;
+  justify-content: center;
 }
 
 .logo-text {

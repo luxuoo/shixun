@@ -32,12 +32,25 @@ async def _auto_score_background(
     from app.core.database import async_session
     async with async_session() as db:
         try:
-            ai_result = await ai_service.score_submission(
-                code=code,
-                step_requirements=step_requirements,
-                task_title=task_title,
-                step_title=step_title
-            )
+            # 抓取类错误（网络抖动、限流）重试一次；服务层内部已有指数退避，
+            # 这里再兜一层，避免一次抖动就让学生永远停在"待评分"
+            ai_result = None
+            last_err = None
+            for attempt in range(2):
+                try:
+                    ai_result = await ai_service.score_submission(
+                        code=code,
+                        step_requirements=step_requirements,
+                        task_title=task_title,
+                        step_title=step_title
+                    )
+                    break
+                except Exception as e:
+                    last_err = e
+                    if attempt == 0:
+                        await asyncio.sleep(3)
+            if ai_result is None:
+                raise last_err or RuntimeError("AI 评分失败")
 
             # 更新提交记录
             sub_result = await db.execute(
@@ -117,6 +130,73 @@ async def _auto_score_background(
                 print(f"后台 AI 评分失败且记录错误日志也失败: {e}")
 
 
+@router.post("/{submission_id}/rescore")
+async def rescore_submission(
+    submission_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """重新触发 AI 评分
+
+    自动评分失败（网络/额度问题）后，学生或教师可以手动重试，
+    不用等到教师逐条人工打分。
+    """
+    from app.services.ai_service import ai_error_detail
+
+    sub = await db.get(Submission, submission_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="提交记录不存在")
+    if current_user.role == "student" and sub.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权操作他人的提交")
+
+    task = await db.get(Task, sub.task_id)
+    step = await db.get(TaskStep, sub.step_id)
+    if not task or not step:
+        raise HTTPException(status_code=404, detail="任务或步骤已删除")
+
+    try:
+        ai_result = await ai_service.score_submission(
+            code=sub.code or "",
+            step_requirements=step.requirements or "",
+            task_title=task.title,
+            step_title=step.title
+        )
+    except Exception as e:
+        detail, code = ai_error_detail(e)
+        raise HTTPException(status_code=code, detail=detail)
+
+    sub.ai_score = ai_result["total_score"]
+    sub.ai_feedback = ai_result["feedback"]
+    sub.status = "ai_scored"
+
+    # 同步更新任务级分数
+    score_result = await db.execute(
+        select(Score).where(Score.user_id == sub.user_id, Score.task_id == sub.task_id)
+    )
+    score = score_result.scalar_one_or_none()
+    if score:
+        avg_result = await db.execute(
+            select(func.avg(Submission.ai_score)).where(
+                Submission.user_id == sub.user_id,
+                Submission.task_id == sub.task_id,
+                Submission.ai_score.isnot(None)
+            )
+        )
+        avg_score = avg_result.scalar()
+        score.ai_total_score = avg_score if avg_score else ai_result["total_score"]
+        from app.api.admin import calc_final_score
+        score.final_score = calc_final_score(score)
+
+    await db.commit()
+
+    return {
+        "message": "已重新评分",
+        "total_score": ai_result["total_score"],
+        "feedback": ai_result["feedback"],
+        "suggestions": ai_result.get("suggestions", [])
+    }
+
+
 @router.post("", response_model=SubmissionResponse)
 async def create_submission(
     submission_data: SubmissionCreate,
@@ -176,7 +256,25 @@ async def create_submission(
     )
     score = score_result.scalar_one_or_none()
     if not score:
-        score = Score(user_id=current_user.id, task_id=submission_data.task_id, total_submissions=1)
+        # 出勤分是挂在 Score 行上的，而 Score 行要等首次提交才创建，
+        # 于是"先点名、后交作业"的学生之前那次点名加分无处写。
+        # 这里按点名记录回算一次，把漏掉的出勤补回来（封顶 100）。
+        attendance = 0
+        rollcall_count = 0
+        if _system_settings.get("rollcall_auto_score", False):
+            from app.models.ai_log import RollcallRecord
+            cnt_result = await db.execute(
+                select(func.count(RollcallRecord.id)).where(RollcallRecord.student_id == current_user.id)
+            )
+            rollcall_count = cnt_result.scalar() or 0
+            attendance = min(100, rollcall_count * _system_settings.get("rollcall_score", 5))
+        score = Score(
+            user_id=current_user.id,
+            task_id=submission_data.task_id,
+            total_submissions=1,
+            attendance_score=attendance,
+            rollcall_count=rollcall_count
+        )
         db.add(score)
     else:
         score.total_submissions = (score.total_submissions or 0) + 1

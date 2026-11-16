@@ -5,7 +5,7 @@
       <div class="hero-content">
         <div class="hero-text">
           <h1>{{ greeting }}，{{ userStore.user?.name || userStore.user?.username }}</h1>
-          <p>今天也要加油学习哦，坚持就是胜利 💪</p>
+          <p>今天也要加油学习哦，坚持就是胜利</p>
         </div>
         <div class="hero-stats">
           <div class="hero-stat">
@@ -35,7 +35,7 @@
     <div class="quick-grid">
       <div class="quick-card quick-blue" @click="router.push('/tasks')">
         <div class="quick-icon">
-          <n-icon size="28"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
+          <AoraBot shape="bulb" color="yellow" face="eyes" :sizePx="36" :lineWeight="1.15" seed="q-tasks" />
         </div>
         <div>
           <div class="quick-title">教学任务</div>
@@ -44,7 +44,7 @@
       </div>
       <div class="quick-card quick-green" @click="router.push('/submissions')">
         <div class="quick-icon">
-          <n-icon size="28"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></n-icon>
+          <AoraBot shape="drop" color="cyan" face="eyes" :sizePx="36" :lineWeight="1.15" seed="q-subs" />
         </div>
         <div>
           <div class="quick-title">提交记录</div>
@@ -53,7 +53,7 @@
       </div>
       <div class="quick-card quick-purple" @click="router.push('/scores')">
         <div class="quick-icon">
-          <n-icon size="28"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></n-icon>
+          <AoraBot shape="star" color="orange" face="eyes" :sizePx="36" :lineWeight="1.15" seed="q-scores" />
         </div>
         <div>
           <div class="quick-title">成绩总览</div>
@@ -62,7 +62,7 @@
       </div>
       <div class="quick-card quick-orange" @click="router.push('/self-eval')">
         <div class="quick-icon">
-          <n-icon size="28"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></n-icon>
+          <AoraBot shape="clover" color="green" face="eyes" :sizePx="36" :lineWeight="1.15" seed="q-eval" />
         </div>
         <div>
           <div class="quick-title">自评互评</div>
@@ -76,7 +76,7 @@
       <!-- 学习进度 -->
       <div class="card-section">
         <div class="card-header">
-          <span class="card-title">📊 学习进度</span>
+          <span class="card-title">学习进度</span>
         </div>
         <div class="progress-list">
           <div v-for="task in recentTasks" :key="task.id" class="progress-item" @click="router.push(`/tasks/${task.id}`)">
@@ -91,14 +91,20 @@
               <span class="progress-pct">{{ getTaskProgress(task) }}%</span>
             </div>
           </div>
-          <n-empty v-if="recentTasks.length === 0" description="暂无任务" size="small" style="padding: 30px 0;" />
+          <EmptyState
+            v-if="recentTasks.length === 0"
+            text="还没有实训任务，等老师布置吧"
+            shape="blob" color="violet" state="idle" :sizePx="60"
+            seed="home-task-empty"
+            class="compact"
+          />
         </div>
       </div>
 
       <!-- 最近提交 -->
       <div class="card-section">
         <div class="card-header">
-          <span class="card-title">📝 最近提交</span>
+          <span class="card-title">最近提交</span>
           <n-button text type="primary" size="small" @click="router.push('/submissions')">查看全部</n-button>
         </div>
         <div class="submit-list">
@@ -114,7 +120,13 @@
               </span>
             </div>
           </div>
-          <n-empty v-if="recentSubmissions.length === 0" description="暂无提交记录" size="small" style="padding: 30px 0;" />
+          <EmptyState
+            v-if="recentSubmissions.length === 0"
+            text="还没交过作业，去任务列表看看"
+            shape="mochi" color="green" state="idle" :sizePx="60"
+            seed="home-sub-empty"
+            class="compact"
+          />
         </div>
       </div>
     </div>
@@ -122,7 +134,7 @@
     <!-- 底部：最近任务列表 -->
     <div class="card-section" style="margin-top: 20px;">
       <div class="card-header">
-        <span class="card-title">📚 全部任务</span>
+        <span class="card-title">全部任务</span>
         <n-button text type="primary" size="small" @click="router.push('/tasks')">查看全部</n-button>
       </div>
       <div class="task-list">
@@ -138,7 +150,12 @@
             <n-button type="primary" size="tiny" quaternary>进入 →</n-button>
           </div>
         </div>
-        <n-empty v-if="recentTasks.length === 0" description="暂无任务" size="small" style="padding: 40px 0;" />
+        <EmptyState
+          v-if="recentTasks.length === 0"
+          text="还没有实训任务"
+          shape="bulb" color="" state="bored" :sizePx="56"
+          seed="home-all-tasks"
+        />
       </div>
     </div>
   </div>
@@ -191,7 +208,7 @@ function getStatusLabel(status: string) {
 }
 
 function getScoreColor(score: number | null) {
-  if (!score) return '#999'
+  if (!score) return '#5f6673'
   if (score >= 90) return '#18a058'
   if (score >= 60) return '#f0a020'
   return '#d03050'
@@ -256,43 +273,33 @@ onMounted(() => { loadData() })
 </script>
 
 <style scoped>
+.compact {
+  padding: 12px 0 10px;
+}
+
+
+.quick-emoji {
+  font-size: 25px;
+  line-height: 1;
+}
+
 .home-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 /* 欢迎横幅 */
+/* 与登录页同一套语言：墨色块 + 细线，不用渐变光斑 */
 .hero-banner {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
-  border-radius: 16px;
-  padding: 32px 40px;
-  margin-bottom: 24px;
-  color: white;
+  background: #16171a;
+  border-radius: 12px;
+  padding: 30px 36px;
+  margin-bottom: 20px;
+  color: #f4f4f1;
   position: relative;
   overflow: hidden;
 }
 
-.hero-banner::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 50%;
-}
-
-.hero-banner::after {
-  content: '';
-  position: absolute;
-  bottom: -40%;
-  right: 10%;
-  width: 200px;
-  height: 200px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 50%;
-}
 
 .hero-content {
   display: flex;
@@ -310,8 +317,8 @@ onMounted(() => { loadData() })
 
 .hero-text p {
   margin: 0;
-  opacity: 0.85;
-  font-size: 15px;
+  color: rgba(244, 244, 241, 0.68);
+  font-size: 14px;
 }
 
 .hero-stats {
@@ -324,20 +331,21 @@ onMounted(() => { loadData() })
 
 .hero-stat-num {
   display: block;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .hero-stat-label {
   font-size: 12px;
-  opacity: 0.75;
+  color: rgba(244, 244, 241, 0.6);
 }
 
 .hero-stat-divider {
   width: 1px;
-  height: 36px;
-  background: rgba(255,255,255,0.25);
+  height: 34px;
+  background: rgba(244, 244, 241, 0.18);
 }
 
 /* 快捷入口 */
@@ -357,7 +365,8 @@ onMounted(() => { loadData() })
   cursor: pointer;
   transition: all 0.2s;
   background: #fff;
-  border: 1px solid #e8e8ec;
+  border: 1px solid #dcdfe6;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 .quick-card:hover {
@@ -375,10 +384,10 @@ onMounted(() => { loadData() })
   flex-shrink: 0;
 }
 
-.quick-blue .quick-icon { background: #f0f6ff; color: #2080f0; }
-.quick-green .quick-icon { background: #f0faf0; color: #18a058; }
-.quick-purple .quick-icon { background: #f5f0ff; color: #7c3aed; }
-.quick-orange .quick-icon { background: #fff8f0; color: #f0a020; }
+.quick-blue .quick-icon { background: #e8f1ff; color: #1f6feb; }
+.quick-green .quick-icon { background: #e8f7ee; color: #12805c; }
+.quick-purple .quick-icon { background: #f1e9ff; color: #6d28d9; }
+.quick-orange .quick-icon { background: #fff2e0; color: #c2740b; }
 
 .quick-title {
   font-size: 14px;
@@ -388,7 +397,7 @@ onMounted(() => { loadData() })
 
 .quick-desc {
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
   margin-top: 2px;
 }
 
@@ -402,8 +411,9 @@ onMounted(() => { loadData() })
 .card-section {
   background: #fff;
   border-radius: 12px;
-  border: 1px solid #e8e8ec;
+  border: 1px solid #dcdfe6;
   padding: 20px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 .card-header {
@@ -515,7 +525,7 @@ onMounted(() => { loadData() })
 
 .submit-time {
   font-size: 11px;
-  color: #bbb;
+  color: #8a919e;
 }
 
 .submit-right {
@@ -576,7 +586,7 @@ onMounted(() => { loadData() })
 
 .task-row-steps, .task-row-hours {
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
 }
 
 /* 响应式 */

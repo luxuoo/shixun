@@ -32,6 +32,17 @@ from app.schemas.evaluation import (
 router = APIRouter(prefix="/api/evaluation", tags=["过程性评价"])
 
 
+async def _run_ai(coro):
+    """统一执行 AI 调用并转换为可读的 HTTP 错误"""
+    from app.services.ai_service import ai_error_detail
+
+    try:
+        return await coro
+    except Exception as e:
+        detail, code = ai_error_detail(e)
+        raise HTTPException(status_code=code, detail=detail)
+
+
 # ==================== 权重校验工具 ====================
 async def validate_phase_weights(db: AsyncSession, template_id: int) -> WeightValidation:
     """校验模板下所有阶段权重合计是否为100%"""
@@ -1148,7 +1159,9 @@ async def calculate_student_score(
             # 按能力维度汇总
             dim_scores_map[indicator.capability_dim].append(normalized)
 
-        phase_score = phase_total
+        # 指标权重合计不等于 100 时按实际合计归一，
+        # 否则一个只配了 80% 权重的阶段，学生拿满也只有 80 分
+        phase_score = (phase_total / phase_weight_sum * 100) if phase_weight_sum > 0 else 0
         weighted_phase = phase_score * (phase.weight / 100)
         total_score += weighted_phase
 
@@ -1494,13 +1507,13 @@ async def ai_generate_template(
     if not course_name:
         raise HTTPException(status_code=400, detail="请提供课程名称")
 
-    result = await ai_service.generate_eval_template(
+    result = await _run_ai(ai_service.generate_eval_template(
         course_name=course_name,
         course_description=course_description,
         category=category,
         student_count=student_count,
         task_count=task_count
-    )
+    ))
 
     if not result["success"]:
         error_msg = result.get("error", "AI 生成失败")
@@ -1630,13 +1643,13 @@ async def ai_suggest_indicators(
         if cat:
             category = cat
 
-    result = await ai_service.suggest_indicators(
+    result = await _run_ai(ai_service.suggest_indicators(
         phase_name=phase.name,
         phase_weight=phase.weight,
         existing_indicators=", ".join(existing) if existing else "",
         category=category,
         other_phases=", ".join(other_phases) if other_phases else ""
-    )
+    ))
 
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result["error"])
@@ -1709,7 +1722,7 @@ async def ai_diagnose_student(
         trend_lines.append(f"- {date_str}: 总分{s.total_score}")
     trend_data = "\n".join(trend_lines) if trend_lines else ""
 
-    result = await ai_service.diagnose_student(
+    result = await _run_ai(ai_service.diagnose_student(
         student_name=student.name or student.username,
         class_name=class_name,
         template_name=template.name,
@@ -1717,7 +1730,7 @@ async def ai_diagnose_student(
         phase_details=phase_details,
         dim_details=dim_details,
         trend_data=trend_data
-    )
+    ))
 
     return {"report": result["report"], "tokens_used": result["tokens_used"]}
 
@@ -1750,7 +1763,7 @@ async def ai_class_insight(
     top_lines = [f"{r.rank}. {r.student_name}: {r.total_score}分" for r in dashboard.ranking[:5]]
     top_students = "\n".join(top_lines)
 
-    result = await ai_service.class_insight(
+    result = await _run_ai(ai_service.class_insight(
         class_name=class_obj.name,
         template_name=f"模板ID:{dashboard.template_id}",
         student_count=dist.total_students,
@@ -1760,6 +1773,6 @@ async def ai_class_insight(
         score_distribution=score_distribution,
         dim_averages=dim_averages,
         top_students=top_students
-    )
+    ))
 
     return {"report": result["report"], "tokens_used": result["tokens_used"]}

@@ -33,7 +33,7 @@
 |------|------|
 | 前端 | Vue 3 + TypeScript + Vite + Naive UI + Monaco Editor |
 | 后端 | Python FastAPI + SQLAlchemy (异步) + SQLite |
-| AI | MiMo API（OpenAI 兼容格式） |
+| AI | DeepSeek / 小米 MiMo（均为 OpenAI 兼容接口，可一键切换） |
 | 部署 | Nginx + systemd / Docker |
 
 ## 项目结构
@@ -84,7 +84,7 @@ cd shixun
 **2. 配置环境变量**
 ```bash
 cp .env.example backend/.env
-# 编辑 backend/.env，填入你的 MiMo API Key
+# 编辑 backend/.env，填入 DeepSeek 或 MiMo 的 API Key，并设置 AI_PROVIDER
 ```
 
 **3. 启动后端**
@@ -128,13 +128,44 @@ docker-compose up -d
 
 ## AI 功能说明
 
-系统使用 MiMo API（OpenAI 兼容格式）作为 AI 后端。在 `backend/.env` 中配置：
+系统支持两家 OpenAI 兼容的大模型服务商，改一行配置即可切换，业务代码无需改动。
 
-```
-MIMO_API_KEY=your-api-key
+### 支持的服务商
+
+| 服务商 | 说明 | 推荐模型 |
+|--------|------|----------|
+| DeepSeek | 深度求索，性价比高，支持 JSON 输出 | `deepseek-chat` / `deepseek-reasoner` |
+| 小米 MiMo | 推理模型，先输出 reasoning 再给正文 | `mimo-v2.5-pro` |
+
+### 配置方式
+
+在 `backend/.env` 中填写：
+
+```bash
+# 选择服务商：deepseek 或 mimo
+AI_PROVIDER=deepseek
+
+# DeepSeek（https://platform.deepseek.com 申请）
+DEEPSEEK_API_KEY=sk-xxxxxxxx
+DEEPSEEK_API_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+# 小米 MiMo
+MIMO_API_KEY=
 MIMO_API_URL=https://token-plan-cn.xiaomimimo.com/v1
 MIMO_MODEL=mimo-v2.5-pro
+
+# 超时与重试
+AI_TIMEOUT=120
+AI_MAX_RETRIES=2
 ```
+
+要点：
+
+- 只填一家密钥也能正常工作。首选服务商没配密钥时，会自动回退到另一家已配置的服务商，不会让 AI 功能整体不可用。
+- 限流（429）、超时、5xx 会自动指数退避重试，重试次数由 `AI_MAX_RETRIES` 控制。
+- 支持 JSON 输出的服务商会自动启用 `response_format=json_object`，评分/任务分解的解析成功率更高。
+- 管理员可在「AI 使用统计 → AI 服务商」中查看当前服务商、分别测试连通性，并临时切换（重启后回到 `.env` 配置）。
 
 ### AI 提示分级
 

@@ -51,9 +51,7 @@
             <n-card>
               <n-statistic label="学生总数" :value="dashboard.distribution.total_students">
                 <template #prefix>
-                  <n-icon color="#2080f0" size="24">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                  </n-icon>
+                  <AoraBot shape="chick" color="blue" face="eyes" :sizePx="28" :lineWeight="1.15" seed="peval-0" />
                 </template>
               </n-statistic>
             </n-card>
@@ -62,9 +60,7 @@
             <n-card>
               <n-statistic label="平均分" :value="dashboard.distribution.average_score" :precision="1">
                 <template #prefix>
-                  <n-icon color="#18a058" size="24">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                  </n-icon>
+                  <AoraBot shape="drop" color="green" face="eyes" :sizePx="28" :lineWeight="1.15" seed="peval-1" />
                 </template>
               </n-statistic>
             </n-card>
@@ -74,9 +70,7 @@
               <n-statistic label="及格率" :value="dashboard.distribution.pass_rate" :precision="1">
                 <template #suffix>%</template>
                 <template #prefix>
-                  <n-icon color="#f0a020" size="24">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                  </n-icon>
+                  <AoraBot shape="star" color="orange" face="eyes" :sizePx="28" :lineWeight="1.15" seed="peval-2" />
                 </template>
               </n-statistic>
             </n-card>
@@ -86,9 +80,7 @@
               <n-statistic label="优秀率" :value="dashboard.distribution.excellent_rate" :precision="1">
                 <template #suffix>%</template>
                 <template #prefix>
-                  <n-icon color="#d03050" size="24">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                  </n-icon>
+                  <AoraBot shape="heart" color="pink" face="eyes" :sizePx="28" :lineWeight="1.15" seed="peval-3" />
                 </template>
               </n-statistic>
             </n-card>
@@ -421,7 +413,7 @@ function drawDistributionChart() {
 
     // Y 轴标签
     const value = niceMax - (niceMax / gridLines) * i
-    ctx.fillStyle = '#999'
+    ctx.fillStyle = '#5f6673'
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -466,7 +458,7 @@ function drawDistributionChart() {
     ctx.fillText(String(item.count), x + barWidth / 2, y - 6)
 
     // X 轴标签
-    ctx.fillStyle = '#666'
+    ctx.fillStyle = '#4a5160'
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
@@ -477,7 +469,7 @@ function drawDistributionChart() {
   ctx.save()
   ctx.translate(16, padding.top + chartHeight / 2)
   ctx.rotate(-Math.PI / 2)
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = '#4a5160'
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -485,7 +477,7 @@ function drawDistributionChart() {
   ctx.restore()
 
   // X 轴标题
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = '#4a5160'
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -569,7 +561,7 @@ function drawPieChart() {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(`${total}`, centerX, centerY - 8)
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#5f6673'
   ctx.font = '12px sans-serif'
   ctx.fillText('总人数', centerX, centerY + 12)
 
@@ -648,7 +640,7 @@ function drawRadarChart() {
 
     // 刻度数值
     const labelValue = Math.round((maxValue / gridLevels) * level)
-    ctx.fillStyle = '#bbb'
+    ctx.fillStyle = '#8a919e'
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'bottom'

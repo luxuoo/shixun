@@ -8,15 +8,15 @@
     <n-spin :show="loading">
       <!-- 成绩未开放 -->
       <template v-if="!loading && !gradesVisible">
-        <n-card>
-          <n-empty description="成绩暂未开放查看，请等待教师开放" style="padding: 60px 0;" />
+        <n-card class="empty-card">
+          <EmptyState text="成绩暂未开放查看，请等待教师开放" shape="bell" color="" state="shy" :sizePx="72" seed="empty-score-lock" />
         </n-card>
       </template>
 
       <!-- Empty state -->
       <template v-else-if="!loading && !dashboardData">
-        <n-card>
-          <n-empty description="暂无过程性评价成绩数据" style="padding: 60px 0;" />
+        <n-card class="empty-card">
+          <EmptyState text="暂无过程性评价成绩数据" shape="star" color="" state="bored" :sizePx="72" seed="empty-score" />
         </n-card>
       </template>
 
@@ -26,13 +26,13 @@
           <n-space align="center" justify="space-between">
             <n-space align="center" :size="24">
               <div>
-                <div style="font-size: 14px; color: #999; margin-bottom: 4px;">过程性评价总分</div>
+                <div style="font-size: 14px; color: #5f6673; margin-bottom: 4px;">过程性评价总分</div>
                 <div
                   class="total-score-number"
                   :style="{ color: getScoreColor(dashboardData.total_score) }"
                 >
                   {{ dashboardData.total_score ?? '--' }}
-                  <span style="font-size: 16px; color: #999; font-weight: 400;">/ 100</span>
+                  <span style="font-size: 16px; color: #5f6673; font-weight: 400;">/ 100</span>
                 </div>
               </div>
               <n-divider vertical />
@@ -163,7 +163,7 @@ const phaseColumns = [
     width: 120,
     render: (row: PhaseScore) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #ccc;' }, '未录入')
+        return h('span', { style: 'color: #8a919e;' }, '未录入')
       }
       const color = getScoreColor(row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 16px;` }, `${row.score}`)
@@ -175,7 +175,7 @@ const phaseColumns = [
     width: 120,
     render: (row: PhaseScore) => {
       if (row.weighted_score === null || row.weighted_score === undefined) {
-        return h('span', { style: 'color: #ccc;' }, '--')
+        return h('span', { style: 'color: #8a919e;' }, '--')
       }
       return h('span', { style: 'font-weight: 600;' }, `${row.weighted_score}`)
     }
@@ -227,7 +227,7 @@ const detailColumns = [
     width: 100,
     render: (row: any) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #ccc;' }, '未录入')
+        return h('span', { style: 'color: #8a919e;' }, '未录入')
       }
       const color = getScoreColor(row.normalized_score ?? row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 15px;` }, `${row.score}`)
@@ -239,7 +239,7 @@ const detailColumns = [
     width: 110,
     render: (row: any) => {
       if (row.normalized_score === null || row.normalized_score === undefined) {
-        return h('span', { style: 'color: #ccc;' }, '--')
+        return h('span', { style: 'color: #8a919e;' }, '--')
       }
       const color = getScoreColor(row.normalized_score)
       return h('span', { style: `color: ${color}; font-weight: 500;` }, `${row.normalized_score}`)
@@ -268,7 +268,7 @@ const detailColumns = [
 // ---- Helpers ----
 
 function getScoreColor(score: number | null | undefined): string {
-  if (score === null || score === undefined) return '#999'
+  if (score === null || score === undefined) return '#5f6673'
   if (score >= 90) return '#18a058'
   if (score >= 60) return '#f0a020'
   return '#d03050'
@@ -367,7 +367,7 @@ function drawRadarChart() {
 
     // Ring labels
     if (ring % 2 === 0 || ring === 5) {
-      ctx.fillStyle = '#aaa'
+      ctx.fillStyle = '#8a919e'
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(String(ring * 20), centerX - 4, centerY - r + 12)
@@ -507,8 +507,32 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 空态卡片：高度定在内容区，并让角色垂直居中 */
+.empty-card :deep(.n-card__content) {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 空态卡片：高度定在内容区，并让角色垂直居中 */
+.empty-card :deep(.n-card__content) {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 空态卡片：高度定在内容区，并让角色居中 */
+.empty-card :deep(.n-card__content) {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .scores-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 4px;
 }

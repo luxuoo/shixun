@@ -11,8 +11,15 @@
     <n-spin :show="loading">
       <div class="task-grid">
         <div v-for="task in tasks" :key="task.id" class="task-card" @click="router.push(`/tasks/${task.id}`)">
-          <div class="task-cover" :style="{ background: getGradient(task.category) }">
-            <n-icon size="40" color="rgba(255,255,255,0.8)"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
+          <div class="task-cover" :style="{ background: coverBg(task.category) }">
+            <AoraBot
+              :shape="coverShape(task.category)"
+              :color="coverInk(task.category)"
+              face="eyes"
+              :sizePx="64"
+              :lineWeight="1.1"
+              :seed="`cover-${task.id}`"
+            />
           </div>
           <div class="task-body">
             <div class="task-tags">
@@ -28,7 +35,7 @@
           </div>
         </div>
       </div>
-      <n-empty v-if="!loading && tasks.length === 0" description="暂无任务" style="padding: 80px 0;" />
+      <EmptyState v-if="!loading && tasks.length === 0" text="还没有实训任务" shape="bulb" color="" state="bored" :sizePx="72" seed="empty-tasks" />
     </n-spin>
   </div>
 </template>
@@ -62,15 +69,29 @@ const difficultyOptions = [
   { label: '5星 高级', value: 5 }
 ]
 
-function getGradient(category: string) {
-  const g: Record<string, string> = {
-    'Python': 'linear-gradient(135deg, #667eea, #764ba2)',
-    'Web': 'linear-gradient(135deg, #f093fb, #f5576c)',
-    'YOLO': 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    '数据分析': 'linear-gradient(135deg, #43e97b, #38f9d7)',
-    '机器学习': 'linear-gradient(135deg, #fa709a, #fee140)'
-  }
-  return g[category] || 'linear-gradient(135deg, #667eea, #764ba2)'
+/* 分类视觉：淡底 + 角色，替代原来的高饱和渐变封面 */
+const CATEGORY_VISUAL: Record<string, { bg: string; ink: string; shape: string }> = {
+  'Python': { bg: '#eef2ff', ink: 'blue', shape: 'circle' },
+  'Web': { bg: '#ecfeff', ink: 'cyan', shape: 'cloud' },
+  'YOLO': { bg: '#f0fdf4', ink: 'green', shape: 'star' },
+  '数据分析': { bg: '#fff7ed', ink: 'orange', shape: 'gem' },
+  '机器学习': { bg: '#faf5ff', ink: 'violet', shape: 'planet' }
+}
+
+function visualOf(category: string) {
+  return CATEGORY_VISUAL[category] || { bg: '#f4f5f7', ink: 'black', shape: 'blob' }
+}
+
+function coverBg(category: string) {
+  return visualOf(category).bg
+}
+
+function coverInk(category: string) {
+  return visualOf(category).ink
+}
+
+function coverShape(category: string) {
+  return visualOf(category).shape
 }
 
 function getCategoryType(category: string) {
@@ -101,7 +122,7 @@ onMounted(() => { loadTasks() })
 
 <style scoped>
 .task-list-container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -138,7 +159,7 @@ onMounted(() => { loadTasks() })
 }
 
 .task-cover {
-  height: 120px;
+  height: 104px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,7 +188,7 @@ onMounted(() => { loadTasks() })
 .task-desc {
   margin: 0 0 12px;
   font-size: 13px;
-  color: #666;
+  color: #4a5160;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -179,7 +200,7 @@ onMounted(() => { loadTasks() })
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
 }
 
 /* 响应式 */
@@ -190,7 +211,7 @@ onMounted(() => { loadTasks() })
   }
 
   .task-cover {
-    height: 100px;
+    height: 88px;
   }
 
   .page-header {

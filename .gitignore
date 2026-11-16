@@ -26,6 +26,11 @@ backend/.env
 
 # Database
 backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+# 运行时系统设置（管理员在后台改的开关，属于部署环境状态）
+backend/data/settings.json
+backend/data/*.tmp
 
 # Uploads
 uploads/*
@@ -37,3 +42,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# 本地 AI 助手工作区（记忆/缓存）
+.workbuddy/

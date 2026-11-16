@@ -17,7 +17,7 @@ from app.schemas.task import (
     TaskStepUpdate,
     TaskStepResponse
 )
-from app.services.ai_service import ai_service
+from app.services.ai_service import ai_service, ai_error_detail
 
 router = APIRouter(prefix="/api/tasks", tags=["任务"])
 
@@ -56,6 +56,12 @@ async def get_task(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="任务不存在"
+        )
+    # 列表里过滤了未发布任务，详情接口也要一致，否则知道 id 就能绕过
+    if not task.is_active and current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="任务尚未发布"
         )
     return task
 
@@ -256,13 +262,8 @@ async def ai_decompose_task(
             steps_count=steps_count
         )
     except Exception as e:
-        err_msg = str(e)[:300]
-        if "auth" in err_msg.lower() or "401" in err_msg:
-            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-        elif "timeout" in err_msg.lower():
-            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-        else:
-            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
+        detail, code = ai_error_detail(e)
+        raise HTTPException(status_code=code, detail=detail)
 
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result.get("error", "AI 分解失败"))

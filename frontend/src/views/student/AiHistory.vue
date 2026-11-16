@@ -6,7 +6,7 @@
     </div>
 
     <n-spin :show="loading">
-      <n-empty v-if="!loading && history.length === 0" description="暂无 AI 对话记录" style="padding: 80px 0;" />
+      <EmptyState v-if="!loading && history.length === 0" text="还没有 AI 对话记录" shape="chat" color="" state="sleeping" :sizePx="72" seed="empty-ai" />
       <div v-else class="history-list">
         <div v-for="item in history" :key="item.id" class="history-card">
           <div class="history-header">
@@ -103,7 +103,7 @@ onMounted(() => { loadHistory() })
 
 .history-time {
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
 }
 
 .history-content {

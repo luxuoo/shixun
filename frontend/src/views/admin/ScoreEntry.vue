@@ -35,7 +35,7 @@
           @update:value="handleIndicatorChange"
         />
       </n-space>
-      <div v-if="currentIndicator" style="margin-top: 12px; color: #666; font-size: 13px;">
+      <div v-if="currentIndicator" style="margin-top: 12px; color: #4a5160; font-size: 13px;">
         <n-space>
           <n-tag size="small" type="info">权重: {{ currentIndicator.weight }}%</n-tag>
           <n-tag size="small">满分: {{ currentIndicator.max_score }}</n-tag>
@@ -137,7 +137,7 @@ const columns = [
     key: 'latest_score',
     width: 100,
     render: (row: any) => {
-      if (row.latest_score == null) return h('span', { style: 'color: #ccc;' }, '--')
+      if (row.latest_score == null) return h('span', { style: 'color: #8a919e;' }, '--')
       return h('span', { style: 'font-weight: 600;' }, `${row.latest_score}`)
     }
   },

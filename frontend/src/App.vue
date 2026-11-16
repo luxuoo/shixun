@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme="themeStore.theme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme="themeStore.theme" :theme-overrides="overrides">
     <n-message-provider>
       <n-dialog-provider>
         <router-view />
@@ -9,23 +9,69 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import type { GlobalThemeOverrides } from 'naive-ui'
 import { useThemeStore } from './stores/theme'
 
 const themeStore = useThemeStore()
 
-const themeOverrides: GlobalThemeOverrides = {
+/* 亮色：正文/次要文字整体加深，边框加实，卡片与页面分层更清楚 */
+const lightOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: '#2080f0',
-    primaryColorHover: '#4098fc',
-    primaryColorPressed: '#1060c9',
-    borderRadius: '8px'
+    primaryColor: '#1f6feb',
+    primaryColorHover: '#3b82f6',
+    primaryColorPressed: '#1a5fd0',
+    borderRadius: '8px',
+    textColorBase: '#111827',
+    textColor1: '#111827',
+    textColor2: '#374151',
+    textColor3: '#6b7280',
+    borderColor: '#dcdfe6',
+    dividerColor: '#e5e7eb'
   },
   Card: {
-    borderRadius: '12px'
+    borderRadius: '12px',
+    borderColor: '#e2e5ea'
+  },
+  DataTable: {
+    thColor: '#f3f4f6',
+    thTextColor: '#374151',
+    tdTextColor: '#1f2937',
+    borderColor: '#e5e7eb'
+  },
+  Tag: {
+    border: '1px solid transparent'
   }
 }
+
+/* 暗色：保证正文与辅助文字在深底上足够亮 */
+const darkOverrides: GlobalThemeOverrides = {
+  common: {
+    primaryColor: '#4d8ef7',
+    primaryColorHover: '#6ba3f9',
+    primaryColorPressed: '#3576dd',
+    borderRadius: '8px',
+    textColorBase: '#f2f4f8',
+    textColor1: '#f2f4f8',
+    textColor2: '#c8cdd8',
+    textColor3: '#9aa1b0',
+    borderColor: '#34374a',
+    dividerColor: '#2a2d3d'
+  },
+  Card: {
+    borderRadius: '12px',
+    borderColor: '#2f3242'
+  },
+  DataTable: {
+    thColor: '#22242f',
+    thTextColor: '#c8cdd8',
+    tdTextColor: '#e6e8ee',
+    borderColor: '#2f3242'
+  }
+}
+
+const overrides = computed(() => (themeStore.isDark ? darkOverrides : lightOverrides))
 </script>
 
 <style>
@@ -166,7 +212,7 @@ html.dark .init-text,
 html.dark .result-info,
 html.dark .logo-subtitle,
 html.dark .rolling-label {
-  color: #888 !important;
+  color: #9aa3b2 !important;
 }
 
 /* ========================================
@@ -199,8 +245,10 @@ html.dark .quick-card:hover {
 }
 
 /* --- 学生主页 --- */
+/* 暗色下墨色块比页面底色略亮一档 + 一道细边，避免糊在一起 */
 html.dark .hero-banner {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%) !important;
+  background: #1c1d22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 html.dark .task-row:hover {
   background: #22223a !important;
@@ -235,7 +283,7 @@ html.dark .call-display.called {
 }
 html.dark .uncalled-tag {
   background: #22223a !important;
-  color: #ccc !important;
+  color: #b8c0cf !important;
 }
 html.dark .rank-item.rank-top {
   background: #2a2a1a !important;
@@ -248,8 +296,8 @@ html.dark .concept-card.blue { background: #1a1a2e !important; border-color: #2a
 html.dark .formula-example { background: #141420 !important; border-color: #2a2a3e !important; }
 html.dark .flow-item { background: #1a1a2e !important; }
 html.dark .weak-dim-item:hover { background: #22223a !important; }
-html.dark .step-content { color: #bbb !important; }
-html.dark .faq-content { color: #bbb !important; }
+html.dark .step-content { color: #b8c0cf !important; }
+html.dark .faq-content { color: #b8c0cf !important; }
 html.dark .remark-input { background: #1a1a2e !important; border-color: #2a2a3e !important; color: #e0e0e6 !important; }
 
 /* --- 通用标题 --- */
@@ -292,7 +340,7 @@ html.dark .result-avatar {
 }
 html.dark .uncalled-tag {
   background: #22223a;
-  color: #ccc;
+  color: #b8c0cf;
 }
 html.dark .rank-item {
   background: #1a1a2e;

@@ -1,7 +1,11 @@
+import json
+import os
 import random
 import string
+import time
+from pathlib import Path
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
@@ -25,8 +29,8 @@ from app.schemas.user import (
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
-# 系统设置（内存缓存，可通过接口修改）
-_system_settings = {
+# 系统设置（内存缓存 + data/settings.json 持久化，重启不丢失）
+_DEFAULT_SETTINGS = {
     "student_register_enabled": True,
     "ai_chat_enabled": True,
     "ai_hints_limit": 0,
@@ -38,23 +42,100 @@ _system_settings = {
     "student_view_grades": True
 }
 
+_SETTINGS_FILE = Path(__file__).resolve().parents[2] / "data" / "settings.json"
+
+
+def _load_system_settings() -> dict:
+    """启动时从磁盘恢复设置，缺失或损坏则用默认值"""
+    merged = dict(_DEFAULT_SETTINGS)
+    try:
+        if _SETTINGS_FILE.exists():
+            saved = json.loads(_SETTINGS_FILE.read_text(encoding="utf-8"))
+            if isinstance(saved, dict):
+                merged.update({k: v for k, v in saved.items() if k in _DEFAULT_SETTINGS})
+    except Exception as e:  # 文件损坏不应阻塞启动
+        print(f"[warn] 读取系统设置失败，使用默认值: {e}")
+    return merged
+
+
+def save_system_settings() -> None:
+    """原子写入设置文件，避免断电/并发导致文件截断"""
+    try:
+        _SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _SETTINGS_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(_system_settings, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, _SETTINGS_FILE)
+    except Exception as e:
+        print(f"[warn] 保存系统设置失败: {e}")
+
+
+_system_settings = _load_system_settings()
+
 
 def _generate_password(length=8):
     """生成随机密码"""
     chars = string.ascii_letters + string.digits
     return ''.join(random.choices(chars, k=length))
 
+# ==================== 登录失败限流 ====================
+# 进程内计数，够用于单机部署；多实例部署需换成 Redis
+_LOGIN_MAX_FAILS = 5
+_LOGIN_LOCK_SECONDS = 300
+_login_fails: dict = {}
+
+
+def _login_key(username: str, ip: str) -> str:
+    return f"{(username or '').strip().lower()}|{ip}"
+
+
+def _login_lock_remaining(key: str) -> int:
+    """剩余锁定秒数，0 表示未锁定"""
+    rec = _login_fails.get(key)
+    if not rec:
+        return 0
+    now = time.time()
+    rec["times"] = [t for t in rec["times"] if now - t < _LOGIN_LOCK_SECONDS]
+    if len(rec["times"]) >= _LOGIN_MAX_FAILS:
+        return max(1, int(_LOGIN_LOCK_SECONDS - (now - rec["times"][0])))
+    return 0
+
+
+def _record_login_fail(key: str) -> None:
+    if len(_login_fails) > 5000:  # 防止字典无限增长
+        _login_fails.clear()
+    _login_fails.setdefault(key, {"times": []})["times"].append(time.time())
+
+
+def _clear_login_fail(key: str) -> None:
+    _login_fails.pop(key, None)
+
 
 @router.post("/login")
-async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
+    ip = request.client.host if request.client else "-"
+    key = _login_key(user_data.username, ip)
+
+    # 连续失败 5 次锁 5 分钟，防暴力破解
+    remain = _login_lock_remaining(key)
+    if remain > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"登录失败次数过多，请 {remain} 秒后再试"
+        )
+
     result = await db.execute(select(User).where(User.username == user_data.username))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(user_data.password, user.password_hash):
+        _record_login_fail(key)
+        left = _LOGIN_MAX_FAILS - len(_login_fails.get(key, {}).get("times", []))
+        tip = f"，还可尝试 {left} 次" if 0 < left <= 3 else ""
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误"
+            detail=f"用户名或密码错误{tip}"
         )
+
+    _clear_login_fail(key)
 
     if not user.is_active:
         raise HTTPException(
@@ -273,7 +354,35 @@ async def update_settings(
         _system_settings["rollcall_auto_score"] = bool(data["rollcall_auto_score"])
     if "student_view_grades" in data:
         _system_settings["student_view_grades"] = bool(data["student_view_grades"])
+    save_system_settings()
     return _system_settings
+
+
+@router.post("/change-password")
+async def change_password(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """自助修改密码（学生/教师/管理员通用）
+
+    之前只能由管理员重置，学生忘记密码必须找老师；这里补上自助通道。
+    """
+    old_password = (data or {}).get("old_password") or ""
+    new_password = (data or {}).get("new_password") or ""
+
+    if not old_password or not new_password:
+        raise HTTPException(status_code=400, detail="请填写原密码和新密码")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="新密码至少 6 位")
+    if new_password == old_password:
+        raise HTTPException(status_code=400, detail="新密码不能与原密码相同")
+    if not verify_password(old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="原密码不正确")
+
+    current_user.password_hash = get_password_hash(new_password)
+    await db.commit()
+    return {"message": "密码已修改，请使用新密码登录"}
 
 
 @router.get("/me", response_model=UserResponse)

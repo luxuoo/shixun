@@ -210,7 +210,7 @@ onMounted(() => {
 
 .register-header p {
   margin-top: 8px;
-  color: #666;
+  color: #4a5160;
   font-size: 14px;
 }
 

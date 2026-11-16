@@ -138,7 +138,7 @@
         <n-descriptions bordered :column="1">
           <n-descriptions-item label="学生自主注册">
             <n-switch v-model:value="settings.student_register_enabled" @update:value="saveSettings" />
-            <span style="margin-left: 12px; color: #666;">
+            <span style="margin-left: 12px; color: #4a5160;">
               {{ settings.student_register_enabled ? '已开启 - 学生可在登录页自行注册' : '已关闭 - 只能由管理员批量注册' }}
             </span>
           </n-descriptions-item>
@@ -149,7 +149,7 @@
         <n-descriptions bordered :column="1">
           <n-descriptions-item label="AI 对话功能">
             <n-switch v-model:value="settings.ai_chat_enabled" @update:value="saveSettings" />
-            <span style="margin-left: 12px; color: #666;">
+            <span style="margin-left: 12px; color: #4a5160;">
               {{ settings.ai_chat_enabled ? '已开启 - 学生可使用 AI 提示和代码分析' : '已关闭 - 学生无法使用 AI 对话功能' }}
             </span>
           </n-descriptions-item>
@@ -162,14 +162,14 @@
                 style="width: 120px;"
                 @update:value="saveSettings"
               />
-              <span style="color: #666;">
+              <span style="color: #4a5160;">
                 {{ settings.ai_hints_limit > 0 ? `每个步骤最多 ${settings.ai_hints_limit} 次提示` : '0 = 使用每个步骤自带的提示次数' }}
               </span>
             </n-space>
           </n-descriptions-item>
           <n-descriptions-item label="提交自动评分">
             <n-switch v-model:value="settings.ai_auto_score" @update:value="saveSettings" />
-            <span style="margin-left: 12px; color: #666;">
+            <span style="margin-left: 12px; color: #4a5160;">
               {{ settings.ai_auto_score ? '已开启 - 提交代码后 AI 自动评分' : '已关闭 - 需要教师手动评分' }}
             </span>
           </n-descriptions-item>
@@ -182,7 +182,7 @@
                 style="width: 120px;"
                 @update:value="saveSettings"
               />
-              <span style="color: #666;">
+              <span style="color: #4a5160;">
                 {{ settings.submission_limit > 0 ? `每个步骤最多提交 ${settings.submission_limit} 次` : '0 = 不限制提交次数' }}
               </span>
             </n-space>
@@ -195,23 +195,23 @@
           <n-descriptions-item label="AI 评分权重">
             <n-space align="center">
               <n-input-number v-model:value="settings.grade_weights.ai" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
-              <span style="color: #666;">%</span>
+              <span style="color: #4a5160;">%</span>
             </n-space>
           </n-descriptions-item>
           <n-descriptions-item label="教师评分权重">
             <n-space align="center">
               <n-input-number v-model:value="settings.grade_weights.teacher" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
-              <span style="color: #666;">%</span>
+              <span style="color: #4a5160;">%</span>
             </n-space>
           </n-descriptions-item>
           <n-descriptions-item label="出勤/平时分权重">
             <n-space align="center">
               <n-input-number v-model:value="settings.grade_weights.attendance" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
-              <span style="color: #666;">%</span>
+              <span style="color: #4a5160;">%</span>
             </n-space>
           </n-descriptions-item>
           <n-descriptions-item label="公式">
-            <span style="color: #666; font-size: 13px;">最终分 = AI分×{{ settings.grade_weights.ai }}% + 教师分×{{ settings.grade_weights.teacher }}% + 出勤分×{{ settings.grade_weights.attendance }}% + 加减分</span>
+            <span style="color: #4a5160; font-size: 13px;">最终分 = AI分×{{ settings.grade_weights.ai }}% + 教师分×{{ settings.grade_weights.teacher }}% + 出勤分×{{ settings.grade_weights.attendance }}% + 加减分</span>
           </n-descriptions-item>
         </n-descriptions>
 
@@ -221,12 +221,12 @@
           <n-descriptions-item label="每次点名出勤分">
             <n-space align="center">
               <n-input-number v-model:value="settings.rollcall_score" :min="0" :max="100" style="width: 100px;" @update:value="saveSettings" />
-              <span style="color: #666;">分</span>
+              <span style="color: #4a5160;">分</span>
             </n-space>
           </n-descriptions-item>
           <n-descriptions-item label="点名自动计入出勤分">
             <n-switch v-model:value="settings.rollcall_auto_score" @update:value="saveSettings" />
-            <span style="margin-left: 12px; color: #666;">
+            <span style="margin-left: 12px; color: #4a5160;">
               {{ settings.rollcall_auto_score ? '已开启 - 点名时自动加分' : '已关闭 - 需手动设置出勤分' }}
             </span>
           </n-descriptions-item>

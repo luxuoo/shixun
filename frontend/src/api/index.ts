@@ -71,6 +71,8 @@ export const authApi = {
     api.post('/auth/batch-register', data),
   getSettings: () =>
     api.get('/auth/settings'),
+  changePassword: (data: { old_password: string; new_password: string }) =>
+    api.post('/auth/change-password', data),
   updateSettings: (data: { student_register_enabled?: boolean; ai_chat_enabled?: boolean; ai_hints_limit?: number; ai_auto_score?: boolean; submission_limit?: number; grade_weights?: { ai: number; teacher: number; attendance: number }; rollcall_score?: number; rollcall_auto_score?: boolean; student_view_grades?: boolean }) =>
     api.put('/auth/settings', data)
 }
@@ -110,7 +112,9 @@ export const submissionApi = {
   getDetail: (id: number) =>
     api.get(`/submissions/${id}`),
   getMyScores: () =>
-    api.get('/submissions/scores/my')
+    api.get('/submissions/scores/my'),
+  rescore: (id: number) =>
+    api.post(`/submissions/${id}/rescore`)
 }
 
 // AI 接口
@@ -163,6 +167,12 @@ export const adminApi = {
   // 成绩汇总
   getGrades: (classId?: number) =>
     api.get('/admin/grades', { params: classId ? { class_id: classId } : {} }),
+  // 导出成绩单（返回 Blob，前端触发下载）
+  exportGrades: (classId?: number) =>
+    api.get('/admin/export/grades', {
+      params: classId ? { class_id: classId } : {},
+      responseType: 'blob'
+    }),
   // 点名记录
   recordRollcall: (data: { student_id: number; class_id?: number }) =>
     api.post('/admin/rollcall', data),

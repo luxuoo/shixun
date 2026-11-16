@@ -15,10 +15,23 @@ from app.schemas.submission import (
     AiScoreRequest,
     AiScoreResponse
 )
-from app.services.ai_service import ai_service
+from app.services.ai_service import ai_service, ai_error_detail
 from app.api.auth import _system_settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
+
+
+async def _run_ai(coro):
+    """统一执行 AI 调用：把 SDK 异常翻译成可读的 HTTP 错误
+
+    三处调用（提示 / 分析 / 评分）原本各写一份 try/except，
+    收敛到这里后只需维护一份错误映射。
+    """
+    try:
+        return await coro
+    except Exception as e:
+        detail, code = ai_error_detail(e)
+        raise HTTPException(status_code=code, detail=detail)
 
 
 @router.post("/hint", response_model=AiHintResponse)
@@ -70,23 +83,14 @@ async def get_hint(
         )
 
     # 调用 AI 服务获取提示
-    try:
-        result = await ai_service.get_hint(
-            task_title=task.title,
-            step_title=step.title,
-            step_requirements=step.requirements or "",
-            hint_count=hint_count + 1,
-            student_code=request.student_code,
-            question=request.question
-        )
-    except Exception as e:
-        err_msg = str(e)[:300]
-        if "auth" in err_msg.lower() or "401" in err_msg:
-            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-        elif "timeout" in err_msg.lower():
-            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-        else:
-            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
+    result = await _run_ai(ai_service.get_hint(
+        task_title=task.title,
+        step_title=step.title,
+        step_requirements=step.requirements or "",
+        hint_count=hint_count + 1,
+        student_code=request.student_code,
+        question=request.question
+    ))
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -148,21 +152,12 @@ async def analyze_code(
         raise HTTPException(status_code=404, detail="步骤不存在")
 
     # 调用 AI 服务分析代码
-    try:
-        result = await ai_service.analyze_code(
-            code=request.code,
-            step_requirements=step.requirements or "",
-            task_title=task.title,
-            step_title=step.title
-        )
-    except Exception as e:
-        err_msg = str(e)[:300]
-        if "auth" in err_msg.lower() or "401" in err_msg:
-            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-        elif "timeout" in err_msg.lower():
-            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-        else:
-            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
+    result = await _run_ai(ai_service.analyze_code(
+        code=request.code,
+        step_requirements=step.requirements or "",
+        task_title=task.title,
+        step_title=step.title
+    ))
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -179,7 +174,8 @@ async def analyze_code(
 
     return AiAnalyzeResponse(
         analysis=result["analysis"],
-        suggestions=[]  # 可以从分析结果中提取
+        # 服务层已从分析文本里提取过建议，这里直接用，别再丢成空数组
+        suggestions=result.get("suggestions", [])
     )
 
 
@@ -210,21 +206,12 @@ async def score_submission(
         raise HTTPException(status_code=404, detail="步骤不存在")
 
     # 调用 AI 服务评分
-    try:
-        result = await ai_service.score_submission(
-            code=request.code,
-            step_requirements=step.requirements or "",
-            task_title=task.title,
-            step_title=step.title
-        )
-    except Exception as e:
-        err_msg = str(e)[:300]
-        if "auth" in err_msg.lower() or "401" in err_msg:
-            raise HTTPException(status_code=502, detail="AI 服务认证失败，请联系管理员检查 API Key 配置")
-        elif "timeout" in err_msg.lower():
-            raise HTTPException(status_code=504, detail="AI 服务响应超时，请稍后重试")
-        else:
-            raise HTTPException(status_code=502, detail=f"AI 服务错误：{err_msg}")
+    result = await _run_ai(ai_service.score_submission(
+        code=request.code,
+        step_requirements=step.requirements or "",
+        task_title=task.title,
+        step_title=step.title
+    ))
 
     # 记录 AI 调用日志
     ai_log = AiLog(
@@ -315,12 +302,30 @@ async def score_submission(
 @router.get("/history")
 async def get_ai_history(
     task_id: int = None,
+    request_type: str = None,
+    limit: int = 200,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """AI 对话历史
+
+    默认只返回最近 200 条：历史多了以后全量返回会拖慢首屏，
+    需要更多时用 limit/offset 翻页。
+    """
     query = select(AiLog).where(AiLog.user_id == current_user.id)
     if task_id:
         query = query.where(AiLog.task_id == task_id)
-    query = query.order_by(AiLog.created_at.desc())
+    if request_type:
+        query = query.where(AiLog.request_type == request_type)
+    query = query.order_by(AiLog.created_at.desc()).limit(min(max(limit, 1), 500)).offset(max(offset, 0))
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.get("/provider")
+async def get_ai_provider(
+    current_user: User = Depends(get_current_user)
+):
+    """当前 AI 服务商信息（不含密钥），供前端展示/管理员排查"""
+    return ai_service.describe()

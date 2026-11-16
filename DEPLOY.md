@@ -124,10 +124,22 @@ DEBUG=false
 # 数据库配置（SQLite，无需修改）
 DATABASE_URL=sqlite+aiosqlite:///./data/teaching.db
 
-# MiMo API 配置（必须填写你自己的 API Key）
-MIMO_API_KEY=你的API密钥
+# AI 服务商：deepseek 或 mimo（二选一，填哪家的密钥就选哪家）
+AI_PROVIDER=deepseek
+
+# DeepSeek API（推荐）
+DEEPSEEK_API_KEY=sk-你的密钥
+DEEPSEEK_API_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+# 小米 MiMo API（备选，留空则不启用）
+MIMO_API_KEY=
 MIMO_API_URL=https://token-plan-cn.xiaomimimo.com/v1
 MIMO_MODEL=mimo-v2.5-pro
+
+# 超时（秒）与失败重试次数
+AI_TIMEOUT=120
+AI_MAX_RETRIES=2
 
 # 安全配置（务必修改为随机字符串）
 SECRET_KEY=改成一个很长的随机字符串比如用openssl生成
@@ -408,9 +420,11 @@ journalctl -u learning-system -n 50
 ```
 
 ### 2. AI 功能不工作
-- 检查 `backend/.env` 中的 `MIMO_API_KEY` 是否正确
-- 确认服务器能访问 `token-plan-cn.xiaomimimo.com`
+- 先到「AI 使用统计 → AI 服务商」点「测试选中」，看具体报错（认证失败 / 超时 / 余额不足会分别提示）
+- 检查 `backend/.env`：`AI_PROVIDER` 与对应服务商的 `*_API_KEY` 是否都填了
+- 确认服务器能访问 `api.deepseek.com`（或 `token-plan-cn.xiaomimimo.com`）
 - 在后台设置中确认"AI 对话功能"已开启
+- 密钥错误时重启服务，日志会打印 `[AI] 服务商=... 密钥=已配置/未配置`
 
 ### 3. 前端页面空白
 - 确认 `frontend/dist/` 目录存在且有文件

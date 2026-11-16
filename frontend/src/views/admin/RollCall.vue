@@ -26,9 +26,15 @@
         <div class="call-display" :class="{ rolling: isRolling, called: calledStudent }">
           <div v-if="!calledStudent && !isRolling" class="init-state">
             <div class="init-icon">
-              <n-icon size="64" color="#c0c4cc">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-              </n-icon>
+              <AoraBot
+                shape="bell"
+                color="orange"
+                face="eyes"
+                :sizePx="76"
+                :lineWeight="1.1"
+                state="idle"
+                seed="rollcall-idle"
+              />
             </div>
             <p class="init-text">选择班级后点击按钮开始点名</p>
           </div>
@@ -127,9 +133,9 @@
               class="rank-item"
               :class="{ 'rank-top': index < 3 }"
             >
-              <span class="rank-medal" v-if="index === 0">🥇</span>
-              <span class="rank-medal" v-else-if="index === 1">🥈</span>
-              <span class="rank-medal" v-else-if="index === 2">🥉</span>
+              <span class="rank-medal" v-if="index === 0">1</span>
+              <span class="rank-medal" v-else-if="index === 1">2</span>
+              <span class="rank-medal" v-else-if="index === 2">3</span>
               <span class="rank-num" v-else>{{ index + 1 }}</span>
               <span class="rank-name">{{ item.name }}</span>
               <span class="rank-score">+{{ item.score }}分</span>
@@ -319,7 +325,7 @@ onMounted(() => {
 
 .init-state { text-align: center; }
 .init-icon { margin-bottom: 16px; }
-.init-text { color: #999; font-size: 15px; margin: 0; }
+.init-text { color: #5f6673; font-size: 15px; margin: 0; }
 
 .rolling-state { text-align: center; }
 .rolling-label { font-size: 16px; color: #3498db; margin-bottom: 12px; }
@@ -332,7 +338,7 @@ onMounted(() => {
 }
 
 .result-state { text-align: center; padding: 20px; }
-.result-label { font-size: 14px; color: #999; margin-bottom: 16px; }
+.result-label { font-size: 14px; color: #5f6673; margin-bottom: 16px; }
 .result-avatar {
   width: 80px; height: 80px; border-radius: 50%;
   background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -341,7 +347,7 @@ onMounted(() => {
   margin: 0 auto 16px;
 }
 .result-name { font-size: 32px; font-weight: 800; color: #e74c3c; margin-bottom: 8px; }
-.result-info { display: flex; gap: 20px; justify-content: center; color: #666; font-size: 14px; }
+.result-info { display: flex; gap: 20px; justify-content: center; color: #4a5160; font-size: 14px; }
 
 .call-actions {
   display: flex;
@@ -351,7 +357,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-.call-stats { font-size: 14px; color: #999; margin-bottom: 20px; }
+.call-stats { font-size: 14px; color: #5f6673; margin-bottom: 20px; }
 .call-stats strong { color: #1e1e2d; font-weight: 600; }
 
 /* 未点名区域 */
@@ -368,7 +374,7 @@ onMounted(() => {
   color: #1e1e2d;
   margin-bottom: 12px;
 }
-.panel-empty { color: #ccc; font-size: 13px; text-align: center; padding: 20px 0; }
+.panel-empty { color: #8a919e; font-size: 13px; text-align: center; padding: 20px 0; }
 .uncalled-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 300px; overflow-y: auto; }
 .uncalled-tag {
   font-size: 15px;
@@ -415,7 +421,7 @@ onMounted(() => {
 }
 .rank-medal { font-size: 18px; }
 .rank-num {
-  font-size: 13px; font-weight: 600; color: #999;
+  font-size: 13px; font-weight: 600; color: #5f6673;
   width: 18px; text-align: center;
 }
 .rank-name { font-size: 14px; font-weight: 500; color: #1e1e2d; flex: 1; }

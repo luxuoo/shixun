@@ -18,7 +18,7 @@
             <n-gi>
               <n-statistic label="过程性评价总分" :value="dashboardData.total_score ?? 0">
                 <template #suffix>
-                  <span style="font-size: 14px; color: #999;">/ 100</span>
+                  <span style="font-size: 14px; color: #5f6673;">/ 100</span>
                 </template>
               </n-statistic>
             </n-gi>
@@ -147,7 +147,7 @@
             <div v-if="diagnoseReport" class="ai-report-content">
               <div v-html="renderMarkdown(diagnoseReport)"></div>
             </div>
-            <div v-else-if="!diagnoseLoading" style="text-align: center; padding: 40px 0; color: #999;">
+            <div v-else-if="!diagnoseLoading" style="text-align: center; padding: 40px 0; color: #5f6673;">
               点击上方按钮，AI 将根据您的过程性评价数据生成个性化诊断报告
             </div>
           </n-spin>
@@ -260,7 +260,7 @@ const detailColumns = [
     width: 100,
     render: (row: any) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #ccc;' }, '--')
+        return h('span', { style: 'color: #8a919e;' }, '--')
       }
       const color = getScoreColor(row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 15px;` }, `${row.score}`)
@@ -286,7 +286,7 @@ const detailColumns = [
 ]
 
 function getScoreColor(score: number | null | undefined): string {
-  if (score === null || score === undefined) return '#999'
+  if (score === null || score === undefined) return '#5f6673'
   if (score >= 90) return '#18a058'
   if (score >= 60) return '#f0a020'
   return '#d03050'
@@ -499,7 +499,7 @@ function drawPieChart() {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(total.toFixed(1), centerX, centerY - 8)
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#5f6673'
   ctx.font = '11px sans-serif'
   ctx.fillText('总分', centerX, centerY + 12)
 
@@ -524,7 +524,7 @@ function drawPieChart() {
     ctx.fillText(slice.name, legendX + 20, legendY + 1)
 
     // Score and percentage
-    ctx.fillStyle = '#666'
+    ctx.fillStyle = '#4a5160'
     ctx.font = '12px sans-serif'
     ctx.fillText(slice.value.toFixed(1) + ' (' + pct + '%)', legendX + 20, legendY + 18)
 
@@ -576,7 +576,7 @@ function drawRadarChart() {
 
     // Ring labels
     if (ring % 2 === 0 || ring === 5) {
-      ctx.fillStyle = '#aaa'
+      ctx.fillStyle = '#8a919e'
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(String(ring * 20), centerX - 4, centerY - r + 12)
@@ -699,7 +699,7 @@ function drawTrendChart() {
     ctx.stroke()
 
     // Y-axis labels
-    ctx.fillStyle = '#999'
+    ctx.fillStyle = '#5f6673'
     ctx.font = '11px sans-serif'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -709,7 +709,7 @@ function drawTrendChart() {
 
   // X-axis labels
   const stepX = chartW / Math.max(points.length - 1, 1)
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#5f6673'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -786,14 +786,14 @@ function drawTrendChart() {
   // Legend
   ctx.fillStyle = '#2080f0'
   ctx.fillRect(displayWidth - padding.right - 80, 8, 14, 3)
-  ctx.fillStyle = '#666'
+  ctx.fillStyle = '#4a5160'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('总分', displayWidth - padding.right - 62, 10)
 
   // Chart title
-  ctx.fillStyle = '#999'
+  ctx.fillStyle = '#5f6673'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText('Y: 分数 (0-100)', padding.left, 12)
@@ -895,7 +895,7 @@ onBeforeUnmount(() => {
 
 .phase-name {
   font-size: 14px;
-  color: #666;
+  color: #4a5160;
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -909,7 +909,7 @@ onBeforeUnmount(() => {
 
 .phase-weight {
   font-size: 12px;
-  color: #999;
+  color: #5f6673;
   margin-bottom: 12px;
 }
 

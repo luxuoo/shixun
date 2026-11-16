@@ -1,25 +1,114 @@
-"""AI 服务 - 调用 MiMo API 提供编程教学辅助"""
+"""AI 服务 - 调用大模型 API 提供编程教学辅助
+
+支持多服务商（MiMo / DeepSeek），二者均为 OpenAI 兼容接口，
+通过 settings.AI_PROVIDER 或运行时切换决定当前使用哪一家。
+"""
+import asyncio
 import json
 import re
 from typing import Optional
+
 from openai import AsyncOpenAI
+import openai
+
 from app.core.config import settings
+
+
+# 各服务商的能力差异
+PROVIDER_CAPS = {
+    "mimo": {"json_mode": False},
+    "deepseek": {"json_mode": True},
+}
+
+
+class AiServiceError(Exception):
+    """AI 服务异常，携带可直接返回给前端的提示"""
+
+    def __init__(self, detail: str, status_code: int = 502):
+        super().__init__(detail)
+        self.detail = detail
+        self.status_code = status_code
 
 
 class AiService:
     def __init__(self):
-        self._client = None
-        self.model = settings.MIMO_MODEL
+        self._clients: dict = {}
+        self._provider_override: Optional[str] = None
+        self._fallback_warned = False
+
+    # ---------------- 服务商管理 ----------------
 
     @property
-    def client(self):
-        if self._client is None:
-            self._client = AsyncOpenAI(
-                api_key=settings.MIMO_API_KEY,
-                base_url=settings.MIMO_API_URL,
-                timeout=60.0
+    def provider(self) -> str:
+        """当前生效的服务商名称
+
+        若首选服务商没配 API Key，而另一家配置了，则自动回退，
+        避免改了 AI_PROVIDER 却忘了填密钥导致整个 AI 功能不可用。
+        """
+        requested = self._provider_override or settings.provider_config()["name"]
+        if settings.provider_config(requested)["api_key"]:
+            return requested
+        for name in ("deepseek", "mimo"):
+            if name != requested and settings.provider_config(name)["api_key"]:
+                if not self._fallback_warned:
+                    print(f"[AI] {requested} 未配置 API Key，已自动回退到 {name}")
+                    self._fallback_warned = True
+                return name
+        return requested
+
+    @property
+    def model(self) -> str:
+        return settings.provider_config(self.provider)["model"]
+
+    def set_provider(self, name: str) -> dict:
+        """运行时切换服务商（重启后回到 .env 配置）"""
+        name = (name or "").strip().lower()
+        if name not in PROVIDER_CAPS:
+            raise AiServiceError(f"不支持的 AI 服务商：{name}", status_code=400)
+        conf = settings.provider_config(name)
+        if not conf["api_key"]:
+            label = conf["label"]
+            raise AiServiceError(
+                f"{label} 未配置 API Key，请先在 .env 中填写后重启服务",
+                status_code=400,
             )
-        return self._client
+        self._provider_override = name
+        return self.describe()
+
+    def describe(self) -> dict:
+        """返回当前服务商信息（不含密钥）"""
+        conf = settings.provider_config(self.provider)
+        return {
+            "provider": conf["name"],
+            "label": conf["label"],
+            "model": conf["model"],
+            "api_url": conf["api_url"],
+            "configured": bool(conf["api_key"]),
+            "providers": settings.available_providers(),
+        }
+
+    @property
+    def client(self) -> AsyncOpenAI:
+        """按 (api_url, api_key) 复用客户端，避免重复建连"""
+        conf = settings.provider_config(self.provider)
+        if not conf["api_key"]:
+            raise AiServiceError(
+                f"{conf['label']} 未配置 API Key，请联系管理员在 .env 中设置 AI 密钥",
+                status_code=503,
+            )
+        cache_key = (conf["api_url"], conf["api_key"])
+        client = self._clients.get(cache_key)
+        if client is None:
+            client = AsyncOpenAI(
+                api_key=conf["api_key"],
+                base_url=conf["api_url"],
+                timeout=settings.AI_TIMEOUT,
+                max_retries=0,  # 重试逻辑自己控制，便于记录日志
+            )
+            self._clients[cache_key] = client
+        return client
+
+    # ---------------- 核心调用 ----------------
 
     async def _chat(
         self,
@@ -27,44 +116,77 @@ class AiService:
         user_prompt: str,
         max_tokens: int = 2000,
         temperature: float = 0.7,
-        force_json: bool = False
+        force_json: bool = False,
     ) -> dict:
-        """统一的 chat 调用，处理推理模型的空响应问题"""
+        """统一的 chat 调用：带重试、JSON 模式与推理模型兼容"""
+        provider = self.provider
         kwargs = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": temperature,
-            "max_tokens": max_tokens
+            "max_tokens": max_tokens,
         }
-        response = await self.client.chat.completions.create(**kwargs)
+        if force_json and PROVIDER_CAPS.get(provider, {}).get("json_mode"):
+            kwargs["response_format"] = {"type": "json_object"}
+
+        response = await self._request_with_retry(kwargs)
 
         msg = response.choices[0].message
-        content = msg.content or ""
-        tokens_used = response.usage.total_tokens if response.usage else 0
+        content = (msg.content or "").strip()
+        tokens_used = response.usage.total_tokens if getattr(response, "usage", None) else 0
 
-        # 推理模型（如 mimo-v2.5-pro）会先消耗 reasoning_tokens 思考，
-        # 然后才生成 content。如果 content 为空，尝试多种方式获取 reasoning 内容
-        if not content.strip():
-            # 方式1: 直接属性访问
-            reasoning = getattr(msg, "reasoning_content", None)
-            # 方式2: 通过 model_extra 字典访问（Pydantic v2）
-            if not reasoning and hasattr(msg, "model_extra"):
-                extra = msg.model_extra or {}
-                reasoning = extra.get("reasoning_content")
-            # 方式3: 通过 to_dict 访问
-            if not reasoning and hasattr(msg, "to_dict"):
-                d = msg.to_dict()
-                reasoning = d.get("reasoning_content")
-            if reasoning and reasoning.strip():
-                content = reasoning
+        # 推理模型（deepseek-reasoner / mimo-v2.5-pro）会先输出 reasoning_content，
+        # 若最终 content 为空则退回使用思考内容，避免前端拿到空白回复
+        if not content:
+            content = (self._extract_reasoning(msg) or "").strip()
 
-        if not content.strip():
+        if not content:
             content = "AI 暂时没有给出回复，可能是请求复杂度过高，请稍后重试或简化问题。"
 
-        return {"content": content.strip(), "tokens_used": tokens_used}
+        return {"content": content, "tokens_used": tokens_used, "provider": provider}
+
+    async def _request_with_retry(self, kwargs: dict):
+        """对限流、超时、5xx 做指数退避重试"""
+        retries = max(0, settings.AI_MAX_RETRIES)
+        last_exc: Optional[Exception] = None
+
+        for attempt in range(retries + 1):
+            try:
+                return await self.client.chat.completions.create(**kwargs)
+            except (
+                openai.RateLimitError,
+                openai.APITimeoutError,
+                openai.APIConnectionError,
+                openai.InternalServerError,
+            ) as e:
+                last_exc = e
+                if attempt >= retries:
+                    break
+                await asyncio.sleep(min(1.5 * (2 ** attempt), 8))
+            except openai.APIStatusError as e:
+                # 429 / 5xx 可重试，其余（401/400）直接抛出
+                status = getattr(e, "status_code", 0)
+                last_exc = e
+                if status not in (429, 500, 502, 503, 504) or attempt >= retries:
+                    break
+                await asyncio.sleep(min(1.5 * (2 ** attempt), 8))
+
+        raise last_exc  # type: ignore[misc]
+
+    @staticmethod
+    def _extract_reasoning(msg) -> Optional[str]:
+        """兼容不同 SDK 版本获取 reasoning_content"""
+        reasoning = getattr(msg, "reasoning_content", None)
+        if not reasoning and hasattr(msg, "model_extra"):
+            reasoning = (msg.model_extra or {}).get("reasoning_content")
+        if not reasoning and hasattr(msg, "to_dict"):
+            reasoning = (msg.to_dict() or {}).get("reasoning_content")
+        return reasoning
+
+    # ---------------- 业务能力 ----------------
 
     async def get_hint(
         self,
@@ -73,7 +195,7 @@ class AiService:
         step_requirements: str,
         hint_count: int,
         student_code: Optional[str] = None,
-        question: Optional[str] = None
+        question: Optional[str] = None,
     ) -> dict:
         """获取分级提示
 
@@ -141,13 +263,13 @@ class AiService:
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=3000,
-            temperature=0.7
+            temperature=0.7,
         )
 
         return {
             "hint_level": level,
             "content": result["content"],
-            "tokens_used": result["tokens_used"]
+            "tokens_used": result["tokens_used"],
         }
 
     async def analyze_code(
@@ -155,7 +277,7 @@ class AiService:
         code: str,
         step_requirements: str,
         task_title: str,
-        step_title: str
+        step_title: str,
     ) -> dict:
         """分析学生代码"""
         system_prompt = """你是一个代码分析助手，帮助学生改进代码。
@@ -190,7 +312,7 @@ class AiService:
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=3000,
-            temperature=0.3
+            temperature=0.3,
         )
 
         # 尝试从分析中提取建议条目
@@ -205,7 +327,7 @@ class AiService:
         return {
             "analysis": result["content"],
             "suggestions": suggestions[:5],
-            "tokens_used": result["tokens_used"]
+            "tokens_used": result["tokens_used"],
         }
 
     async def score_submission(
@@ -213,7 +335,7 @@ class AiService:
         code: str,
         step_requirements: str,
         task_title: str,
-        step_title: str
+        step_title: str,
     ) -> dict:
         """对提交的代码进行评分"""
         system_prompt = """你是一个严格但公正的代码评分助手，对学生提交的代码进行评分。
@@ -262,13 +384,13 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=4000,
-            temperature=0.2
+            temperature=0.2,
+            force_json=True,
         )
 
         content = result["content"]
         tokens_used = result["tokens_used"]
 
-        # 提取 JSON
         score_data = self._extract_json(content)
 
         if score_data:
@@ -290,7 +412,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
                     "creativity": creativity,
                     "feedback": score_data.get("feedback", ""),
                     "suggestions": score_data.get("suggestions", []),
-                    "tokens_used": tokens_used
+                    "tokens_used": tokens_used,
                 }
             except (ValueError, TypeError):
                 pass
@@ -304,7 +426,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             "creativity": 60,
             "feedback": "AI 评分解析失败。原始回复：" + content[:300],
             "suggestions": ["请重新提交评分", "可能是代码过长或 AI 模型暂时不可用"],
-            "tokens_used": tokens_used
+            "tokens_used": tokens_used,
         }
 
     async def decompose_task(
@@ -314,19 +436,17 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         category: str = "",
         difficulty: int = 3,
         detail_level: str = "normal",
-        steps_count: int = 0
+        steps_count: int = 0,
     ) -> dict:
         """AI 自动分解教学任务为多个步骤"""
 
-        # 根据详细度调整提示词
         detail_instructions = {
             "brief": "每个步骤的要求和描述要简洁明了，每条不超过50字，重点突出核心目标。",
             "normal": "每个步骤的描述适中，要求具体明确，包含必要的技术细节。",
-            "detailed": "每个步骤要非常详细，描述要包含具体的技术方案、参考代码思路、常见问题提示，要求要列出每一条检查点。"
+            "detailed": "每个步骤要非常详细，描述要包含具体的技术方案、参考代码思路、常见问题提示，要求要列出每一条检查点。",
         }
         detail_hint = detail_instructions.get(detail_level, detail_instructions["normal"])
 
-        steps_hint = ""
         if steps_count > 0:
             steps_hint = f"\n请将任务分解为恰好 {steps_count} 个步骤。"
         else:
@@ -375,28 +495,23 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=4000,
-            temperature=0.5
+            temperature=0.5,
+            force_json=True,
         )
 
         content = result["content"]
         tokens_used = result["tokens_used"]
 
-        # 提取 JSON
         task_data = self._extract_json(content)
 
         if task_data and "steps" in task_data:
-            return {
-                "success": True,
-                "data": task_data,
-                "tokens_used": tokens_used
-            }
+            return {"success": True, "data": task_data, "tokens_used": tokens_used}
 
-        # 解析失败
         return {
             "success": False,
             "error": "AI 分解失败，请重试或手动创建任务",
             "raw_content": content[:500],
-            "tokens_used": tokens_used
+            "tokens_used": tokens_used,
         }
 
     async def generate_eval_template(
@@ -405,7 +520,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         course_description: str,
         category: str = "",
         student_count: int = 0,
-        task_count: int = 0
+        task_count: int = 0,
     ) -> dict:
         """AI 生成评价方案模板"""
         from app.prompts.evaluation import GENERATE_TEMPLATE_SYSTEM, GENERATE_TEMPLATE_USER
@@ -415,20 +530,26 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             course_description=course_description,
             category=category or "通用",
             student_count=student_count,
-            task_count=task_count
+            task_count=task_count,
         )
 
         result = await self._chat(
             system_prompt=GENERATE_TEMPLATE_SYSTEM,
             user_prompt=user_prompt,
             max_tokens=4000,
-            temperature=0.5
+            temperature=0.5,
+            force_json=True,
         )
 
         data = self._extract_json(result["content"])
         if data and "phases" in data:
             return {"success": True, "data": data, "tokens_used": result["tokens_used"]}
-        return {"success": False, "error": "AI 生成失败，请重试", "raw_content": result["content"][:500], "tokens_used": result["tokens_used"]}
+        return {
+            "success": False,
+            "error": "AI 生成失败，请重试",
+            "raw_content": result["content"][:500],
+            "tokens_used": result["tokens_used"],
+        }
 
     async def suggest_indicators(
         self,
@@ -436,7 +557,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         phase_weight: float,
         existing_indicators: str = "",
         category: str = "",
-        other_phases: str = ""
+        other_phases: str = "",
     ) -> dict:
         """AI 推荐评价指标"""
         from app.prompts.evaluation import SUGGEST_INDICATORS_SYSTEM, SUGGEST_INDICATORS_USER
@@ -446,20 +567,26 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             phase_weight=phase_weight,
             existing_indicators=existing_indicators or "无",
             category=category or "通用",
-            other_phases=other_phases or "无"
+            other_phases=other_phases or "无",
         )
 
         result = await self._chat(
             system_prompt=SUGGEST_INDICATORS_SYSTEM,
             user_prompt=user_prompt,
             max_tokens=3000,
-            temperature=0.5
+            temperature=0.5,
+            force_json=True,
         )
 
         data = self._extract_json(result["content"])
         if data and "indicators" in data:
             return {"success": True, "data": data["indicators"], "tokens_used": result["tokens_used"]}
-        return {"success": False, "error": "AI 推荐失败，请重试", "raw_content": result["content"][:500], "tokens_used": result["tokens_used"]}
+        return {
+            "success": False,
+            "error": "AI 推荐失败，请重试",
+            "raw_content": result["content"][:500],
+            "tokens_used": result["tokens_used"],
+        }
 
     async def diagnose_student(
         self,
@@ -469,7 +596,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         total_score: float,
         phase_details: str,
         dim_details: str,
-        trend_data: str
+        trend_data: str,
     ) -> dict:
         """AI 学生个体诊断"""
         from app.prompts.evaluation import DIAGNOSE_STUDENT_SYSTEM, DIAGNOSE_STUDENT_USER
@@ -481,14 +608,14 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             total_score=total_score,
             phase_details=phase_details,
             dim_details=dim_details,
-            trend_data=trend_data or "暂无历史数据"
+            trend_data=trend_data or "暂无历史数据",
         )
 
         result = await self._chat(
             system_prompt=DIAGNOSE_STUDENT_SYSTEM,
             user_prompt=user_prompt,
             max_tokens=3000,
-            temperature=0.6
+            temperature=0.6,
         )
 
         return {"report": result["content"], "tokens_used": result["tokens_used"]}
@@ -503,7 +630,7 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         excellent_rate: float,
         score_distribution: str,
         dim_averages: str,
-        top_students: str
+        top_students: str,
     ) -> dict:
         """AI 班级学情洞察"""
         from app.prompts.evaluation import CLASS_INSIGHT_SYSTEM, CLASS_INSIGHT_USER
@@ -517,35 +644,69 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             excellent_rate=excellent_rate,
             score_distribution=score_distribution,
             dim_averages=dim_averages,
-            top_students=top_students
+            top_students=top_students,
         )
 
         result = await self._chat(
             system_prompt=CLASS_INSIGHT_SYSTEM,
             user_prompt=user_prompt,
             max_tokens=4000,
-            temperature=0.6
+            temperature=0.6,
         )
 
         return {"report": result["content"], "tokens_used": result["tokens_used"]}
+
+    async def health_check(self, provider: Optional[str] = None, timeout: float = 20.0) -> dict:
+        """连通性自检：返回耗时与模型回复片段"""
+        import time
+
+        original = self._provider_override
+        started = time.perf_counter()
+        try:
+            if provider:
+                self.set_provider(provider)
+            resp = await self._chat(
+                system_prompt="你是一个测试助手，请只回复一句简短的中文问候。",
+                user_prompt="请用中文回复：你好",
+                max_tokens=200,
+                temperature=0.3,
+            )
+            elapsed = round((time.perf_counter() - started) * 1000)
+            return {
+                "success": True,
+                "provider": self.provider,
+                "model": self.model,
+                "latency_ms": elapsed,
+                "reply": resp["content"][:120],
+                "tokens_used": resp["tokens_used"],
+            }
+        except Exception as e:
+            detail, _ = ai_error_detail(e)
+            return {
+                "success": False,
+                "provider": self.provider,
+                "model": self.model,
+                "latency_ms": round((time.perf_counter() - started) * 1000),
+                "error": detail,
+            }
+        finally:
+            if provider:
+                self._provider_override = original
 
     def _extract_json(self, text: str) -> Optional[dict]:
         """从 AI 文本中提取 JSON 对象"""
         if not text:
             return None
-        # 直接尝试
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             pass
-        # 尝试去除 markdown 代码块
         m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         if m:
             try:
                 return json.loads(m.group(1))
             except json.JSONDecodeError:
                 pass
-        # 尝试找第一个 { 到最后一个 }
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
@@ -554,6 +715,35 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
             except json.JSONDecodeError:
                 pass
         return None
+
+
+def ai_error_detail(exc: Exception) -> tuple:
+    """把 AI 调用异常翻译成 (HTTP 状态码, 用户可读提示)
+
+    401/403 认证问题、余额不足、限流、超时分别给出针对性提示，
+    避免前端只看到一坨 SDK 原始报错。
+    """
+    if isinstance(exc, AiServiceError):
+        return exc.detail, exc.status_code
+
+    raw = str(exc)
+    text = raw.lower()
+
+    if isinstance(exc, openai.AuthenticationError) or "401" in text or "invalid api key" in text:
+        return "AI 服务认证失败，请管理员检查 API Key 是否正确或已过期", 502
+    if isinstance(exc, openai.PermissionDeniedError) or "403" in text:
+        return "AI 服务拒绝访问，请检查 API Key 权限或账户状态", 502
+    if isinstance(exc, openai.RateLimitError) or "429" in text:
+        return "AI 服务请求过于频繁或额度已用尽，请稍后重试", 429
+    if "insufficient" in text or "balance" in text or "quota" in text:
+        return "AI 账户余额不足，请管理员充值后重试", 502
+    if isinstance(exc, openai.APITimeoutError) or "timeout" in text or "timed out" in text:
+        return "AI 服务响应超时，请稍后重试或简化问题", 504
+    if isinstance(exc, openai.APIConnectionError):
+        return "无法连接 AI 服务，请检查网络或 API 地址配置", 502
+    if isinstance(exc, openai.BadRequestError) or "400" in text:
+        return f"AI 请求参数有误：{raw[:200]}", 502
+    return f"AI 服务错误：{raw[:300]}", 502
 
 
 # 全局实例

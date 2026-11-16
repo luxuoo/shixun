@@ -10,7 +10,7 @@
               <n-tag :type="getDifficultyType(task.difficulty)">{{ task.difficulty }}星难度</n-tag>
             </n-space>
             <h2 style="margin: 0 0 8px 0;">{{ task.title }}</h2>
-            <p style="color: #666; margin: 0;">{{ task.description }}</p>
+            <p style="color: #4a5160; margin: 0;">{{ task.description }}</p>
             <n-space style="margin-top: 16px;" :size="16">
               <n-statistic label="总步骤" :value="task.total_steps" />
               <n-statistic label="预计时长" :value="task.estimated_hours || '未知'" suffix="小时" />
@@ -56,7 +56,7 @@
             <n-space vertical :size="16">
               <div>
                 <h4 style="margin: 0 0 8px 0;">步骤说明</h4>
-                <p style="color: #666; margin: 0; white-space: pre-wrap;">{{ currentStepData.description }}</p>
+                <p style="color: #4a5160; margin: 0; white-space: pre-wrap;">{{ currentStepData.description }}</p>
               </div>
               <div v-if="currentStepData.requirements">
                 <h4 style="margin: 0 0 8px 0;">具体要求</h4>
@@ -607,7 +607,7 @@ onBeforeUnmount(() => {
   border-left: 3px solid #6366f1;
   padding-left: 12px;
   margin: 8px 0;
-  color: #666;
+  color: #4a5160;
 }
 
 /* 加载动画 */

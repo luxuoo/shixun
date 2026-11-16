@@ -321,7 +321,7 @@ onMounted(() => {
 
 .eval-latest {
   font-size: 13px;
-  color: #666;
+  color: #4a5160;
 }
 
 .eval-item-body {

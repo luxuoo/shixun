@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
@@ -21,6 +22,14 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "images"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "videos"), exist_ok=True)
+    # 启动时打印当前 AI 配置，方便排查
+    conf = settings.provider_config()
+    print(f"[AI] 服务商={conf['label']} 模型={conf['model']} 密钥={'已配置' if conf['api_key'] else '未配置'}")
+    if not conf["api_key"]:
+        print("[AI] 警告：当前服务商没有 API Key，AI 提示/评分/诊断将不可用")
+    # 默认密钥是公开的，任何人都能伪造 JWT，正式部署必须换掉
+    if settings.SECRET_KEY in ("your-secret-key-change-in-production", "", "changeme"):
+        print("[安全] 警告：SECRET_KEY 仍是默认值，任何拿到源码的人都能伪造登录凭证，请立即修改")
     yield
 
 
@@ -39,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip 压缩：任务列表、看板、AI 报告等 JSON 体积较大，压缩后传输量可降 60%+
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # 静态文件服务
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

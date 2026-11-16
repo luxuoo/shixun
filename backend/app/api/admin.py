@@ -10,7 +10,7 @@ from app.models.submission import Submission
 from app.models.ai_log import AiLog, Score, RollcallRecord
 from app.schemas.submission import SubmissionReview, SubmissionResponse
 from app.schemas.user import UserResponse, ClassUpdate, ClassResponse
-from app.services.ai_service import ai_service
+from app.services.ai_service import ai_service, AiServiceError
 from app.core.config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["管理后台"])
@@ -44,58 +44,61 @@ def calc_final_score(score) -> float:
     return round(min(100, weighted), 1)
 
 
-@router.get("/ai-test")
-async def test_ai_connection(
+@router.get("/ai-provider")
+async def get_ai_provider_info(
     current_user: User = Depends(get_current_admin)
 ):
-    """测试 AI 服务连接（仅管理员）"""
+    """查看当前 AI 服务商与可选服务商配置状态"""
     import openai
-    result = {
-        "api_url": settings.MIMO_API_URL,
-        "model": settings.MIMO_MODEL,
-        "api_key_set": bool(settings.MIMO_API_KEY),
-        "api_key_prefix": settings.MIMO_API_KEY[:10] + "..." if settings.MIMO_API_KEY else "未设置",
-        "openai_version": openai.__version__,
-        "test_result": None,
-        "error": None
-    }
+    info = ai_service.describe()
+    info["openai_version"] = openai.__version__
+    info["timeout"] = settings.AI_TIMEOUT
+    info["max_retries"] = settings.AI_MAX_RETRIES
+    return info
 
+
+@router.put("/ai-provider")
+async def switch_ai_provider(
+    data: dict,
+    current_user: User = Depends(get_current_admin)
+):
+    """运行时切换 AI 服务商（仅本次进程有效，重启后回到 .env 配置）"""
+    provider = (data or {}).get("provider", "")
     try:
-        resp = await ai_service.client.chat.completions.create(
-            model=settings.MIMO_MODEL,
-            messages=[{"role": "user", "content": "请用中文回复：你好"}],
-            max_tokens=200
-        )
-        msg = resp.choices[0].message
-        content = msg.content or ""
+        return ai_service.set_provider(provider)
+    except AiServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
 
-        # 尝试多种方式获取 reasoning_content
-        reasoning = getattr(msg, "reasoning_content", None)
-        if not reasoning and hasattr(msg, "model_extra"):
-            extra = msg.model_extra or {}
-            reasoning = extra.get("reasoning_content")
-        if not reasoning and hasattr(msg, "to_dict"):
-            d = msg.to_dict()
-            reasoning = d.get("reasoning_content")
-        reasoning = reasoning or ""
 
-        result["test_result"] = {
-            "content": content[:300],
-            "reasoning": reasoning[:300],
-            "content_empty": not content.strip(),
-            "reasoning_empty": not reasoning.strip(),
-            "tokens": resp.usage.total_tokens if resp.usage else 0
-        }
-        if content.strip():
-            result["status"] = "ok"
-        elif reasoning.strip():
-            result["status"] = "reasoning_only"
-        else:
-            result["status"] = "content_empty"
-    except Exception as e:
-        result["status"] = "error"
-        result["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+@router.get("/ai-test")
+async def test_ai_connection(
+    provider: str = None,
+    current_user: User = Depends(get_current_admin)
+):
+    """测试 AI 服务连接（仅管理员）
 
+    provider 可选：不传则测试当前生效的服务商，传 deepseek 可单独验证 DeepSeek。
+    """
+    import time
+    import openai
+
+    started = time.perf_counter()
+    check = await ai_service.health_check(provider=provider)
+    conf = settings.provider_config(check["provider"])
+
+    result = {
+        "status": "ok" if check["success"] else "error",
+        "provider": check["provider"],
+        "api_url": conf["api_url"],
+        "model": check["model"],
+        "api_key_set": bool(conf["api_key"]),
+        "api_key_prefix": conf["api_key"][:8] + "..." if conf["api_key"] else "未设置",
+        "openai_version": openai.__version__,
+        "latency_ms": check.get("latency_ms", round((time.perf_counter() - started) * 1000)),
+        "test_result": {"content": check.get("reply", "")} if check["success"] else None,
+        "error": check.get("error"),
+        "providers": settings.available_providers(),
+    }
     return result
 
 
@@ -716,11 +719,23 @@ async def record_rollcall(
     if not student:
         raise HTTPException(status_code=404, detail="学生不存在")
 
+    # 同一天重复点名不再加分（原来重复点击会重复累加）
+    today = datetime.now(timezone.utc).date()
+    dup_result = await db.execute(
+        select(RollcallRecord).where(
+            RollcallRecord.student_id == student_id,
+            func.date(RollcallRecord.created_at) == today
+        )
+    )
+    if dup_result.scalars().first():
+        return {"message": f"{student.name} 今天已点过名", "duplicated": True, "scored": False}
+
     # 记录点名
     record = RollcallRecord(student_id=student_id, class_id=class_id)
     db.add(record)
 
     # 如果开启了自动出勤加分，更新该学生所有任务的 Score 记录
+    scored = False
     if _system_settings.get("rollcall_auto_score", False):
         rollcall_score = _system_settings.get("rollcall_score", 5)
         scores_result = await db.execute(
@@ -728,13 +743,18 @@ async def record_rollcall(
         )
         scores = scores_result.scalars().all()
         for score in scores:
-            score.attendance_score = (score.attendance_score or 0) + rollcall_score
+            # 出勤分按百分制参与权重，必须封顶 100，否则几周后人人满分、20% 权重失效
+            score.attendance_score = min(100, (score.attendance_score or 0) + rollcall_score)
             score.rollcall_count = (score.rollcall_count or 0) + 1
-            # 重新计算最终分数
             score.final_score = calc_final_score(score)
+            scored = True
 
     await db.commit()
-    return {"message": f"已记录 {student.name} 的出勤"}
+    return {
+        "message": f"已记录 {student.name} 的出勤",
+        "duplicated": False,
+        "scored": scored
+    }
 
 
 @router.get("/rollcall/today")
@@ -829,3 +849,65 @@ async def get_system_stats(
         "total_classes": total_classes,
         "total_tasks": total_tasks
     }
+
+
+# ==================== 成绩导出 ====================
+
+@router.get("/export/grades")
+async def export_grades(
+    class_id: int = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_teacher)
+):
+    """导出成绩单为 CSV（Excel 可直接打开，带 BOM 防中文乱码）"""
+    import csv
+    import io as _io
+    from fastapi.responses import Response
+
+    query = select(User).where(User.role == "student")
+    if class_id:
+        query = query.where(User.class_id == class_id)
+    students = (await db.execute(query.order_by(User.student_id))).scalars().all()
+
+    class_map = {c.id: c.name for c in (await db.execute(select(Class))).scalars().all()}
+
+    buf = _io.StringIO()
+    buf.write("\ufeff")  # BOM，Excel 打开中文不乱码
+    writer = csv.writer(buf)
+    writer.writerow([
+        "学号", "姓名", "班级", "任务数", "AI均分", "教师均分",
+        "出勤分", "加分", "最终均分", "提交次数"
+    ])
+
+    for s in students:
+        rows = (await db.execute(
+            select(Score).where(Score.user_id == s.id)
+        )).scalars().all()
+
+        def _avg(values):
+            vals = [v for v in values if v is not None]
+            return round(sum(vals) / len(vals), 1) if vals else ""
+
+        writer.writerow([
+            s.student_id or "",
+            s.name or s.username,
+            class_map.get(s.class_id, ""),
+            len(rows),
+            _avg([r.ai_total_score for r in rows]),
+            _avg([r.teacher_score for r in rows]),
+            _avg([r.attendance_score for r in rows]),
+            _avg([r.bonus_score for r in rows]),
+            _avg([r.final_score for r in rows]),
+            sum((r.total_submissions or 0) for r in rows)
+        ])
+
+    filename = f"成绩单_{class_map.get(class_id, '全部班级')}.csv"
+    # 中文文件名必须 percent-encode，否则 header 只能放 latin-1 会 500
+    from urllib.parse import quote
+    return Response(
+        content=buf.getvalue().encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename=grades.csv; filename*=UTF-8''{quote(filename)}"
+        }
+    )

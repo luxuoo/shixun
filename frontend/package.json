@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aora-bot/element": "^0.2.0",
     "@vueuse/core": "^10.7.2",
     "axios": "^1.6.5",
     "marked": "^18.0.4",

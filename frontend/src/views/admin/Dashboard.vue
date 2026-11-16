@@ -5,7 +5,7 @@
       <div class="welcome-content">
         <div>
           <h2 style="margin: 0; color: #1e1e2d;">{{ greeting }}，{{ userStore.user?.name || userStore.user?.username }}</h2>
-          <p style="margin: 6px 0 0; color: #666;">{{ userStore.isAdmin ? '系统管理员' : '教师' }} · 今天是 {{ todayStr }}</p>
+          <p style="margin: 6px 0 0; color: #4a5160;">{{ userStore.isAdmin ? '系统管理员' : '教师' }} · 今天是 {{ todayStr }}</p>
         </div>
         <n-tag :type="userStore.isAdmin ? 'error' : 'warning'" size="large" round>
           {{ userStore.isAdmin ? '管理员' : '教师' }}
@@ -18,7 +18,7 @@
       <n-card class="stat-card stat-blue">
         <n-space align="center" :size="16">
           <div class="stat-icon">
-            <n-icon size="28" color="#2080f0"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></n-icon>
+            <AoraBot shape="chick" color="blue" face="eyes" :sizePx="30" :lineWeight="1.15" seed="stat-students" />
           </div>
           <div>
             <div class="stat-value">{{ stats.total_students }}</div>
@@ -29,7 +29,7 @@
       <n-card class="stat-card stat-green">
         <n-space align="center" :size="16">
           <div class="stat-icon" style="background: rgba(24,160,88,0.1);">
-            <n-icon size="28" color="#18a058"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
+            <AoraBot shape="bulb" color="green" face="eyes" :sizePx="30" :lineWeight="1.15" seed="stat-tasks" />
           </div>
           <div>
             <div class="stat-value">{{ stats.total_tasks }}</div>
@@ -40,7 +40,7 @@
       <n-card class="stat-card stat-orange">
         <n-space align="center" :size="16">
           <div class="stat-icon" style="background: rgba(240,160,32,0.1);">
-            <n-icon size="28" color="#f0a020"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></n-icon>
+            <AoraBot shape="drop" color="orange" face="eyes" :sizePx="30" :lineWeight="1.15" seed="stat-subs" />
           </div>
           <div>
             <div class="stat-value">{{ stats.total_submissions }}</div>
@@ -51,7 +51,7 @@
       <n-card class="stat-card stat-red">
         <n-space align="center" :size="16">
           <div class="stat-icon" style="background: rgba(208,48,80,0.1);">
-            <n-icon size="28" color="#d03050"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg></n-icon>
+            <AoraBot shape="ghost" color="violet" face="eyes" :sizePx="30" :lineWeight="1.15" seed="stat-ai" />
           </div>
           <div>
             <div class="stat-value">{{ stats.total_ai_calls }}</div>
@@ -66,30 +66,30 @@
     <div class="quick-grid">
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminStudents' })">
         <n-space vertical align="center" :size="8">
-          <n-icon size="36" color="#2080f0"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></n-icon>
+          <AoraBot shape="chick" color="blue" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-students" />
           <span style="font-weight: 500;">学生管理</span>
-          <span style="font-size: 12px; color: #999;">管理学生账号和班级</span>
+          <span style="font-size: 12px; color: #5f6673;">管理学生账号和班级</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminTasks' })">
         <n-space vertical align="center" :size="8">
-          <n-icon size="36" color="#18a058"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></n-icon>
+          <AoraBot shape="bulb" color="green" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-tasks" />
           <span style="font-weight: 500;">任务管理</span>
-          <span style="font-size: 12px; color: #999;">创建和编辑教学任务</span>
+          <span style="font-size: 12px; color: #5f6673;">创建和编辑教学任务</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminProcessEval' })">
         <n-space vertical align="center" :size="8">
-          <n-icon size="36" color="#f0a020"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></n-icon>
+          <AoraBot shape="star" color="orange" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-eval" />
           <span style="font-weight: 500;">过程性评价</span>
-          <span style="font-size: 12px; color: #999;">查看班级评价看板</span>
+          <span style="font-size: 12px; color: #5f6673;">查看班级评价看板</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminRollCall' })">
         <n-space vertical align="center" :size="8">
-          <n-icon size="36" color="#d03050"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></n-icon>
+          <AoraBot shape="bell" color="pink" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-roll" />
           <span style="font-weight: 500;">课堂点名</span>
-          <span style="font-size: 12px; color: #999;">随机点名学生</span>
+          <span style="font-size: 12px; color: #5f6673;">随机点名学生</span>
         </n-space>
       </n-card>
     </div>
@@ -119,7 +119,11 @@
           :bordered="false"
           :pagination="{ pageSize: 5 }"
           size="small"
-        />
+        >
+          <template #empty>
+            <EmptyState text="最近还没有学生提交" shape="drop" state="sleeping" :sizePx="56" seed="dash-empty-subs" />
+          </template>
+        </n-data-table>
       </n-card>
     </div>
   </div>
@@ -220,6 +224,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.stat-emoji { font-size: 26px; line-height: 1; }
+.quick-emoji { font-size: 32px; line-height: 1; }
+
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -269,7 +276,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 13px;
-  color: #999;
+  color: #5f6673;
   margin-top: 2px;
 }
 

@@ -22,6 +22,14 @@
           <n-descriptions-item label="教师评分">{{ detailData.teacher_score ? `${detailData.teacher_score}分` : '待评分' }}</n-descriptions-item>
           <n-descriptions-item label="最终分数" :span="2"><span style="font-size: 24px; font-weight: bold;" :style="{ color: getScoreColor(detailData.final_score) }">{{ detailData.final_score ? `${detailData.final_score}分` : '-' }}</span></n-descriptions-item>
         </n-descriptions>
+        <n-space v-if="canRescore" justify="space-between" align="center">
+          <span style="font-size: 12px; color: #6b7280;">
+            AI 评分未完成或失败，可手动重试一次
+          </span>
+          <n-button size="small" type="primary" secondary :loading="rescoring" @click="handleRescore">
+            重新评分
+          </n-button>
+        </n-space>
         <div v-if="detailData.ai_feedback">
           <h4 style="margin: 0 0 8px;">AI 反馈</h4>
           <n-card embedded><p style="margin: 0; white-space: pre-wrap;">{{ detailData.ai_feedback }}</p></n-card>
@@ -40,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h, reactive } from 'vue'
+import { ref, onMounted, h, reactive, computed } from 'vue'
 import { NButton, NTag, useMessage } from 'naive-ui'
 import { submissionApi, taskApi } from '@/api'
 
@@ -51,6 +59,31 @@ const selectedTask = ref<number | null>(null)
 const selectedStatus = ref<string | null>(null)
 const showDetail = ref(false)
 const detailData = ref<any>({})
+const rescoring = ref(false)
+
+/** 待评分或评分失败时允许手动重试 */
+const canRescore = computed(() => {
+  const s = detailData.value?.status
+  const fb = String(detailData.value?.ai_feedback || '')
+  return s === 'pending' || fb.includes('失败')
+})
+
+async function handleRescore() {
+  if (!detailData.value?.id) return
+  rescoring.value = true
+  try {
+    const res = await submissionApi.rescore(detailData.value.id) as any
+    message.success(`重新评分完成：${res.total_score} 分`)
+    detailData.value.ai_score = res.total_score
+    detailData.value.ai_feedback = res.feedback
+    detailData.value.status = 'ai_scored'
+    loadSubmissions()
+  } catch (e: any) {
+    message.error(e?.detail || '重新评分失败，请稍后再试')
+  } finally {
+    rescoring.value = false
+  }
+}
 const taskOptions = ref<{ label: string; value: number }[]>([])
 
 const statusOptions = [
@@ -77,7 +110,7 @@ const columns = [
 
 function getStatusType(s: string) { return ({ pending: 'warning', ai_scored: 'info', reviewed: 'success' } as any)[s] || 'default' }
 function getStatusLabel(s: string) { return ({ pending: '待评分', ai_scored: 'AI 已评分', reviewed: '已审核' } as any)[s] || s }
-function getScoreColor(s: number | null) { if (!s) return '#999'; if (s >= 90) return '#18a058'; if (s >= 80) return '#2080f0'; if (s >= 60) return '#f0a020'; return '#d03050' }
+function getScoreColor(s: number | null) { if (!s) return '#5f6673'; if (s >= 90) return '#18a058'; if (s >= 80) return '#2080f0'; if (s >= 60) return '#f0a020'; return '#d03050' }
 
 async function loadSubmissions() {
   loading.value = true
@@ -106,7 +139,7 @@ onMounted(() => { loadTasks(); loadSubmissions() })
 
 <style scoped>
 .submissions-container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 

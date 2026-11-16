@@ -1,10 +1,15 @@
 <template>
   <div class="grade-manage-container">
-    <h2 style="margin: 0 0 24px; font-size: 20px;">成绩管理</h2>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+      <h2 style="margin: 0; font-size: 20px;">成绩管理</h2>
+      <n-button size="small" secondary :loading="exporting" @click="exportGrades">
+        导出成绩单 (CSV)
+      </n-button>
+    </div>
 
     <n-tabs type="line" animated>
       <!-- ==================== Tab 1: 使用指南 ==================== -->
-      <n-tab-pane name="guide" tab="📖 使用指南">
+      <n-tab-pane name="guide" tab="使用指南">
         <!-- 快速理解 -->
         <n-card title="一、成绩系统快速理解" style="margin-bottom: 20px;">
           <div class="guide-section">
@@ -164,7 +169,7 @@
       </n-tab-pane>
 
       <!-- ==================== Tab 2: 权重配置 ==================== -->
-      <n-tab-pane name="weights" tab="⚙️ 权重配置">
+      <n-tab-pane name="weights" tab="权重配置">
         <n-card title="任务成绩权重" style="margin-bottom: 20px;">
           <template #header-extra>
             <n-tag :type="weightsSaved ? 'success' : 'warning'" size="small">
@@ -223,7 +228,7 @@
       </n-tab-pane>
 
       <!-- ==================== Tab 3: 学生成绩 ==================== -->
-      <n-tab-pane name="students" tab="📊 学生成绩">
+      <n-tab-pane name="students" tab="学生成绩">
         <n-card>
           <template #header>
             <n-space align="center" justify="space-between" style="width: 100%;">
@@ -270,6 +275,28 @@ import { authApi, adminApi } from '@/api'
 
 const router = useRouter()
 const message = useMessage()
+const exporting = ref(false)
+
+/** 导出当前班级成绩单（未选班级则导出全部） */
+async function exportGrades() {
+  exporting.value = true
+  try {
+    const blob = await adminApi.exportGrades(selectedClassId.value || undefined) as any
+    const url = URL.createObjectURL(new Blob([blob], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `成绩单_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    message.success('成绩单已导出')
+  } catch (e: any) {
+    message.error('导出失败，请确认后端已更新')
+  } finally {
+    exporting.value = false
+  }
+}
 
 const weights = ref({ ai: 40, teacher: 30, attendance: 20 })
 const defaultWeights = { ai: 40, teacher: 30, attendance: 20 }
@@ -291,7 +318,7 @@ const scoreColumns = [
     key: 'avg_score',
     width: 110,
     render: (row: any) => {
-      if (row.avg_score == null) return h('span', { style: 'color: #ccc;' }, '--')
+      if (row.avg_score == null) return h('span', { style: 'color: #8a919e;' }, '--')
       const color = row.avg_score >= 90 ? '#18a058' : row.avg_score >= 60 ? '#f0a020' : '#d03050'
       return h('span', { style: `color: ${color}; font-weight: 600;` }, row.avg_score.toFixed(1))
     }
@@ -475,7 +502,7 @@ onMounted(() => {
 .formula-title {
   font-weight: 600;
   margin-bottom: 8px;
-  color: #666;
+  color: #4a5160;
   font-size: 13px;
 }
 
@@ -487,7 +514,7 @@ onMounted(() => {
 
 .formula-example {
   font-size: 13px;
-  color: #888;
+  color: #5f6673;
   padding: 12px;
   background: #fff;
   border-radius: 6px;
