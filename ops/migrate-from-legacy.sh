@@ -40,7 +40,7 @@ fi
 
 if command -v "$NPM_BIN" >/dev/null 2>&1; then
     log "  npm: $("$NPM_BIN" -v 2>/dev/null)"
-    NODE_MAJOR="$("$NPM_BIN" -v 2>/dev/null | cut -d. -f1)"
+    NODE_MAJOR="$(node_major_of)"
     if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -lt 18 ] 2>/dev/null; then
         log "  ⚠ Node 版本为 $NODE_MAJOR，Vite 构建需要 >= 18，构建可能失败"
     fi

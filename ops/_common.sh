@@ -69,6 +69,20 @@ INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-900}"
 
 mkdir -p "$RELEASES_DIR" "$SHARED_DIR"
 
+# ---------------- 工具 ----------------
+
+# 取 Node 大版本。
+# 注意："$NPM_BIN" -v 读到的是 npm 的版本（如 11.16.0），不是 Node 的，
+# 曾被误判成 Node 11 导致 preflight 中止；必须取 npm 同目录下 node 的版本。
+# 取不到时输出空串（调用方按「未知版本」放行）。
+node_major_of() {
+    local node_cmd
+    node_cmd="$(dirname "$(command -v "$NPM_BIN" 2>/dev/null)")/node"
+    [ -x "$node_cmd" ] || node_cmd="node"
+    command -v "$node_cmd" >/dev/null 2>&1 || return 0
+    "$node_cmd" -v 2>/dev/null | sed -E 's/^v?([0-9]+).*/\1/'
+}
+
 # ---------------- 日志 ----------------
 
 log() {
@@ -253,7 +267,7 @@ preflight() {
         die "找不到 $NPM_BIN，无法构建前端（宝塔可在 Node 管理器装好后用 NPM_BIN=/path/to/npm 指定）"
     fi
     local node_major
-    node_major="$("$NPM_BIN" -v 2>/dev/null | cut -d. -f1)"
+    node_major="$(node_major_of)"
     if [ -n "$node_major" ] && [ "$node_major" -lt 18 ] 2>/dev/null; then
         die "Node 版本为 $node_major，Vite 构建需要 >= 18"
     fi
