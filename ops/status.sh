@@ -41,10 +41,11 @@ done < <(list_releases)
 
 echo ""
 echo "--- 服务状态 ---"
-if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 2>/dev/null | grep -q "^${SERVICE}\.service"; then
-    systemctl is-active "$SERVICE" 2>/dev/null | sed 's/^/  /'
+if service_exists; then
+    state="$(systemctl is-active "$SERVICE" 2>/dev/null || true)"
+    echo "  ${state:-unknown}（$SERVICE）"
 else
-    echo "  （未使用 systemd，或服务名不是 $SERVICE）"
+    echo "  （未找到服务单元 $SERVICE，或未使用 systemd）"
 fi
 
 echo ""

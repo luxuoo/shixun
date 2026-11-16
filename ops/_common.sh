@@ -393,6 +393,31 @@ build_frontend() {
 
 # ---------------- 切换与重启 ----------------
 
+# 判断服务单元是否存在
+# 注意：不能用 `systemctl list-unit-files | grep -q ...` —— grep -q 命中后立即退出，
+# systemctl 收到 SIGPIPE 返回 141，pipefail 下整条管道判为失败，
+# 于是「服务明明存在」却被当成不存在，发布时直接跳过重启（线上仍是旧代码）。
+service_exists() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+
+    local state
+    state="$(systemctl show -p LoadState --value "$SERVICE" 2>/dev/null || true)"
+    if [ -n "$state" ]; then
+        if [ "$state" = "not-found" ] || [ "$state" = "masked" ]; then
+            return 1
+        fi
+        return 0
+    fi
+
+    # 老版本 systemd 不支持 show --value：先把列表落到文件，再对文件 grep（无管道）
+    local tmp found=1
+    tmp="$(mktemp 2>/dev/null || echo "/tmp/ops-units.$$")"
+    systemctl list-unit-files >"$tmp" 2>/dev/null || true
+    grep -q "^${SERVICE}\.service" "$tmp" && found=0
+    rm -f "$tmp"
+    return "$found"
+}
+
 do_restart() {
     if [ -n "$RESTART_CMD" ]; then
         log "  执行自定义重启命令：$RESTART_CMD"
@@ -405,7 +430,7 @@ do_restart() {
         return 0
     fi
 
-    if ! systemctl list-unit-files 2>/dev/null | grep -q "^${SERVICE}\.service"; then
+    if ! service_exists; then
         log "  ⚠ 未找到服务 ${SERVICE}.service，先执行 ops/install-service.sh"
         return 0
     fi

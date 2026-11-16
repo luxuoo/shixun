@@ -676,3 +676,17 @@ bash ops/recover.sh                 # 切到上一个版本并重启
 bash ops/recover.sh --to <版本名>    # 指定版本
 bash ops/recover.sh --fix-unit      # 顺带重装 systemd 单元
 ```
+
+### 12. 必须轮换 SECRET_KEY（公网部署）
+
+默认密钥直接写在源码里，任何拿到仓库的人都能伪造管理员 JWT。发布体系下它存放在
+`.deploy/shared/.env`：
+
+```bash
+bash ops/rotate-secret.sh --show      # 检查当前是否还是默认值
+bash ops/rotate-secret.sh --restart   # 生成新密钥并重启服务
+```
+
+脚本会先把原 `.env` 备份到 `.deploy/backup/secret-<时间戳>/`，再原地替换那一行，
+不会动文件里的其他配置。**换完之后所有已登录用户需要重新登录一次**（旧 token 全部失效）。
+启动日志里也会检查：密钥仍是默认值时打印 `[安全] 警告`。

@@ -62,6 +62,8 @@ shixun/
 ├── ops/                    # 发布运维脚本
 │   ├── deploy.sh           #   一键更新（构建新版本 → 切软链 → 重启，失败自动回滚）
 │   ├── rollback.sh         #   一键回滚（切回历史版本，几秒完成）
+│   ├── recover.sh          #   应急恢复（服务挂了直接切到最近一次成功的版本）
+│   ├── rotate-secret.sh    #   轮换 JWT 密钥（会让所有用户重新登录）
 │   ├── status.sh           #   查看当前版本与历史
 │   ├── migrate-from-legacy.sh  # 老结构（git pull 部署）迁移到发布体系
 │   ├── install-service.sh  #   首次安装 systemd 服务

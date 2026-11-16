@@ -137,10 +137,21 @@ REUSE_DIST=0
 if [ -n "$PREV_DIR" ] && [ -d "$PREV_DIR" ] && [ "${FORCE_REBUILD:-0}" != "1" ] && [ -n "$CURRENT_SHA" ]; then
     CHANGED="$(git -C "$APP_DIR" diff --name-only "${CURRENT_SHA}..${SHA}" 2>/dev/null || true)"
     if [ -n "$CHANGED" ]; then
-        TOTAL_CHANGES="$(printf '%s\n' "$CHANGED" | grep -c . || true)"
+        TOTAL_CHANGES=0
+        REQ_CHANGED=0
+        FRONT_CHANGED=0
+        # 用 case 逐行判断：`printf | grep -q` 在 pipefail 下会因 SIGPIPE 误判
+        while IFS= read -r changed_file; do
+            [ -z "$changed_file" ] && continue
+            TOTAL_CHANGES=$((TOTAL_CHANGES + 1))
+            case "$changed_file" in
+                backend/requirements.txt) REQ_CHANGED=1 ;;
+                frontend/*) FRONT_CHANGED=1 ;;
+            esac
+        done <<<"$CHANGED"
         log "  本次变更 $TOTAL_CHANGES 个文件"
-        printf '%s\n' "$CHANGED" | grep -qE '^backend/requirements\.txt$' || REUSE_VENV=1
-        printf '%s\n' "$CHANGED" | grep -qE '^frontend/' || REUSE_DIST=1
+        [ "$REQ_CHANGED" = "0" ] && REUSE_VENV=1
+        [ "$FRONT_CHANGED" = "0" ] && REUSE_DIST=1
     else
         log "  未检测到文件差异，全部复用上一版产物"
         REUSE_VENV=1
