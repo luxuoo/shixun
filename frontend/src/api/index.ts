@@ -158,6 +158,17 @@ export const opsApi = {
 export const adminApi = {
   getDashboard: () =>
     api.get('/admin/dashboard'),
+  // AI 服务配置（数据库优先于 .env，保存后即时生效）
+  getAiConfig: () =>
+    api.get('/admin/ai-config'),
+  updateAiConfig: (data: {
+    provider?: string
+    providers?: Record<string, { api_key?: string; api_url?: string; model?: string }>
+    clear?: string[]
+  }) =>
+    api.put('/admin/ai-config', data),
+  testAi: (provider?: string) =>
+    api.get('/admin/ai-test', { params: { provider }, timeout: 180000 }),
   getStudents: (class_id?: number) =>
     api.get('/admin/students', { params: { class_id } }),
   getStudentDetail: (id: number) =>

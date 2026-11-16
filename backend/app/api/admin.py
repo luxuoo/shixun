@@ -11,9 +11,105 @@ from app.models.ai_log import AiLog, Score, RollcallRecord
 from app.schemas.submission import SubmissionReview, SubmissionResponse
 from app.schemas.user import UserResponse, ClassUpdate, ClassResponse
 from app.services.ai_service import ai_service, AiServiceError
+from app.services import app_settings
 from app.core.config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["管理后台"])
+
+
+# ---------------- AI 服务配置（仅管理员，数据库优先于 .env） ----------------
+
+from pydantic import BaseModel
+from typing import Optional
+
+
+class ProviderConfigIn(BaseModel):
+    """单个服务商的覆盖值
+
+    字段语义（以 api_key 为例）：
+      None   = 不修改
+      "sk-…" = 覆盖为该值
+      ""     = 显式置空（屏蔽 .env 的值，configured=false）
+    整体回退 .env 用顶层 clear 字段（删除数据库覆盖）。
+    """
+    api_key: Optional[str] = None
+    api_url: Optional[str] = None
+    model: Optional[str] = None
+
+
+class AiConfigIn(BaseModel):
+    provider: Optional[str] = None            # 默认服务商（持久化）
+    providers: Optional[dict] = None          # {"mimo": {...}, "deepseek": {...}}
+    clear: Optional[list] = None              # 需要整体清除的字段，如 ["ai.deepseek.api_key"]
+
+
+@router.get("/ai-config")
+async def get_ai_config(
+    current_user: User = Depends(get_current_admin)
+):
+    """AI 服务商连接配置（密钥脱敏），含每项来源（数据库覆盖 / .env）"""
+    providers = []
+    for p in app_settings.available_providers():
+        providers.append({
+            "name": p["name"],
+            "label": p["label"],
+            "api_url": p["api_url"],
+            "model": p["model"],
+            "configured": p["configured"],
+            "key_masked": p["key_masked"],
+            "source": p["source"],
+        })
+    current = ai_service.describe()
+    return {
+        "provider": app_settings.default_provider(),
+        "active": current["provider"],   # 实际生效（含自动回退）的服务商
+        "active_fallback": current["provider"] != app_settings.default_provider(),
+        "providers": providers,
+    }
+
+
+@router.put("/ai-config")
+async def update_ai_config(
+    body: AiConfigIn,
+    current_user: User = Depends(get_current_admin)
+):
+    """保存 AI 服务商配置（写数据库 + 即时生效，无需重启）"""
+    items: dict[str, Optional[str]] = {}
+
+    if body.provider is not None:
+        name = body.provider.strip().lower()
+        if name not in ("mimo", "deepseek"):
+            raise HTTPException(status_code=400, detail="不支持的 AI 服务商")
+        items["ai.provider"] = name
+
+    if body.providers:
+        for name, fields in body.providers.items():
+            if name not in ("mimo", "deepseek"):
+                raise HTTPException(status_code=400, detail=f"未知服务商：{name}")
+            for field in ("api_key", "api_url", "model"):
+                value = fields.get(field)
+                if value is None:
+                    continue
+                value = value.strip()
+                if field == "api_url" and value and not value.startswith(("http://", "https://")):
+                    raise HTTPException(status_code=400, detail=f"{name} 的 API 地址必须以 http(s):// 开头")
+                if field == "model" and not value:
+                    raise HTTPException(status_code=400, detail=f"{name} 的模型名不能为空")
+                items[f"ai.{name}.{field}"] = value
+
+    if body.clear:
+        for key in body.clear:
+            items[key] = None
+
+    if not items:
+        raise HTTPException(status_code=400, detail="没有要保存的配置")
+
+    try:
+        await app_settings.set_values(items, updated_by=current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return await get_ai_config(current_user)
 
 
 def calc_final_score(score) -> float:
@@ -84,7 +180,7 @@ async def test_ai_connection(
 
     started = time.perf_counter()
     check = await ai_service.health_check(provider=provider)
-    conf = settings.provider_config(check["provider"])
+    conf = app_settings.provider_config(check["provider"])
 
     result = {
         "status": "ok" if check["success"] else "error",
@@ -92,12 +188,12 @@ async def test_ai_connection(
         "api_url": conf["api_url"],
         "model": check["model"],
         "api_key_set": bool(conf["api_key"]),
-        "api_key_prefix": conf["api_key"][:8] + "..." if conf["api_key"] else "未设置",
+        "api_key_prefix": app_settings.mask_key(conf["api_key"]) or "未设置",
         "openai_version": openai.__version__,
         "latency_ms": check.get("latency_ms", round((time.perf_counter() - started) * 1000)),
         "test_result": {"content": check.get("reply", "")} if check["success"] else None,
         "error": check.get("error"),
-        "providers": settings.available_providers(),
+        "providers": app_settings.available_providers(),
     }
     return result
 

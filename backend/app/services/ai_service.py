@@ -12,6 +12,7 @@ from openai import AsyncOpenAI
 import openai
 
 from app.core.config import settings
+from app.services import app_settings
 
 
 # 各服务商的能力差异
@@ -45,11 +46,11 @@ class AiService:
         若首选服务商没配 API Key，而另一家配置了，则自动回退，
         避免改了 AI_PROVIDER 却忘了填密钥导致整个 AI 功能不可用。
         """
-        requested = self._provider_override or settings.provider_config()["name"]
-        if settings.provider_config(requested)["api_key"]:
+        requested = self._provider_override or app_settings.default_provider()
+        if app_settings.provider_config(requested)["api_key"]:
             return requested
         for name in ("deepseek", "mimo"):
-            if name != requested and settings.provider_config(name)["api_key"]:
+            if name != requested and app_settings.provider_config(name)["api_key"]:
                 if not self._fallback_warned:
                     print(f"[AI] {requested} 未配置 API Key，已自动回退到 {name}")
                     self._fallback_warned = True
@@ -58,18 +59,18 @@ class AiService:
 
     @property
     def model(self) -> str:
-        return settings.provider_config(self.provider)["model"]
+        return app_settings.provider_config(self.provider)["model"]
 
     def set_provider(self, name: str) -> dict:
-        """运行时切换服务商（重启后回到 .env 配置）"""
+        """运行时切换服务商（重启后回到数据库/.env 里配置的默认值）"""
         name = (name or "").strip().lower()
         if name not in PROVIDER_CAPS:
             raise AiServiceError(f"不支持的 AI 服务商：{name}", status_code=400)
-        conf = settings.provider_config(name)
+        conf = app_settings.provider_config(name)
         if not conf["api_key"]:
             label = conf["label"]
             raise AiServiceError(
-                f"{label} 未配置 API Key，请先在 .env 中填写后重启服务",
+                f"{label} 未配置 API Key，请先在管理后台「AI 服务配置」里填写",
                 status_code=400,
             )
         self._provider_override = name
@@ -77,23 +78,23 @@ class AiService:
 
     def describe(self) -> dict:
         """返回当前服务商信息（不含密钥）"""
-        conf = settings.provider_config(self.provider)
+        conf = app_settings.provider_config(self.provider)
         return {
             "provider": conf["name"],
             "label": conf["label"],
             "model": conf["model"],
             "api_url": conf["api_url"],
             "configured": bool(conf["api_key"]),
-            "providers": settings.available_providers(),
+            "providers": app_settings.available_providers(),
         }
 
     @property
     def client(self) -> AsyncOpenAI:
         """按 (api_url, api_key) 复用客户端，避免重复建连"""
-        conf = settings.provider_config(self.provider)
+        conf = app_settings.provider_config(self.provider)
         if not conf["api_key"]:
             raise AiServiceError(
-                f"{conf['label']} 未配置 API Key，请联系管理员在 .env 中设置 AI 密钥",
+                f"{conf['label']} 未配置 API Key，请联系管理员在「AI 服务配置」页面设置",
                 status_code=503,
             )
         cache_key = (conf["api_url"], conf["api_key"])

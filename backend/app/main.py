@@ -11,7 +11,8 @@ from app.core.database import init_db
 from app.api import auth, tasks, submissions, ai, admin, evaluation, ops
 from app.models import (
     User, Class, Task, TaskStep, Submission, AiLog, Score,
-    EvalTemplate, EvalPhase, EvalIndicator, EvalScorerConfig, EvalRecord, EvalSnapshot
+    EvalTemplate, EvalPhase, EvalIndicator, EvalScorerConfig, EvalRecord, EvalSnapshot,
+    AppSetting
 )
 
 
@@ -19,12 +20,18 @@ from app.models import (
 async def lifespan(app: FastAPI):
     # 启动时初始化数据库
     await init_db()
+    # 加载管理后台保存的运行时配置（AI 密钥等，优先于 .env）
+    from app.services import app_settings
+    try:
+        await app_settings.reload()
+    except Exception as e:
+        print(f"[配置] 运行时配置加载失败（回退 .env）：{e}")
     # 创建上传目录
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "images"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "videos"), exist_ok=True)
     # 启动时打印当前 AI 配置，方便排查
-    conf = settings.provider_config()
+    conf = app_settings.provider_config(app_settings.default_provider())
     print(f"[AI] 服务商={conf['label']} 模型={conf['model']} 密钥={'已配置' if conf['api_key'] else '未配置'}")
     if not conf["api_key"]:
         print("[AI] 警告：当前服务商没有 API Key，AI 提示/评分/诊断将不可用")

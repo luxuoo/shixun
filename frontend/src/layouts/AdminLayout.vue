@@ -215,6 +215,7 @@ const menuGroups = computed(() => {
       items: [
         { label: '用户管理', key: 'AdminUsers', icon: botIcon('cat', 'orange') },
         { label: '系统统计', key: 'AdminSystemStats', icon: botIcon('planet', 'blue') },
+        { label: 'AI 服务配置', key: 'AdminAiConfig', icon: botIcon('bot', 'green') },
         { label: '部署运维', key: 'AdminOps', icon: botIcon('ghost', 'cyan') }
       ]
     })
