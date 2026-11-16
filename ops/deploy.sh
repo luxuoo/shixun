@@ -6,19 +6,25 @@
 #   bash ops/deploy.sh                  # 更新到 origin/main 最新
 #   bash ops/deploy.sh --ref v1.2.0     # 指定分支/标签/提交
 #   bash ops/deploy.sh --force          # 版本号相同也强制重建
+#   bash ops/deploy.sh --no-restart --skip-health   # 只准备版本（迁移时用）
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 REF="$REMOTE/$BRANCH"
 FORCE=0
+NO_RESTART="${NO_RESTART:-0}"
+SKIP_HEALTH="${SKIP_HEALTH:-0}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --ref) REF="${2:?--ref 需要参数}"; shift 2 ;;
         --force) FORCE=1; shift ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        --no-restart) NO_RESTART=1; shift ;;
+        --skip-health) SKIP_HEALTH=1; shift ;;
+        -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
         *) die "未知参数: $1" ;;
     esac
 done
+export NO_RESTART SKIP_HEALTH
 
 acquire_lock
 

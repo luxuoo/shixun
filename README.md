@@ -63,6 +63,7 @@ shixun/
 │   ├── deploy.sh           #   一键更新（构建新版本 → 切软链 → 重启，失败自动回滚）
 │   ├── rollback.sh         #   一键回滚（切回历史版本，几秒完成）
 │   ├── status.sh           #   查看当前版本与历史
+│   ├── migrate-from-legacy.sh  # 老结构（git pull 部署）迁移到发布体系
 │   ├── install-service.sh  #   首次安装 systemd 服务
 │   ├── webhook.py          #   GitHub push 自动发布
 │   └── nginx.snippet.conf  #   配合发布目录的 Nginx 片段

@@ -250,10 +250,21 @@ switch_to() {
     log "  切换软链 current → $(basename "$target")"
     ln -sfn "$target" "$CURRENT_LINK"
 
-    step "重启服务"
-    if ! do_restart; then
-        log "  ✗ 服务重启失败"
-        return 1
+    # 首次从旧结构迁移时，服务单元可能还指向老路径，
+    # 这两个开关让发布只「准备好版本」，重启与校验交给迁移脚本后续处理
+    if [ "${NO_RESTART:-0}" = "1" ]; then
+        log "  （按要求跳过重启）"
+    else
+        step "重启服务"
+        if ! do_restart; then
+            log "  ✗ 服务重启失败"
+            return 1
+        fi
+    fi
+
+    if [ "${SKIP_HEALTH:-0}" = "1" ]; then
+        log "  （按要求跳过健康检查）"
+        return 0
     fi
 
     step "健康检查"

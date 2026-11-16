@@ -371,6 +371,8 @@ systemctl restart learning-system
 
 首次发布会自动把老的 `backend/data`、`backend/uploads`、`backend/.env` 迁到 `.deploy/shared`。
 
+> 服务器上已经是老结构（服务直接跑 `backend/`）？先看 **10.5**，迁移一次后本节步骤自然完成。
+
 ### 10.2 一次性准备（3 步）
 
 ```bash
@@ -449,7 +451,63 @@ bash ops/rollback.sh --to 20261115-143022-9a2c1f0   # 回到指定版本
 
 回滚只是切换软链 + 重启，**不重新构建**，所以很快；回滚后若想回到最新版，再点一次「一键更新」即可。
 
-### 10.5 手动流程（不使用脚本时）
+### 10.5 从旧版升级到发布体系（老服务器必看）
+
+如果服务器上还是「`git pull` + 直接构建」的老结构（`backend/` 与 `frontend/dist` 被服务和 Nginx 直接引用），
+先迁移一次，之后才能用一键更新。
+
+**直接 `git pull` 后执行 `ops/deploy.sh` 是不行的**：旧 systemd 单元的 `WorkingDirectory` 还指着
+`.../learning-system/backend`，脚本重启的仍是老代码，而健康检查（读 8000 端口）会照常通过，
+看起来「发布成功」但页面没变。
+
+正确做法：
+
+```bash
+cd /www/wwwroot/learning-system
+
+# 1) 先拿到新代码（远端不是 GitHub 的话，先加一个）
+git remote -v
+# 若 origin 还是自建地址，执行：
+#   git remote add github https://github.com/luxuoo/shixun.git
+#   git fetch github main && git reset --hard github/main
+git pull
+
+# 2) 一条命令完成迁移（构建 → 迁移数据 → 改写服务单元 → 重启 → 校验）
+bash ops/migrate-from-legacy.sh
+
+# 根目录的 bash deploy.sh 已改为转发入口，效果相同；
+# 迁移完成后再执行它只会提示当前版本，不会覆盖服务配置
+```
+
+脚本会做这些事，全程线上不中断：
+
+| 步骤 | 说明 |
+|---|---|
+| 自检 | 检查 git 仓库、python3-venv、npm/Node 版本 |
+| 备份 | `.env`、`data/`、`uploads/` 复制到 `.deploy/backup/<时间戳>/` |
+| 构建 | 新版本构建到 `.deploy/releases/`，此时线上仍跑老代码 |
+| 迁数据 | 老 `.env` / 数据库 / 上传文件搬到 `.deploy/shared`，版本间共享 |
+| 改服务 | 把 systemd 单元重写到 `.deploy/current/backend` 并重启 |
+| 校验 | 健康检查 + 打印 Nginx 需要改的两行 |
+
+最后手动改 Nginx 并 reload：
+
+```nginx
+root /www/wwwroot/learning-system/.deploy/current/frontend/dist;
+location /uploads/ { alias /www/wwwroot/learning-system/.deploy/shared/uploads/; }
+```
+
+```bash
+nginx -t && nginx -s reload
+```
+
+用宝塔「Python 项目管理器」启动后端（没有 systemd 单元）的话，迁移脚本会跳过改服务这一步，
+请改为在 `.env` 里设置 `RESTART_CMD="bt restart 你的项目名"`，并在面板里把项目目录改成
+`/www/wwwroot/learning-system/.deploy/current/backend`。
+
+> 迁移脚本以 root 执行时，会自动把 `.deploy` 归属改成 `www`，否则运行用户写不了数据库和上传目录。
+
+### 10.6 手动流程（不使用脚本时）
 
 ```bash
 cd /www/wwwroot/learning-system
