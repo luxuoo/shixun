@@ -9,9 +9,11 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 TARGET=""
+ACTOR="${OPS_ACTOR:-$(whoami 2>/dev/null || echo unknown)}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --to) TARGET="${2:?--to 需要版本名}"; shift 2 ;;
+        --actor) ACTOR="${2:?--actor 需要参数}"; shift 2 ;;
         --list)
             echo "可用版本（新 → 旧，* 为当前）:"
             cur="$(current_release_name)"
@@ -27,6 +29,8 @@ while [ $# -gt 0 ]; do
 done
 
 acquire_lock
+rotate_log
+START_TS="$(date +%s)"
 
 CURRENT_NAME="$(current_release_name)"
 CURRENT_DIR="$(current_release)"
@@ -49,7 +53,7 @@ if [ "$TARGET" = "$CURRENT_NAME" ]; then
 fi
 
 state_set \
-    "status=running" "action=rollback" "step=started" "pid=$$" "error=" \
+    "status=running" "action=rollback" "step=started" "pid=$$" "actor=$ACTOR" "error=" \
     "release=$CURRENT_NAME" "target_release=$TARGET" \
     "started_at=$(date '+%Y-%m-%d %H:%M:%S')" "finished_at=" "log=$LOG_FILE"
 
@@ -65,6 +69,7 @@ if ! switch_to "$TARGET_DIR"; then
         "status=failed" "step=回滚失败" "release=$CURRENT_NAME" \
         "error=目标版本 $TARGET 启动失败，已切回原版本" \
         "finished_at=$(date '+%Y-%m-%d %H:%M:%S')"
+    history_add rollback "$TARGET" "" failed "$ACTOR" "启动失败，已切回 $CURRENT_NAME"
     exit 1
 fi
 
@@ -76,10 +81,12 @@ if [ -f "$TARGET_DIR/REVISION" ]; then
     SUBJECT="$(grep -m1 '^subject=' "$TARGET_DIR/REVISION" | cut -d= -f2-)"
 fi
 
+DUR="$(($(date +%s) - START_TS))"
 state_set \
     "status=success" "step=完成" "release=$TARGET" "sha=$SHA" \
     "subject=$SUBJECT" "prev_release=$CURRENT_NAME" \
-    "finished_at=$(date '+%Y-%m-%d %H:%M:%S')"
+    "finished_at=$(date '+%Y-%m-%d %H:%M:%S')" "duration_sec=$DUR"
+history_add rollback "$TARGET" "$SHA" success "$ACTOR" "来自 $CURRENT_NAME，耗时 ${DUR}s"
 
-log "========== 回滚完成：现在运行 $TARGET =========="
+log "========== 回滚完成：现在运行 $TARGET（耗时 ${DUR}s）=========="
 log "如需回到回滚前的版本，执行：bash ops/rollback.sh --to $CURRENT_NAME"

@@ -48,12 +48,35 @@ else
 fi
 
 echo ""
-echo "--- 健康检查 ---"
-if curl -fsS -m 3 "$HEALTH_URL" >/dev/null 2>&1; then
-    echo "  ✓ $HEALTH_URL 正常"
-else
+echo "--- 健康检查与版本一致性 ---"
+HEALTH_JSON="$(curl -fsS -m 3 "$HEALTH_URL" 2>/dev/null || true)"
+if [ -z "$HEALTH_JSON" ]; then
     echo "  ✗ $HEALTH_URL 无响应"
+else
+    RUN_COMMIT="$(printf '%s' "$HEALTH_JSON" | "$PYTHON_BIN" -c \
+        'import json,sys;print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true)"
+    RUN_STARTED="$(printf '%s' "$HEALTH_JSON" | "$PYTHON_BIN" -c \
+        'import json,sys;print(json.load(sys.stdin).get("started_at",""))' 2>/dev/null || true)"
+    CUR_DIR="$(current_release)"
+    CUR_COMMIT=""
+    [ -f "$CUR_DIR/REVISION" ] && CUR_COMMIT="$(grep -m1 '^commit=' "$CUR_DIR/REVISION" | cut -d= -f2)"
+
+    echo "  ✓ 服务在线（启动于 ${RUN_STARTED:-未知}）"
+    echo "  运行版本: ${RUN_COMMIT:-未知（旧版本没有上报）}"
+    echo "  软链版本: ${CUR_COMMIT:-未知}"
+    if [ -n "$RUN_COMMIT" ] && [ -n "$CUR_COMMIT" ] && [ "$RUN_COMMIT" != "$CUR_COMMIT" ]; then
+        echo "  ⚠ 两者不一致：进程还在跑 $RUN_COMMIT，重启服务或检查 systemd 单元是否指向 .deploy/current"
+    fi
+fi
+
+echo ""
+echo "--- 最近操作记录 ---"
+if [ -f "$HISTORY_FILE" ]; then
+    tail -6 "$HISTORY_FILE" | sed 's/^/  /'
+else
+    echo "  （暂无记录）"
 fi
 
 echo ""
 echo "日志: $LOG_FILE"
+echo "历史: $HISTORY_FILE"

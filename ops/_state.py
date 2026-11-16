@@ -66,7 +66,8 @@ def main():
                 continue
             k, v = pair.split("=", 1)
             data[k.strip()] = coerce(v)
-        data.setdefault("updated_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+        # 每次写入都刷新时间戳（原来用 setdefault 导致永远停在第一次写入的时间）
+        data["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         save(path, data)
         return 0
 

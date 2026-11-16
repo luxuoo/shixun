@@ -15,6 +15,7 @@ SHARED_DIR="$DEPLOY_DIR/shared"
 STATE_FILE="$DEPLOY_DIR/state.json"
 LOCK_FILE="$DEPLOY_DIR/ops.lock"
 LOG_FILE="$DEPLOY_DIR/ops.log"
+HISTORY_FILE="$DEPLOY_DIR/history.log"
 
 # 可通过环境变量覆盖
 REMOTE="${REMOTE:-origin}"
@@ -42,6 +43,24 @@ log() {
 step() {
     log "▶ $*"
     state_set "step=$*"
+}
+
+# 发布日志超过 2MB 就轮转，避免长期运行把磁盘吃满
+rotate_log() {
+    local max=2097152
+    if [ -f "$LOG_FILE" ] && [ "$(wc -c <"$LOG_FILE" 2>/dev/null || echo 0)" -gt "$max" ]; then
+        mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || true
+        log "（日志已轮转到 ops.log.1）"
+    fi
+}
+
+# 追加一条历史记录，供运维页面展示「谁在什么时候发布了什么」
+# 格式: 时间 | 动作 | 版本 | 提交 | 结果 | 操作者 | 补充说明
+history_add() {
+    local action="$1" release="$2" sha="$3" result="$4" actor="$5" detail="${6:-}"
+    printf '%s | %s | %s | %s | %s | %s | %s\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" "$action" "${release:--}" "${sha:--}" \
+        "$result" "${actor:--}" "$detail" >>"$HISTORY_FILE"
 }
 
 die() {
@@ -153,6 +172,53 @@ link_shared() {
     done
 }
 
+# ---------------- 前置检查 ----------------
+
+# 构建前把「缺依赖」这类问题提前暴露，避免跑到一半才失败
+preflight() {
+    log "  检查构建环境…"
+
+    if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+        die "找不到 $PYTHON_BIN，无法创建虚拟环境"
+    fi
+    if ! "$PYTHON_BIN" -c 'import venv' >/dev/null 2>&1; then
+        die "缺少 python3-venv，执行：apt install -y python3-venv（CentOS: yum install -y python3）"
+    fi
+
+    if ! command -v "$NPM_BIN" >/dev/null 2>&1; then
+        die "找不到 $NPM_BIN，无法构建前端（宝塔可在 Node 管理器装好后用 NPM_BIN=/path/to/npm 指定）"
+    fi
+    local node_major
+    node_major="$("$NPM_BIN" -v 2>/dev/null | cut -d. -f1)"
+    if [ -n "$node_major" ] && [ "$node_major" -lt 18 ] 2>/dev/null; then
+        die "Node 版本为 $node_major，Vite 构建需要 >= 18"
+    fi
+
+    if command -v df >/dev/null 2>&1; then
+        local avail_kb
+        avail_kb="$(df -Pk "$DEPLOY_DIR" 2>/dev/null | awk 'NR==2 {print $4}')"
+        if [ -n "${avail_kb:-}" ] && [ "$avail_kb" -lt 1048576 ] 2>/dev/null; then
+            die "磁盘剩余不足 1GB（$(($avail_kb / 1024))MB），先清理再发布"
+        fi
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+        log "  ⚠ 未安装 curl，发布后将跳过健康检查"
+    fi
+    log "  环境检查通过"
+}
+
+# 构建产物自检：少文件就别切换，免得把线上切到坏的版本
+check_build() {
+    local release="$1"
+    [ -f "$release/backend/app/main.py" ] || { log "  ✗ 缺少后端入口 app/main.py"; return 1; }
+    [ -x "$release/backend/venv/bin/python" ] || { log "  ✗ 缺少后端虚拟环境"; return 1; }
+    if [ -f "$release/frontend/package.json" ]; then
+        [ -f "$release/frontend/dist/index.html" ] || { log "  ✗ 前端产物 dist/index.html 不存在"; return 1; }
+    fi
+    return 0
+}
+
 # ---------------- 构建 ----------------
 
 build_backend() {
@@ -241,6 +307,9 @@ switch_to() {
     local target="$1"
     [ -d "$target" ] || die "目标版本不存在：$target"
     [ -f "$target/backend/app/main.py" ] || die "目标版本缺少后端代码：$target"
+    if [ ! -x "$target/backend/venv/bin/python" ]; then
+        die "版本 $(basename "$target") 缺少虚拟环境，无法启动。可执行 bash ops/deploy.sh --force 重新构建"
+    fi
 
     # current 若被误建成真实目录，先清掉，避免软链建到目录内部
     if [ -e "$CURRENT_LINK" ] && [ ! -L "$CURRENT_LINK" ]; then

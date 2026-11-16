@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from datetime import datetime
 import os
 
 from app.core.config import settings
@@ -74,6 +75,43 @@ async def root():
     }
 
 
+def _read_revision() -> dict:
+    """读取发布脚本写入的 REVISION（线上在 .deploy/releases/<版本>/REVISION）"""
+    from pathlib import Path
+
+    for candidate in (
+        Path(__file__).resolve().parents[2] / "REVISION",  # backend/app/main.py → 版本根
+        Path.cwd().parent / "REVISION",
+    ):
+        try:
+            if candidate.is_file():
+                info = {}
+                for line in candidate.read_text(encoding="utf-8").splitlines():
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        info[k.strip()] = v.strip()
+                return info
+        except OSError:
+            continue
+    return {}
+
+
+REVISION = _read_revision()
+STARTED_AT = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """健康检查，同时暴露运行版本
+
+    运维页面据此判断「软链指向的版本」与「进程实际运行的版本」是否一致 ——
+    systemd 单元没改到 .deploy/current 时，两者会不一致，页面会直接报警。
+    """
+    return {
+        "status": "healthy",
+        "version": app.version,
+        "commit": REVISION.get("commit", ""),
+        "built_at": REVISION.get("built_at", ""),
+        "started_at": STARTED_AT,
+        "pid": os.getpid(),
+    }

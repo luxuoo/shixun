@@ -7,6 +7,7 @@
 3. 默认关闭（OPS_ENABLED=false），避免误操作把线上服务重启掉。
 """
 
+import asyncio
 import json
 import os
 import platform
@@ -191,14 +192,75 @@ def _tail_log(lines: int = 200) -> list:
     return content.splitlines()[-lines:]
 
 
-def _health_ok() -> bool:
+def _health_info() -> dict:
+    """请求 /health，拿到进程实际运行的版本（用于发现「服务没换新代码」）"""
     import urllib.request
 
     try:
         with urllib.request.urlopen(settings.OPS_HEALTH_URL, timeout=2) as resp:
-            return 200 <= resp.status < 400
+            if not (200 <= resp.status < 400):
+                return {}
+            return json.loads(resp.read().decode("utf-8"))
     except Exception:
-        return False
+        return {}
+
+
+def _local_identity() -> dict:
+    """HTTP 探测失败时的兜底：直接读本进程的版本信息
+
+    这样即使 OPS_HEALTH_URL 配错（比如端口不对），后台仍能显示
+    「进程实际在跑哪个提交」，不会因为探测失败就丢掉漂移判断。
+    """
+    try:
+        from app.main import REVISION, STARTED_AT
+
+        return {
+            "commit": REVISION.get("commit", ""),
+            "built_at": REVISION.get("built_at", ""),
+            "started_at": STARTED_AT,
+            "pid": os.getpid(),
+        }
+    except Exception:
+        return {}
+
+
+def _duration(state: dict) -> Optional[int]:
+    """按 started_at / finished_at 算耗时（秒）"""
+    try:
+        start = datetime.strptime(str(state.get("started_at")), "%Y-%m-%d %H:%M:%S")
+        end = datetime.strptime(str(state.get("finished_at")), "%Y-%m-%d %H:%M:%S")
+        return int((end - start).total_seconds())
+    except (ValueError, TypeError):
+        return state.get("duration_sec") if isinstance(state.get("duration_sec"), int) else None
+
+
+def _read_history(limit: int = 15) -> list:
+    """解析 history.log：时间 | 动作 | 版本 | 提交 | 结果 | 操作者 | 说明"""
+    path = DEPLOY_DIR / "history.log"
+    if not path.exists():
+        return []
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]
+    except OSError:
+        return []
+
+    items = []
+    for line in reversed(lines):
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 6:
+            continue
+        items.append(
+            {
+                "time": parts[0],
+                "action": parts[1],
+                "release": parts[2],
+                "commit": parts[3],
+                "result": parts[4],
+                "actor": parts[5],
+                "detail": parts[6] if len(parts) > 6 else "",
+            }
+        )
+    return items
 
 
 def _spawn(script: str, extra_args: list) -> None:
@@ -222,6 +284,77 @@ def _spawn(script: str, extra_args: list) -> None:
         )
 
 
+def _git_check() -> dict:
+    """拉取远端并比较当前版本，判断有多少新提交（只读，不改任何东西）"""
+    root = str(PROJECT_ROOT)
+
+    def run(args, timeout=30):
+        return subprocess.run(
+            ["git", "-C", root, *args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+    try:
+        fetch = run(["fetch", "--quiet", "--tags", "origin"], timeout=30)
+        if fetch.returncode != 0:
+            return {"ok": False, "error": f"git fetch 失败：{(fetch.stderr or '').strip()[:200]}"}
+
+        current = _current_release_commit()
+        if not current:
+            latest = run(["rev-parse", "--short=7", "origin/main"])
+            return {
+                "ok": True,
+                "current_commit": "",
+                "latest_commit": latest.stdout.strip(),
+                "behind": None,
+                "commits": [],
+                "changed_files": [],
+                "note": "还没有发布记录，首次发布会构建全部内容",
+            }
+
+        behind = run(["rev-list", "--count", f"{current}..origin/main"])
+        log_out = run(["log", "--pretty=%h|%s|%ad|%an", "--date=format:%m-%d %H:%M", "-n", "10", f"{current}..origin/main"])
+        diff = run(["diff", "--name-only", f"{current}..origin/main"])
+
+        commits = []
+        for line in (log_out.stdout or "").splitlines():
+            parts = line.split("|", 3)
+            if len(parts) == 4:
+                commits.append({"sha": parts[0], "subject": parts[1], "time": parts[2], "author": parts[3]})
+
+        files = [f for f in (diff.stdout or "").splitlines() if f]
+        latest = run(["rev-parse", "--short=7", "origin/main"])
+
+        return {
+            "ok": True,
+            "current_commit": current,
+            "latest_commit": latest.stdout.strip(),
+            "behind": int((behind.stdout or "0").strip() or 0),
+            "commits": commits,
+            "changed_files": files[:30],
+            "changed_count": len(files),
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "git fetch 超时，检查服务器网络或仓库权限"}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+
+
+def _current_release_commit() -> str:
+    link = DEPLOY_DIR / "current"
+    try:
+        rev = link / "REVISION"
+        if rev.is_file():
+            for line in rev.read_text(encoding="utf-8").splitlines():
+                if line.startswith("commit="):
+                    return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return ""
+
+
 class DeployRequest(BaseModel):
     ref: Optional[str] = None
     force: bool = False
@@ -243,20 +376,56 @@ async def ops_status(
         state["status"] = "unknown"
         state.setdefault("error", "上次操作异常中断（未写入结果）")
 
+    releases = _list_releases()
+    health = _health_info()
+    reachable = bool(health)
+    if not health:
+        health = _local_identity()
+    running_commit = str(health.get("commit") or "")
+    current = _current_release_name()
+    current_commit = ""
+    for item in releases:
+        if item["current"]:
+            current_commit = item["commit"]
+            break
+
+    # 进程跑的版本 ≠ 软链指向的版本 → systemd 单元可能还指着老目录
+    drift = bool(running_commit and current_commit and running_commit != current_commit)
+
+    state["duration_sec"] = _duration(state)
+
     return {
         "enabled": settings.OPS_ENABLED,
         "platform_ok": _platform_ok(),
         "service": settings.OPS_SERVICE,
         "health_url": settings.OPS_HEALTH_URL,
-        "health_ok": _health_ok(),
+        "health_ok": reachable,
+        "running_info": {
+            "commit": running_commit,
+            "built_at": health.get("built_at", ""),
+            "started_at": health.get("started_at", ""),
+            "pid": health.get("pid"),
+        },
+        "drift": drift,
         "project_dir": str(PROJECT_ROOT),
         "running": running,
         "state": state,
-        "current": _current_release_name(),
-        "releases": _list_releases(),
+        "current": current,
+        "current_commit": current_commit,
+        "releases": releases,
+        "disk_mb": round(sum(r["size_mb"] for r in releases), 1),
+        "history": _read_history(15),
         "log_tail": _tail_log(lines),
         "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+
+@router.get("/check")
+async def ops_check(current_user: User = Depends(get_current_admin)):
+    """检查是否有新提交（只读，可在点更新前先看）"""
+    if not _platform_ok():
+        raise HTTPException(status_code=400, detail="当前环境不支持（需 Linux + bash）")
+    return await asyncio.to_thread(_git_check)
 
 
 @router.post("/deploy")
@@ -275,6 +444,7 @@ async def ops_deploy(
     if payload.force:
         args += ["--force"]
 
+    args += ["--actor", current_user.username]
     _spawn("deploy.sh", args)
     return {
         "ok": True,
@@ -301,6 +471,7 @@ async def ops_rollback(
     if not payload.release and len(_list_releases()) < 2:
         raise HTTPException(status_code=400, detail="没有可回滚的历史版本")
 
+    args += ["--actor", current_user.username]
     _spawn("rollback.sh", args)
     return {"ok": True, "message": "已开始回滚", "action": "rollback", "to": payload.release or "上一个版本"}
 

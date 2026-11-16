@@ -7,6 +7,9 @@
       </div>
       <n-space :size="10" align="center">
         <n-button text :loading="loading" @click="loadStatus(true)">刷新</n-button>
+        <n-button text :loading="checking" :disabled="!status.platform_ok" @click="handleCheck">
+          检查更新
+        </n-button>
         <n-button :disabled="!canOperate || running" :loading="deploying" @click="handleDeploy">
           一键更新
         </n-button>
@@ -30,6 +33,45 @@
       当前环境不支持在线发布（需要 Linux + bash）。本页仅展示状态，部署请在服务器上执行 ops 脚本。
     </n-alert>
 
+    <n-alert v-if="drift" type="error" :bordered="false" class="hint">
+      进程仍在运行 <code>{{ runningCommit }}</code>，但当前版本目录是
+      <code>{{ status.current_commit }}</code> —— 说明服务没重启到新代码。
+      先执行 <code>sudo systemctl restart {{ status.service }}</code>；仍无效则检查服务单元的
+      WorkingDirectory 是否指向 <code>.deploy/current/backend</code>
+      （可重跑 <code>sudo bash ops/install-service.sh</code>）。
+    </n-alert>
+
+    <section v-if="checkResult" class="update-box">
+      <div class="update-body">
+        <template v-if="checkResult.ok">
+          <div class="update-head">
+            <n-tag v-if="checkResult.behind" type="warning" size="small" :bordered="false">
+              落后 {{ checkResult.behind }} 个提交
+            </n-tag>
+            <n-tag v-else type="success" size="small" :bordered="false">已是最新</n-tag>
+            <span class="mono">{{ checkResult.current_commit || '未发布' }} → {{ checkResult.latest_commit }}</span>
+            <span v-if="checkResult.changed_count" class="muted">{{ checkResult.changed_count }} 个文件变更</span>
+          </div>
+          <ul v-if="checkResult.commits && checkResult.commits.length" class="commit-list">
+            <li v-for="c in checkResult.commits.slice(0, 5)" :key="c.sha">
+              <span class="mono sha">{{ c.sha }}</span>
+              <span class="subject">{{ c.subject }}</span>
+              <span class="muted time">{{ c.time }}</span>
+            </li>
+          </ul>
+          <p v-if="checkResult.note" class="note muted">{{ checkResult.note }}</p>
+          <p v-else-if="checkResult.behind" class="note muted">
+            更新会重新安装依赖并构建前端，约 1–3 分钟；期间页面可正常访问，最后重启约 10 秒。
+          </p>
+        </template>
+        <div v-else class="update-head">
+          <n-tag type="error" size="small" :bordered="false">检查失败</n-tag>
+          <span class="subject">{{ checkResult.error }}</span>
+        </div>
+      </div>
+      <n-button text size="tiny" class="dismiss" @click="checkResult = null">关闭</n-button>
+    </section>
+
     <section class="grid">
       <div class="panel">
         <div class="panel-label">当前版本</div>
@@ -42,16 +84,17 @@
       </div>
 
       <div class="panel">
-        <div class="panel-label">服务状态</div>
+        <div class="panel-label">进程运行版本</div>
         <div class="panel-main">
           <n-tag :type="status.health_ok ? 'success' : 'error'" size="small" :bordered="false">
             {{ status.health_ok ? '运行中' : '无响应' }}
           </n-tag>
-          <span class="mono service">{{ status.service }}</span>
+          <span class="mono">{{ runningCommit || '—' }}</span>
         </div>
         <div class="panel-meta">
-          <span class="mono">{{ status.health_url }}</span>
-          <span class="muted">服务器时间 {{ status.server_time || '—' }}</span>
+          <span v-if="runningInfo.started_at">启动于 {{ runningInfo.started_at }}</span>
+          <span v-if="runningInfo.pid" class="mono">pid {{ runningInfo.pid }}</span>
+          <span class="muted">{{ status.service }}</span>
         </div>
       </div>
 
@@ -63,6 +106,8 @@
         </div>
         <div class="panel-meta">
           <span v-if="state.sha" class="mono">{{ state.sha }}</span>
+          <span v-if="state.actor">操作者 {{ state.actor }}</span>
+          <span v-if="state.duration_sec != null">耗时 {{ fmtDuration(state.duration_sec) }}</span>
           <span v-if="state.finished_at">{{ state.finished_at }}</span>
           <span v-else-if="state.started_at">开始于 {{ state.started_at }}</span>
         </div>
@@ -121,6 +166,44 @@
 
     <section class="block">
       <div class="block-head">
+        <h3>操作记录</h3>
+        <span class="muted">最近 15 条，命令行与后台触发都会记录</span>
+      </div>
+      <n-table :bordered="false" size="small" :single-line="false">
+        <thead>
+          <tr>
+            <th style="width: 150px;">时间</th>
+            <th style="width: 70px;">动作</th>
+            <th style="width: 230px;">版本</th>
+            <th style="width: 85px;">提交</th>
+            <th style="width: 80px;">结果</th>
+            <th style="width: 130px;">操作者</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(h, i) in history" :key="i">
+            <td class="mono muted">{{ h.time }}</td>
+            <td>{{ h.action === 'rollback' ? '回滚' : '更新' }}</td>
+            <td class="mono">{{ h.release }}</td>
+            <td class="mono">{{ h.commit }}</td>
+            <td>
+              <n-tag size="small" :bordered="false" :type="h.result === 'success' ? 'success' : h.result === 'skipped' ? 'default' : 'error'">
+                {{ resultLabel(h.result) }}
+              </n-tag>
+            </td>
+            <td>{{ h.actor }}</td>
+            <td class="subject">{{ h.detail }}</td>
+          </tr>
+          <tr v-if="history.length === 0">
+            <td colspan="7" class="empty">还没有操作记录</td>
+          </tr>
+        </tbody>
+      </n-table>
+    </section>
+
+    <section class="block">
+      <div class="block-head">
         <h3>发布日志</h3>
         <n-space :size="8">
           <span class="muted">{{ running ? '执行中，自动刷新…' : '最近一次执行输出' }}</span>
@@ -152,6 +235,8 @@ const message = useMessage()
 const dialog = useDialog()
 
 const loading = ref(false)
+const checking = ref(false)
+const checkResult = ref<any>(null)
 const deploying = ref(false)
 const rollingBack = ref(false)
 const logOpen = ref(true)
@@ -164,13 +249,21 @@ const status = ref<any>({
   health_url: '',
   health_ok: false,
   current: '',
+  current_commit: '',
+  running_info: {},
+  drift: false,
   releases: [],
+  history: [],
   state: {},
   log_tail: [],
   server_time: ''
 })
 
 const releases = computed<Release[]>(() => status.value.releases || [])
+const history = computed<any[]>(() => status.value.history || [])
+const runningInfo = computed<any>(() => status.value.running_info || {})
+const runningCommit = computed(() => runningInfo.value.commit || '')
+const drift = computed(() => Boolean(status.value.drift))
 const state = computed<any>(() => status.value.state || {})
 const running = computed(() => Boolean(status.value.running))
 const canOperate = computed(() => status.value.enabled && status.value.platform_ok)
@@ -197,6 +290,20 @@ const stateLabel = computed(() => {
   return '空闲'
 })
 
+function fmtDuration(sec: number | null | undefined) {
+  if (sec === null || sec === undefined) return '—'
+  if (sec < 60) return `${sec}s`
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return s ? `${m}m${s}s` : `${m}m`
+}
+
+function resultLabel(r: string) {
+  if (r === 'success') return '成功'
+  if (r === 'skipped') return '跳过'
+  return '失败'
+}
+
 let timer: ReturnType<typeof setInterval> | null = null
 
 async function loadStatus(silent = false) {
@@ -219,6 +326,19 @@ function schedule() {
   // 执行中 2 秒一刷，空闲 10 秒一刷
   const interval = running.value ? 2000 : 10000
   timer = setInterval(() => loadStatus(true), interval)
+}
+
+async function handleCheck() {
+  checking.value = true
+  try {
+    const data = await opsApi.check() as any
+    checkResult.value = data
+    if (data.ok && data.behind === 0) message.success('已经是最新版本')
+  } catch (e: any) {
+    checkResult.value = { ok: false, error: e?.detail || '检查失败，服务可能正在重启' }
+  } finally {
+    checking.value = false
+  }
 }
 
 async function handleDeploy() {
@@ -312,6 +432,78 @@ onBeforeUnmount(() => {
   background: rgba(127, 127, 127, 0.14);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
+}
+
+.update-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--hair, #dcdfe6);
+  border-left: 2px solid #d0a54a;
+  border-radius: 2px;
+  background: var(--panel, #fff);
+}
+
+.update-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.commit-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+.commit-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.commit-list .sha {
+  color: var(--muted-2, #6b7280);
+  flex: 0 0 auto;
+}
+
+.commit-list .subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-list .time {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+}
+
+.dismiss {
+  flex: 0 0 auto;
+}
+
+.ops.dark .update-box {
+  background: #1b1c20;
+  border-color: rgba(233, 233, 230, 0.14);
+  border-left-color: #d0a54a;
 }
 
 .grid {
