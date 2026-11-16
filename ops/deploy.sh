@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 一键更新：拉取最新代码 → 构建到独立版本目录 → 切换软链 → 重启 → 健康检查
 # 构建失败或健康检查不通过时，自动切回上一个版本。
+# 发布成功后会把工作区快进到同一提交，让面板按钮始终跑最新脚本（有本地改动时只提醒不强拉）。
 #
 # 用法:
 #   bash ops/deploy.sh                  # 更新到 origin/main 最新
@@ -236,5 +237,31 @@ history_add deploy "$NAME" "$SHORT" success "$ACTOR" "耗时 ${DUR}s"
 # ---------- 8. 清理旧版本 ----------
 step "清理旧版本"
 prune_releases
+
+# ---------- 9. 同步工作区 ----------
+# 面板按钮执行的是项目目录（工作区）里的 ops 脚本，而发布用的是 git archive 打包、
+# 不动工作区——不同步的话，下次点按钮跑的还是旧脚本（面板的「脚本漂移」黄条就是检测这个）。
+# 原则：
+# - 只在干净的工作区上快进，绝不覆盖本地改动（有人在服务器上手工热修过时，只提醒不强拉）；
+# - 失败只告警不影响发布结果，漂移黄条会继续作为兜底提醒。
+step "同步工作区脚本"
+WS_HEAD="$(git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || true)"
+if [ "$WS_HEAD" = "$SHA" ]; then
+    log "  工作区已与发布版本一致（$SHORT）"
+elif [ -n "$(git -C "$APP_DIR" status --porcelain 2>/dev/null || echo dirty)" ]; then
+    log "  ⚠ 工作区有本地改动（可能手工热修过），跳过自动同步"
+    log "    处理后手动执行：cd $APP_DIR && git stash && git pull && git stash pop"
+    log "    面板黄条会继续提醒，不影响本次发布"
+else
+    # 只允许向前快进：部署旧引用（--ref 旧标签）时工作区不动，倒退毫无意义
+    if ! git -C "$APP_DIR" merge-base --is-ancestor HEAD "$SHA" 2>/dev/null; then
+        log "  发布的是旧引用（$SHORT 比工作区 HEAD 还旧），工作区不动"
+    elif git -C "$APP_DIR" merge --ff-only "$SHA" >>"$LOG_FILE" 2>&1; then
+        log "  工作区已快进到发布版本（$SHORT）"
+    else
+        log "  ⚠ 工作区无法快进到 $SHORT（历史分叉），跳过"
+        log "    手动处理：cd $APP_DIR && git status"
+    fi
+fi
 
 log "========== 发布完成：$NAME（耗时 ${DUR}s）=========="
