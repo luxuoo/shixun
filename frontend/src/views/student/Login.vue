@@ -391,7 +391,7 @@ function handleMouseMove(e: MouseEvent) {
 
 const inkBtn = computed(() => (
   themeStore.isDark
-    ? { bg: '#fafaf9', ink: '#0c0a09' }
+    ? { bg: '#fafafa', ink: '#171717' }
     : { bg: '#3f51b5', ink: '#ffffff' }
 ))
 
@@ -399,9 +399,9 @@ function modalStyle(width: string) {
   return {
     width: isMobile.value ? '94vw' : width,
     maxWidth: '94vw',
-    background: themeStore.isDark ? '#1c1917' : '#ffffff',
+    background: themeStore.isDark ? '#1f1f1f' : '#ffffff',
     borderRadius: '8px',
-    border: themeStore.isDark ? '1px solid #292524' : '1px solid #e2e8f0',
+    border: themeStore.isDark ? '1px solid #2e2e2e' : '1px solid #e2e8f0',
     boxShadow: 'none'
   }
 }
@@ -520,10 +520,10 @@ onBeforeUnmount(() => {
   --cc-error-bg: rgba(239, 68, 68, 0.08);
   --cc-error-border: rgba(239, 68, 68, 0.3);
   --cc-placeholder: #64748b;
-  /* 左面板 = 主色渐变（from-primary/90 via-primary to-primary/80） */
-  --cc-left-a: rgba(63, 81, 181, 0.9);
-  --cc-left-b: #3f51b5;
-  --cc-left-c: rgba(63, 81, 181, 0.9);
+  /* 左面板 = 中性灰渐变（白天灰、黑夜深灰，不用彩色背景板） */
+  --cc-left-a: #6b7280;
+  --cc-left-b: #4b5563;
+  --cc-left-c: #374151;
   --cc-left-fg: #ffffff;
   --cc-left-muted: #ffffff;
   --cc-grid-line: rgba(255, 255, 255, 0.05);
@@ -541,25 +541,26 @@ onBeforeUnmount(() => {
 }
 
 .cc-auth.dark {
-  --cc-bg: #0c0a09;
-  --cc-fg: #fafaf9;
-  --cc-muted: #a8a29e;
-  --cc-border: #292524;
-  --cc-input-border: #44403c;
+  --cc-bg: #141414;
+  --cc-fg: #fafafa;
+  --cc-muted: #a3a3a3;
+  --cc-border: #2e2e2e;
+  --cc-input-border: #404040;
   --cc-primary: #3f51b5;
   --cc-primary-fg: #ffffff;
   --cc-link: #9fa8da;
   --cc-error: #fca5a5;
   --cc-error-bg: rgba(239, 68, 68, 0.12);
   --cc-error-border: rgba(239, 68, 68, 0.35);
-  --cc-placeholder: #a8a29e;
-  --cc-left-a: rgba(255, 255, 255, 0.9);
-  --cc-left-b: rgba(255, 255, 255, 0.8);
-  --cc-left-c: rgba(255, 255, 255, 0.7);
-  --cc-left-fg: #1c1917;
-  --cc-left-muted: rgba(28, 25, 23, 0.72);
-  --cc-grid-line: rgba(28, 25, 23, 0.05);
-  --cc-blob: rgba(28, 25, 23, 0.08);
+  --cc-placeholder: #a3a3a3;
+  /* 黑夜 = 深灰渐变，仍只有灰/白，无彩色背景板 */
+  --cc-left-a: #2a2a2a;
+  --cc-left-b: #222222;
+  --cc-left-c: #1a1a1a;
+  --cc-left-fg: #ffffff;
+  --cc-left-muted: #ffffff;
+  --cc-grid-line: rgba(255, 255, 255, 0.05);
+  --cc-blob: rgba(255, 255, 255, 0.08);
 }
 
 /* ===== 左面板 ===== */
