@@ -132,7 +132,7 @@
     <section class="block">
       <div class="block-head">
         <h3>版本历史</h3>
-        <span class="muted">服务端默认保留最近 5 个版本，可在 ops 脚本中用 RELEASE_KEEP 调整</span>
+        <span class="muted">服务端默认保留最近 3 个版本，可在 ops 脚本中用 RELEASE_KEEP 调整</span>
       </div>
       <n-table :bordered="false" size="small" :single-line="false">
         <thead>

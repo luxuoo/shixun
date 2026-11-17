@@ -55,7 +55,7 @@ BRANCH="${BRANCH:-main}"
 SERVICE="${SERVICE:-learning-system}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-40}"
-RELEASE_KEEP="${RELEASE_KEEP:-5}"
+RELEASE_KEEP="${RELEASE_KEEP:-3}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 NPM_BIN="${NPM_BIN:-npm}"
 # 没有 systemd 时（如宝塔「Python 项目管理器」）可用自定义重启命令

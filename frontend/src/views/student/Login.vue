@@ -15,14 +15,16 @@
 
     <!-- 左：墨色信息面板 -->
     <aside class="pane-info">
+      <span class="info-watermark" aria-hidden="true">{ }</span>
       <div class="info-top">
         <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="24" :lineWeight="1.15" seed="login-logo" />
         <span class="brand-name">实训教学平台</span>
       </div>
 
       <div class="info-body">
-        <div class="mascot">
+        <div class="mascot" @mouseenter="onMascotHover">
           <AoraBot
+            ref="mascotBotRef"
             shape="circle"
             color="cyan"
             face="eyes"
@@ -31,10 +33,10 @@
             seed="login-mascot"
           />
         </div>
-        <p class="eyebrow">PROGRAMMING PRACTICUM</p>
+        <p class="eyebrow">GUIDED CODING PRACTICUM</p>
         <h2 class="tagline">
-          <span class="line"><span>写代码这件事</span></span>
-          <span class="line"><span>得一步一步来</span></span>
+          <span class="line"><span>提示只给思路，</span></span>
+          <span class="line"><span>答案留给你写。</span></span>
         </h2>
 
         <ol class="steps">
@@ -49,7 +51,7 @@
       </div>
 
       <div class="info-foot">
-        <span>提示分级 · 思路引导 → API 指引 → 关键代码</span>
+        <span>引导而非代写 · 过程性评价贯穿课前课中课后</span>
       </div>
     </aside>
 
@@ -80,7 +82,7 @@
 
         <div class="intro">
           <h1>登录</h1>
-          <p>使用教师分配的账号进入实训环境。</p>
+          <p>用教师分配的账号进入实训，接着上次的进度写。</p>
         </div>
 
         <form class="form" novalidate @submit.prevent="handleLogin">
@@ -239,6 +241,11 @@ const classOptions = ref<{ label: string; value: number }[]>([])
 const classesLoaded = ref(false)
 const isMobile = ref(window.innerWidth <= 900)
 
+const mascotBotRef = ref<any>(null)
+function onMascotHover() {
+  mascotBotRef.value?.bounce?.(0.5)
+}
+
 const formData = ref({ username: '', password: '' })
 const registerData = ref({
   username: '',
@@ -250,10 +257,10 @@ const registerData = ref({
 })
 
 const steps = [
-  { num: '01', title: '阅读任务与验收标准', desc: '看清每一步要交付什么' },
-  { num: '02', title: '动手编码，卡住时请求提示', desc: '三级递进，不会直接给答案' },
-  { num: '03', title: '提交后获得评语与四维评分', desc: '正确性、规范性、完成度、创新性' },
-  { num: '04', title: '过程性评价累计为最终成绩', desc: '课前、课中、课后全程记录' }
+  { num: '01', title: '先读懂验收标准', desc: '弄清要交付什么、怎样算通过，再写第一行代码。' },
+  { num: '02', title: '卡住时逐级求提示', desc: '思路引导 → API 指引 → 关键代码，三级递进，不直接给答案。' },
+  { num: '03', title: '提交后拿四维反馈', desc: '正确性、规范性、完成度、创新性，逐项评语而非一个冷分数。' },
+  { num: '04', title: '过程累计成成绩', desc: '课前、课中、课后全程留痕，努力看得见、可回溯。' }
 ]
 
 const registerRules: FormRules = {
@@ -483,11 +490,35 @@ onBeforeUnmount(() => {
   padding: 44px 56px 36px;
   background: #16171a;
   color: #f4f4f1;
+  overflow: hidden;
 }
 
 .auth.dark .pane-info {
   background: #08080a;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 墨色面板里的巨型代码符号水印：压暗、垫底，给面板一层「代码纸」的纵深 */
+.info-watermark {
+  position: absolute;
+  right: -28px;
+  bottom: -78px;
+  z-index: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 300px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: rgba(244, 244, 241, 0.045);
+  pointer-events: none;
+  user-select: none;
+}
+
+.info-top,
+.info-body,
+.info-foot {
+  position: relative;
+  z-index: 1;
 }
 
 .info-top {
@@ -632,6 +663,17 @@ onBeforeUnmount(() => {
   -webkit-mask-image: radial-gradient(ellipse 62% 55% at 50% 46%, transparent 38%, #000 82%);
   mask-image: radial-gradient(ellipse 62% 55% at 50% 46%, transparent 38%, #000 82%);
   pointer-events: none;
+}
+
+/* 极淡的纸纹颗粒：给纸面一点手感，明暗两态都成立，不抢内容 */
+.pane-form::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* 漂浮代码符号 */
