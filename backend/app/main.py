@@ -93,12 +93,15 @@ def _read_revision() -> dict:
         try:
             if candidate.is_file():
                 info = {}
-                for line in candidate.read_text(encoding="utf-8").splitlines():
+                # errors="replace"：发布脚本若按字节截断中文标题，REVISION 可能含
+                # 半个汉字（非法 UTF-8）。这里只是读取展示用的元数据，绝不能因此
+                # 让进程在导入期崩溃（曾导致 uvicorn 启动即崩、服务反复重启）。
+                for line in candidate.read_text(encoding="utf-8", errors="replace").splitlines():
                     if "=" in line:
                         k, v = line.split("=", 1)
                         info[k.strip()] = v.strip()
                 return info
-        except OSError:
+        except (OSError, ValueError):
             continue
     return {}
 

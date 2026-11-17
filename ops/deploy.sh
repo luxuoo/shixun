@@ -104,7 +104,11 @@ fi
 git -C "$APP_DIR" fetch --prune --tags "$REMOTE" >>"$LOG_FILE" 2>&1 || die "git fetch 失败（检查网络或仓库权限）"
 SHA="$(git -C "$APP_DIR" rev-parse "$REF" 2>/dev/null)" || die "找不到引用 $REF"
 SHORT="$(git -C "$APP_DIR" rev-parse --short=7 "$SHA")"
-SUBJECT="$(git -C "$APP_DIR" log -1 --pretty=%s "$SHA" | cut -c1-80)"
+# 按字符（而非字节）截断标题：cut -c 在 C/POSIX locale 下按字节切，会把中文
+# 标题切出半个汉字，写出非法 UTF-8 的 REVISION，曾导致后端启动解码崩溃、服务反复重启。
+# 这里显式以 UTF-8 解码→按字符切片→再编码，保证产物始终是合法 UTF-8。
+SUBJECT="$(git -C "$APP_DIR" log -1 --pretty=%s "$SHA" \
+    | "$PYTHON_BIN" -c 'import sys; s=sys.stdin.buffer.read().decode("utf-8","replace").rstrip("\n"); sys.stdout.buffer.write(s[:80].encode("utf-8"))')"
 log "  目标提交: $SHORT  $SUBJECT"
 
 CURRENT_SHA=""

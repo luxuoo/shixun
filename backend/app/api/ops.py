@@ -116,11 +116,11 @@ def _read_revision(release: Path) -> dict:
     if not rev.exists():
         return info
     try:
-        for line in rev.read_text(encoding="utf-8").splitlines():
+        for line in rev.read_text(encoding="utf-8", errors="replace").splitlines():
             if "=" in line:
                 k, v = line.split("=", 1)
                 info[k.strip()] = v.strip()
-    except OSError:
+    except (OSError, ValueError):
         pass
     return info
 
@@ -368,10 +368,10 @@ def _current_release_commit() -> str:
     try:
         rev = link / "REVISION"
         if rev.is_file():
-            for line in rev.read_text(encoding="utf-8").splitlines():
+            for line in rev.read_text(encoding="utf-8", errors="replace").splitlines():
                 if line.startswith("commit="):
                     return line.split("=", 1)[1].strip()
-    except OSError:
+    except (OSError, ValueError):
         pass
     return ""
 
