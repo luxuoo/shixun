@@ -13,41 +13,35 @@
       />
     </div>
 
-    <!-- 左：主色渐变 + 四个会看鼠标/眨眼/偷看密码的卡通角色 -->
+    <!-- 左：primary 渐变 + 四个卡通角色 -->
     <aside class="cc-left">
-      <div class="cc-grid" aria-hidden="true"></div>
-      <div class="cc-blob cc-blob-a" aria-hidden="true"></div>
-      <div class="cc-blob cc-blob-b" aria-hidden="true"></div>
-
       <div class="cc-left-top">
-        <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="26" :lineWeight="1.15" seed="login-logo" />
-        <span class="cc-brand">实训教学平台</span>
+        <div class="cc-brand-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+        </div>
+        <span>实训教学平台</span>
       </div>
 
       <div class="cc-left-mid">
         <div class="cc-chars" aria-hidden="true">
-          <!-- 紫：高个，打字时探头、密码可见时偷看 -->
           <div ref="purpleRef" class="cc-char" :style="purpleBody">
             <div class="cc-eyes cc-eyes-slow" :style="purpleEyes">
               <TrackingEye :size="18" :pupil-size="7" :max-distance="5" :blinking="isPurpleBlinking" :force-look-x="purpleForce?.x" :force-look-y="purpleForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
               <TrackingEye :size="18" :pupil-size="7" :max-distance="5" :blinking="isPurpleBlinking" :force-look-x="purpleForce?.x" :force-look-y="purpleForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
             </div>
           </div>
-          <!-- 黑：中个 -->
           <div ref="blackRef" class="cc-char" :style="blackBody">
             <div class="cc-eyes cc-eyes-slow" :style="blackEyes">
               <TrackingEye :size="16" :pupil-size="6" :max-distance="4" :blinking="isBlackBlinking" :force-look-x="blackForce?.x" :force-look-y="blackForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
               <TrackingEye :size="16" :pupil-size="6" :max-distance="4" :blinking="isBlackBlinking" :force-look-x="blackForce?.x" :force-look-y="blackForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
             </div>
           </div>
-          <!-- 橙：半圆，前排左 -->
           <div ref="orangeRef" class="cc-char" :style="orangeBody">
             <div class="cc-eyes cc-eyes-fast" :style="orangeEyes">
               <TrackingEye :show-white="false" :pupil-size="12" :max-distance="5" :force-look-x="orangeForce?.x" :force-look-y="orangeForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
               <TrackingEye :show-white="false" :pupil-size="12" :max-distance="5" :force-look-x="orangeForce?.x" :force-look-y="orangeForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
             </div>
           </div>
-          <!-- 黄：圆顶，前排右，带嘴 -->
           <div ref="yellowRef" class="cc-char" :style="yellowBody">
             <div class="cc-eyes cc-eyes-fast" :style="yellowEyes">
               <TrackingEye :show-white="false" :pupil-size="12" :max-distance="5" :force-look-x="yellowForce?.x" :force-look-y="yellowForce?.y" :mouse-x="mouseX" :mouse-y="mouseY" />
@@ -59,13 +53,17 @@
       </div>
 
       <div class="cc-left-foot">
-        <span>课堂教学用途</span>
-        <span>数据仅用于教学</span>
-        <span>账号问题联系任课教师</span>
+        <span>隐私政策</span>
+        <span>服务条款</span>
+        <span>联系任课教师</span>
       </div>
+
+      <div class="cc-grid" aria-hidden="true"></div>
+      <div class="cc-blob cc-blob-a" aria-hidden="true"></div>
+      <div class="cc-blob cc-blob-b" aria-hidden="true"></div>
     </aside>
 
-    <!-- 右：居中登录表单 -->
+    <!-- 右：登录表单 -->
     <main class="cc-right">
       <button class="cc-theme" type="button" @click="themeStore.toggle()">
         <span class="cc-theme-ico">{{ themeStore.isDark ? '☀' : '☾' }}</span>
@@ -74,7 +72,9 @@
 
       <div class="cc-form-wrap">
         <div class="cc-mobile-brand">
-          <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="24" :lineWeight="1.15" seed="login-logo" />
+          <div class="cc-brand-box mobile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+          </div>
           <span>实训教学平台</span>
         </div>
 
@@ -124,7 +124,10 @@
           <div class="cc-row">
             <label class="cc-remember">
               <input v-model="rememberMe" type="checkbox" />
-              <span>30 天内记住我</span>
+              <span class="cc-box" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+              <span class="cc-remember-txt">30 天内记住我</span>
             </label>
             <button class="cc-link" type="button" @click="showHelp = true">忘记密码？</button>
           </div>
@@ -132,14 +135,20 @@
           <p v-if="errorMsg" class="cc-error">{{ errorMsg }}</p>
 
           <button class="cc-submit" type="submit" :disabled="loading">
-            <span class="cc-submit-txt">{{ loading ? '登录中…' : '登录' }}</span>
+            {{ loading ? '登录中…' : '登录' }}
           </button>
         </form>
 
-        <p v-if="registerEnabled" class="cc-alt">
-          还没有账号？<button class="cc-link strong" type="button" @click="openRegister">申请开通</button>
+        <div class="cc-social">
+          <button class="cc-outline" type="button" @click="handleGoogle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            Google 登录
+          </button>
+        </div>
+
+        <p class="cc-alt">
+          还没有账号？<button class="cc-alt-link" type="button" @click="openRegister">申请开通</button>
         </p>
-        <p v-else class="cc-alt muted">注册已关闭，账号由任课教师统一发放。</p>
       </div>
     </main>
 
@@ -263,7 +272,7 @@ const registerData = ref({
   class_id: null as number | null
 })
 
-/* ===== 角色动画状态（移植 animated-characters-login-page） ===== */
+/* ===== 角色动画（照搬源码行为） ===== */
 const mouseX = ref(0)
 const mouseY = ref(0)
 const isPurpleBlinking = ref(false)
@@ -341,7 +350,6 @@ const yellowMouth = computed(() => ({
   top: pwShown.value ? '88px' : `${88 + yellowPos.value.faceY}px`,
 }))
 
-/* 眨眼 / 对视 / 偷看 的定时器 */
 const timers: ReturnType<typeof setTimeout>[] = []
 function scheduleBlink(set: (v: boolean) => void) {
   const t = setTimeout(() => {
@@ -391,19 +399,23 @@ function handleMouseMove(e: MouseEvent) {
 
 const inkBtn = computed(() => (
   themeStore.isDark
-    ? { bg: '#fafafa', ink: '#171717' }
-    : { bg: '#3f51b5', ink: '#ffffff' }
+    ? { bg: '#fafafa', ink: '#18181b' }
+    : { bg: '#18181b', ink: '#fafafa' }
 ))
 
 function modalStyle(width: string) {
   return {
     width: isMobile.value ? '94vw' : width,
     maxWidth: '94vw',
-    background: themeStore.isDark ? '#1f1f1f' : '#ffffff',
+    background: themeStore.isDark ? '#09090b' : '#ffffff',
     borderRadius: '8px',
-    border: themeStore.isDark ? '1px solid #2e2e2e' : '1px solid #e2e8f0',
+    border: themeStore.isDark ? '1px solid #27272a' : '1px solid #e4e4e7',
     boxShadow: 'none'
   }
+}
+
+function handleGoogle() {
+  message.info('本系统使用教师分配的账号登录，暂不支持 Google 登录')
 }
 
 async function handleLogin() {
@@ -428,7 +440,7 @@ async function handleLogin() {
     }
     router.replace(userStore.isTeacher ? '/admin' : '/')
   } catch (error: any) {
-    errorMsg.value = error?.detail || error?.message || '登录失败，请检查账号与密码'
+    errorMsg.value = error?.detail || error?.message || '账号或密码错误，请重试'
   } finally {
     loading.value = false
   }
@@ -506,28 +518,29 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* ===== 主色靛蓝 / 8px 圆角 / 左渐变右居中 ===== */
+/* ===== shadcn 中性色板：白天 primary=近黑 / 黑夜 primary=近白，仅灰白转换 ===== */
 .cc-auth {
   --cc-bg: #ffffff;
-  --cc-fg: #0f172a;
-  --cc-muted: #64748b;
-  --cc-border: #e2e8f0;
-  --cc-input-border: #cbd5e1;
-  --cc-primary: #3f51b5;
-  --cc-primary-fg: #ffffff;
-  --cc-link: #3f51b5;
-  --cc-error: #b91c1c;
-  --cc-error-bg: rgba(239, 68, 68, 0.08);
-  --cc-error-border: rgba(239, 68, 68, 0.3);
-  --cc-placeholder: #64748b;
-  /* 左面板 = 中性灰渐变（白天灰、黑夜深灰，不用彩色背景板） */
-  --cc-left-a: #6b7280;
-  --cc-left-b: #4b5563;
-  --cc-left-c: #374151;
-  --cc-left-fg: #ffffff;
-  --cc-left-muted: #ffffff;
-  --cc-grid-line: rgba(255, 255, 255, 0.05);
-  --cc-blob: rgba(255, 255, 255, 0.1);
+  --cc-fg: #09090b;
+  --cc-muted: #71717a;
+  --cc-border: #e4e4e7;
+  --cc-input: #e4e4e7;
+  --cc-accent: #f4f4f5;
+  --cc-primary: #18181b;
+  --cc-primary-fg: #fafafa;
+  --cc-ring: #18181b;
+  --cc-brandbox: rgba(250, 250, 250, 0.1);
+  --cc-left-a: rgba(24, 24, 27, 0.9);
+  --cc-left-b: #18181b;
+  --cc-left-c: rgba(24, 24, 27, 0.8);
+  --cc-left-fg: #fafafa;
+  --cc-left-muted: rgba(250, 250, 250, 0.75);
+  --cc-grid: rgba(255, 255, 255, 0.05);
+  --cc-blob: rgba(250, 250, 250, 0.1);
+  --cc-blob2: rgba(250, 250, 250, 0.05);
+  --cc-error: #dc2626;
+  --cc-error-bg: rgba(127, 29, 29, 0.08);
+  --cc-error-border: rgba(127, 29, 29, 0.2);
 
   position: relative;
   display: grid;
@@ -541,26 +554,27 @@ onBeforeUnmount(() => {
 }
 
 .cc-auth.dark {
-  --cc-bg: #141414;
+  --cc-bg: #09090b;
   --cc-fg: #fafafa;
-  --cc-muted: #a3a3a3;
-  --cc-border: #2e2e2e;
-  --cc-input-border: #404040;
-  --cc-primary: #3f51b5;
-  --cc-primary-fg: #ffffff;
-  --cc-link: #9fa8da;
-  --cc-error: #fca5a5;
-  --cc-error-bg: rgba(239, 68, 68, 0.12);
-  --cc-error-border: rgba(239, 68, 68, 0.35);
-  --cc-placeholder: #a3a3a3;
-  /* 黑夜 = 深灰渐变，仍只有灰/白，无彩色背景板 */
-  --cc-left-a: #2a2a2a;
-  --cc-left-b: #222222;
-  --cc-left-c: #1a1a1a;
-  --cc-left-fg: #ffffff;
-  --cc-left-muted: #ffffff;
-  --cc-grid-line: rgba(255, 255, 255, 0.05);
-  --cc-blob: rgba(255, 255, 255, 0.08);
+  --cc-muted: #a1a1aa;
+  --cc-border: #27272a;
+  --cc-input: #27272a;
+  --cc-accent: #27272a;
+  --cc-primary: #fafafa;
+  --cc-primary-fg: #18181b;
+  --cc-ring: #fafafa;
+  --cc-brandbox: rgba(24, 24, 27, 0.1);
+  --cc-left-a: rgba(250, 250, 250, 0.9);
+  --cc-left-b: #fafafa;
+  --cc-left-c: rgba(250, 250, 250, 0.8);
+  --cc-left-fg: #18181b;
+  --cc-left-muted: rgba(24, 24, 27, 0.75);
+  --cc-grid: rgba(255, 255, 255, 0.05);
+  --cc-blob: rgba(24, 24, 27, 0.1);
+  --cc-blob2: rgba(24, 24, 27, 0.05);
+  --cc-error: #f87171;
+  --cc-error-bg: rgba(127, 29, 29, 0.2);
+  --cc-error-border: rgba(127, 29, 29, 0.3);
 }
 
 /* ===== 左面板 ===== */
@@ -574,23 +588,22 @@ onBeforeUnmount(() => {
   color: var(--cc-left-fg);
   overflow: hidden;
 }
-.cc-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(var(--cc-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--cc-grid-line) 1px, transparent 1px);
-  background-size: 20px 20px;
-  pointer-events: none;
-}
-.cc-blob { position: absolute; border-radius: 50%; filter: blur(64px); background: var(--cc-blob); pointer-events: none; }
-.cc-blob-a { top: 25%; right: 25%; width: 256px; height: 256px; }
-.cc-blob-b { bottom: 25%; left: 25%; width: 384px; height: 384px; }
+.cc-grid { position: absolute; inset: 0; background-image: linear-gradient(var(--cc-grid) 1px, transparent 1px), linear-gradient(90deg, var(--cc-grid) 1px, transparent 1px); background-size: 20px 20px; pointer-events: none; }
+.cc-blob { position: absolute; border-radius: 50%; filter: blur(64px); pointer-events: none; }
+.cc-blob-a { top: 25%; right: 25%; width: 256px; height: 256px; background: var(--cc-blob); }
+.cc-blob-b { bottom: 25%; left: 25%; width: 384px; height: 384px; background: var(--cc-blob2); }
 
-.cc-left-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; }
+.cc-left-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; }
+.cc-brand-box { width: 32px; height: 32px; border-radius: 8px; background: var(--cc-brandbox); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+.cc-brand-box svg { width: 16px; height: 16px; }
+.cc-brand-box.mobile { background: color-mix(in srgb, var(--cc-primary) 10%, transparent); color: var(--cc-primary); }
+
 .cc-left-mid { position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: center; height: 500px; }
-.cc-left-foot { position: relative; z-index: 2; display: flex; align-items: center; gap: 32px; font-size: 13px; color: var(--cc-left-muted); }
+.cc-left-foot { position: relative; z-index: 2; display: flex; align-items: center; gap: 32px; font-size: 14px; color: var(--cc-left-muted); }
+.cc-left-foot span { transition: color 0.2s; cursor: default; }
+.cc-left-foot span:hover { color: var(--cc-left-fg); }
 
-/* ===== 四个卡通角色 ===== */
+/* ===== 四个角色 ===== */
 .cc-chars { position: relative; width: 550px; height: 400px; }
 .cc-char { position: absolute; bottom: 0; transition: all 0.7s ease-in-out; transform-origin: bottom center; }
 .cc-eyes { position: absolute; display: flex; }
@@ -600,62 +613,69 @@ onBeforeUnmount(() => {
 
 /* ===== 右面板 ===== */
 .cc-right { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 32px; }
-.cc-theme {
-  position: absolute; top: 20px; right: 20px; z-index: 3;
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
-  font-size: 12px; color: var(--cc-muted); background: transparent;
-  border: 1px solid var(--cc-border); border-radius: 8px; cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-}
-.cc-theme:hover { color: var(--cc-fg); border-color: var(--cc-input-border); }
+.cc-theme { position: absolute; top: 20px; right: 20px; z-index: 3; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; color: var(--cc-muted); background: transparent; border: 1px solid var(--cc-border); border-radius: 8px; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.cc-theme:hover { color: var(--cc-fg); border-color: var(--cc-muted); }
 .cc-theme-ico { display: inline-block; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 .cc-theme:hover .cc-theme-ico { transform: rotate(40deg) scale(1.15); }
 
 .cc-form-wrap { position: relative; z-index: 2; width: 100%; max-width: 420px; }
 .cc-mobile-brand { display: none; }
-.cc-head { text-align: center; margin-bottom: 40px; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cc-head { text-align: center; margin-bottom: 40px; }
 .cc-head h1 { margin: 0 0 8px; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
 .cc-head p { margin: 0; font-size: 14px; color: var(--cc-muted); }
 
 .cc-form { display: flex; flex-direction: column; gap: 20px; }
-.cc-field { display: flex; flex-direction: column; gap: 8px; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.cc-field:nth-of-type(1) { animation-delay: 0.08s; }
-.cc-field:nth-of-type(2) { animation-delay: 0.16s; }
+.cc-field { display: flex; flex-direction: column; gap: 8px; }
 .cc-field label { font-size: 14px; font-weight: 500; }
 .cc-field input {
-  height: 48px; padding: 0 14px; font-size: 15px; color: var(--cc-fg);
-  background: var(--cc-bg); border: 1px solid var(--cc-input-border); border-radius: 8px;
-  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  height: 48px; width: 100%; padding: 0 12px; font-size: 14px;
+  color: var(--cc-fg); background: var(--cc-bg);
+  border: 1px solid var(--cc-input); border-radius: 6px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.cc-field input::placeholder { color: var(--cc-placeholder); }
-.cc-field input:focus { border-color: var(--cc-primary); box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.18); }
+.cc-field input::placeholder { color: var(--cc-muted); }
+.cc-field input:focus { border-color: var(--cc-primary); box-shadow: 0 0 0 2px var(--cc-bg), 0 0 0 4px var(--cc-ring); }
 .cc-pw-wrap { position: relative; }
-.cc-pw-wrap input { width: 100%; padding-right: 44px; }
-.cc-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: inline-flex; padding: 4px; color: var(--cc-muted); background: none; border: none; cursor: pointer; transition: color 0.2s; }
+.cc-pw-wrap input { padding-right: 40px; }
+.cc-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: inline-flex; padding: 0; color: var(--cc-muted); background: none; border: none; cursor: pointer; transition: color 0.2s; }
 .cc-eye:hover { color: var(--cc-fg); }
 .cc-eye svg { width: 20px; height: 20px; }
 
-.cc-row { display: flex; align-items: center; justify-content: space-between; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both; }
-.cc-remember { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-.cc-remember input { width: 16px; height: 16px; accent-color: var(--cc-primary); cursor: pointer; }
-.cc-link { padding: 0; font-size: 14px; font-weight: 500; color: var(--cc-link); background: none; border: none; cursor: pointer; }
+.cc-row { display: flex; align-items: center; justify-content: space-between; }
+.cc-remember { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; position: relative; }
+.cc-remember input { position: absolute; opacity: 0; width: 16px; height: 16px; margin: 0; cursor: pointer; }
+.cc-box { width: 16px; height: 16px; border: 1px solid var(--cc-primary); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--cc-primary-fg); background: transparent; transition: background 0.15s; flex: 0 0 auto; }
+.cc-box svg { width: 12px; height: 12px; opacity: 0; }
+.cc-remember input:checked + .cc-box { background: var(--cc-primary); }
+.cc-remember input:checked + .cc-box svg { opacity: 1; }
+.cc-remember input:focus-visible + .cc-box { box-shadow: 0 0 0 2px var(--cc-bg), 0 0 0 4px var(--cc-ring); }
+.cc-remember-txt { font-weight: 400; }
+.cc-link { padding: 0; font-size: 14px; font-weight: 500; color: var(--cc-primary); background: none; border: none; cursor: pointer; }
 .cc-link:hover { text-decoration: underline; }
-.cc-link.strong { color: var(--cc-fg); font-weight: 600; }
 
-.cc-error { margin: 0; padding: 12px; font-size: 14px; color: var(--cc-error); background: var(--cc-error-bg); border: 1px solid var(--cc-error-border); border-radius: 8px; animation: cc-shake 0.4s ease; }
+.cc-error { margin: 0; padding: 12px; font-size: 14px; color: var(--cc-error); background: var(--cc-error-bg); border: 1px solid var(--cc-error-border); border-radius: 8px; }
 
 .cc-submit {
-  position: relative; height: 48px; overflow: hidden;
-  font-size: 16px; font-weight: 500; color: var(--cc-primary-fg);
-  background: var(--cc-primary); border: 1px solid var(--cc-primary); border-radius: 8px;
-  cursor: pointer; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both; transition: filter 0.2s, opacity 0.2s;
+  height: 48px; width: 100%; font-size: 16px; font-weight: 500;
+  color: var(--cc-primary-fg); background: var(--cc-primary);
+  border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.2s;
 }
-.cc-submit:hover:not(:disabled) { filter: brightness(1.1); }
-.cc-submit:active:not(:disabled) .cc-submit-txt { transform: translateY(1px); }
-.cc-submit:disabled { opacity: 0.6; cursor: default; }
-.cc-submit-txt { position: relative; display: inline-block; transition: transform 0.12s; }
+.cc-submit:hover:not(:disabled) { opacity: 0.9; }
+.cc-submit:disabled { opacity: 0.5; cursor: default; }
 
-.cc-alt { margin: 32px 0 0; text-align: center; font-size: 14px; color: var(--cc-muted); animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both; }
+.cc-social { margin-top: 24px; }
+.cc-outline {
+  height: 48px; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 16px; font-weight: 500; color: var(--cc-fg);
+  background: var(--cc-bg); border: 1px solid var(--cc-input); border-radius: 6px; cursor: pointer;
+  transition: background 0.2s;
+}
+.cc-outline:hover { background: var(--cc-accent); }
+.cc-outline svg { width: 20px; height: 20px; }
+
+.cc-alt { margin: 32px 0 0; text-align: center; font-size: 14px; color: var(--cc-muted); }
+.cc-alt-link { padding: 0; font-size: 14px; font-weight: 500; color: var(--cc-fg); background: none; border: none; cursor: pointer; }
+.cc-alt-link:hover { text-decoration: underline; }
 
 /* ===== 右下角大表情头（保留） ===== */
 .bg-bot {
@@ -665,33 +685,24 @@ onBeforeUnmount(() => {
   filter: saturate(0.3) brightness(1.05);
   -webkit-mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
   mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
-  animation: cc-drift 11s ease-in-out infinite alternate;
   --aora-fg: #16171a; --aora-paper: #ffffff; --aora-bg-base: transparent;
 }
 
-@keyframes cc-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes cc-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-14px, -10px) scale(1.025); } }
-@keyframes cc-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
-
-.reg-form :deep(.n-input), .reg-form :deep(.n-base-selection), .mod-actions :deep(.n-button) { --n-border-radius: 8px !important; border-radius: 8px !important; }
-.reg-form :deep(.n-input), .reg-form :deep(.n-base-selection) { --n-border-focus: #3f51b5 !important; --n-border-hover: #3f51b5 !important; --n-box-shadow-focus: none !important; }
+.reg-form :deep(.n-input), .reg-form :deep(.n-base-selection), .mod-actions :deep(.n-button) { --n-border-radius: 6px !important; border-radius: 6px !important; }
+.reg-form :deep(.n-input), .reg-form :deep(.n-base-selection) { --n-border-focus: var(--cc-primary) !important; --n-border-hover: var(--cc-primary) !important; --n-box-shadow-focus: none !important; }
 .reg-form :deep(.n-form-item-label) { font-size: 12.5px; }
 .help p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.8; color: var(--cc-muted); }
 .help p:last-child { margin-bottom: 0; }
 
-@media (max-width: 1280px) {
-  .cc-chars { transform: scale(0.75); transform-origin: bottom center; }
-}
+@media (max-width: 1280px) { .cc-chars { transform: scale(0.75); transform-origin: bottom center; } }
 @media (max-width: 1024px) {
   .cc-auth { grid-template-columns: 1fr; }
   .cc-left { display: none; }
   .cc-right { min-height: 100vh; padding: 72px 24px 24px; }
-  .cc-mobile-brand { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 40px; font-size: 16px; font-weight: 600; }
-  .bg-bot {
-    right: -170px; bottom: -180px; width: 320px; height: 320px; opacity: 0.35;
+  .cc-mobile-brand { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 48px; font-size: 18px; font-weight: 600; }
+  .bg-bot { right: -170px; bottom: -180px; width: 320px; height: 320px; opacity: 0.35;
     -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
-    mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
-  }
+    mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cc-auth, .cc-auth *, .cc-auth *::before, .cc-auth *::after { animation: none !important; transition: none !important; }
