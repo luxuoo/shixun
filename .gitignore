@@ -31,6 +31,7 @@ backend/data/*.db-shm
 # 运行时系统设置（管理员在后台改的开关，属于部署环境状态）
 backend/data/settings.json
 backend/data/*.tmp
+backend/data/.app_settings.stamp
 
 # Uploads
 uploads/*
