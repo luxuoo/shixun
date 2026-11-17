@@ -1,6 +1,6 @@
 <template>
-  <div class="auth mono-theme" :class="{ dark: themeStore.isDark }">
-    <!-- 背景角色：大、在下、跟随鼠标，不抢内容 -->
+  <div class="cc-auth" :class="{ dark: themeStore.isDark }">
+    <!-- 右下角保留的大表情头 -->
     <div class="bg-bot" aria-hidden="true">
       <AoraBot
         shape="circle"
@@ -13,125 +13,113 @@
       />
     </div>
 
-    <!-- 左：墨色信息面板 -->
-    <aside class="pane-info">
-      <span class="info-watermark" aria-hidden="true">{ }</span>
-      <div class="info-top">
-        <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="24" :lineWeight="1.15" seed="login-logo" />
-        <span class="brand-name">实训教学平台</span>
+    <!-- 左：渐变面板 + 会反应的表情角色 -->
+    <aside class="cc-left">
+      <div class="cc-grid" aria-hidden="true"></div>
+      <div class="cc-blob cc-blob-a" aria-hidden="true"></div>
+      <div class="cc-blob cc-blob-b" aria-hidden="true"></div>
+
+      <div class="cc-left-top">
+        <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="26" :lineWeight="1.15" seed="login-logo" />
+        <span class="cc-brand">实训教学平台</span>
       </div>
 
-      <div class="info-body">
-        <div class="mascot" @mouseenter="onMascotHover">
+      <div class="cc-left-mid">
+        <div class="cc-mascot" @mouseenter="onMascotHover">
           <AoraBot
             ref="mascotBotRef"
             shape="circle"
             color="cyan"
-            face="eyes"
-            :state="loading ? 'thinking' : errorMsg ? 'shy' : 'reading'"
-            :sizePx="92"
+            :face="showPassword ? 'shades' : 'eyes'"
+            :state="mascotState"
+            :sizePx="210"
             seed="login-mascot"
           />
         </div>
-        <p class="eyebrow">GUIDED CODING PRACTICUM</p>
-        <h2 class="tagline">
-          <span class="line"><span>提示只给思路，</span></span>
-          <span class="line"><span>答案留给你写。</span></span>
-        </h2>
-
-        <ol class="steps">
-          <li v-for="s in steps" :key="s.title">
-            <span class="idx">{{ s.num }}</span>
-            <div>
-              <strong>{{ s.title }}</strong>
-              <p>{{ s.desc }}</p>
-            </div>
-          </li>
-        </ol>
       </div>
 
-      <div class="info-foot">
-        <span>引导而非代写 · 过程性评价贯穿课前课中课后</span>
+      <div class="cc-left-foot">
+        <span>课堂教学用途</span>
+        <span>账号问题联系任课教师</span>
       </div>
     </aside>
 
-    <!-- 右：表单 -->
-    <main class="pane-form">
-      <!-- 漂浮的代码符号：纸面上的“活字”，不抢内容 -->
-      <div class="drift" aria-hidden="true">
-        <span>{ }</span>
-        <span>&lt;/&gt;</span>
-        <span>;</span>
-        <span>=&gt;</span>
-        <span>( )</span>
-        <span>[ ]</span>
-        <span>::</span>
-        <span>fn</span>
-      </div>
-
-      <button class="theme" type="button" @click="themeStore.toggle()">
-        <span class="theme-ico">{{ themeStore.isDark ? '☀' : '☾' }}</span>
+    <!-- 右：居中登录表单 -->
+    <main class="cc-right">
+      <button class="cc-theme" type="button" @click="themeStore.toggle()">
+        <span class="cc-theme-ico">{{ themeStore.isDark ? '☀' : '☾' }}</span>
         {{ themeStore.isDark ? '日间' : '夜间' }}
       </button>
 
-      <div class="form-wrap">
-        <div class="mobile-brand">
-          <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="22" :lineWeight="1.15" seed="login-logo" />
+      <div class="cc-form-wrap">
+        <div class="cc-mobile-brand">
+          <AoraBot shape="bot" color="cyan" face="eyes" :sizePx="24" :lineWeight="1.15" seed="login-logo" />
           <span>实训教学平台</span>
         </div>
 
-        <div class="intro">
-          <h1>登录</h1>
-          <p>用教师分配的账号进入实训，接着上次的进度写。</p>
+        <div class="cc-head">
+          <h1>欢迎回来！</h1>
+          <p>请输入你的账号信息</p>
         </div>
 
-        <form class="form" novalidate @submit.prevent="handleLogin">
-          <label class="field">
-            <span class="field-label">账号</span>
-            <n-input
-              v-model:value="formData.username"
+        <form class="cc-form" novalidate @submit.prevent="handleLogin">
+          <div class="cc-field">
+            <label for="cc-user">账号</label>
+            <input
+              id="cc-user"
+              v-model="formData.username"
+              type="text"
               placeholder="用户名或学号"
-              :input-props="{ autocomplete: 'username', 'aria-label': '账号' }"
+              autocomplete="username"
+              @focus="isTyping = true"
+              @blur="isTyping = false"
             />
-          </label>
-
-          <label class="field">
-            <span class="field-label">密码</span>
-            <n-input
-              v-model:value="formData.password"
-              type="password"
-              placeholder="登录密码"
-              show-password-on="click"
-              :input-props="{ autocomplete: 'current-password', 'aria-label': '密码' }"
-            />
-          </label>
-
-          <p v-if="errorMsg" class="error">
-            <span class="error-bar"></span>{{ errorMsg }}
-          </p>
-
-          <div class="row">
-            <n-checkbox v-model:checked="rememberMe" size="small">记住账号</n-checkbox>
-            <button class="link" type="button" @click="showHelp = true">忘记密码</button>
           </div>
 
-          <button class="submit" type="submit" :disabled="loading">
-            <span class="submit-txt">{{ loading ? '正在验证' : '登录' }}</span>
-            <span v-if="loading" class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span v-else class="arrow" aria-hidden="true">→</span>
+          <div class="cc-field">
+            <label for="cc-pw">密码</label>
+            <div class="cc-pw-wrap">
+              <input
+                id="cc-pw"
+                v-model="formData.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                @focus="isTyping = true"
+                @blur="isTyping = false"
+              />
+              <button
+                type="button"
+                class="cc-eye"
+                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword"
+              >
+                <svg v-if="showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="cc-row">
+            <label class="cc-remember">
+              <input v-model="rememberMe" type="checkbox" />
+              <span>30 天内记住我</span>
+            </label>
+            <button class="cc-link" type="button" @click="showHelp = true">忘记密码？</button>
+          </div>
+
+          <p v-if="errorMsg" class="cc-error">{{ errorMsg }}</p>
+
+          <button class="cc-submit" type="submit" :disabled="loading">
+            <span class="cc-submit-txt">{{ loading ? '登录中…' : '登录' }}</span>
           </button>
-
-          <p v-if="registerEnabled" class="alt">
-            还没有账号？<button class="link" type="button" @click="openRegister">申请开通</button>
-          </p>
-          <p v-else class="alt muted">注册已关闭，账号由任课教师统一发放。</p>
         </form>
-      </div>
 
-      <footer class="foot">
-        <span>本系统用于课堂教学，账号问题请联系任课教师</span>
-        <span class="foot-meta">v1.0</span>
-      </footer>
+        <p v-if="registerEnabled" class="cc-alt">
+          还没有账号？<button class="cc-link strong" type="button" @click="openRegister">申请开通</button>
+        </p>
+        <p v-else class="cc-alt muted">注册已关闭，账号由任课教师统一发放。</p>
+      </div>
     </main>
 
     <!-- 学生注册 -->
@@ -223,9 +211,9 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 
 const REMEMBER_KEY = 'remembered_username'
+const REMEMBER_TS_KEY = 'remembered_username_expires'
+const REMEMBER_DAYS = 30
 
-// 角色是「白底 + 墨线」：main.ts 里已把 ivory 色板覆写为纯白，
-// 两种主题统一用 ivory（--bot-opacity 由 mono.css 按主题微调），五官始终用墨色（--aora-fg）
 const bgBotColor = computed(() => 'ivory')
 
 const registerFormRef = ref<FormInst | null>(null)
@@ -237,14 +225,24 @@ const showHelp = ref(false)
 const registerEnabled = ref(true)
 const rememberMe = ref(false)
 const errorMsg = ref('')
+const showPassword = ref(false)
+const isTyping = ref(false)
 const classOptions = ref<{ label: string; value: number }[]>([])
 const classesLoaded = ref(false)
-const isMobile = ref(window.innerWidth <= 900)
+const isMobile = ref(window.innerWidth <= 1024)
 
 const mascotBotRef = ref<any>(null)
 function onMascotHover() {
   mascotBotRef.value?.bounce?.(0.5)
 }
+
+// 角色随输入/显隐密码/报错做出反应（对齐参考仓库的 AnimatedCharacters 思路）
+const mascotState = computed(() => {
+  if (loading.value) return 'thinking'
+  if (errorMsg.value) return 'shy'
+  if (isTyping.value) return 'writing'
+  return 'reading'
+})
 
 const formData = ref({ username: '', password: '' })
 const registerData = ref({
@@ -255,13 +253,6 @@ const registerData = ref({
   email: '',
   class_id: null as number | null
 })
-
-const steps = [
-  { num: '01', title: '先读懂验收标准', desc: '弄清要交付什么、怎样算通过，再写第一行代码。' },
-  { num: '02', title: '卡住时逐级求提示', desc: '思路引导 → API 指引 → 关键代码，三级递进，不直接给答案。' },
-  { num: '03', title: '提交后拿四维反馈', desc: '正确性、规范性、完成度、创新性，逐项评语而非一个冷分数。' },
-  { num: '04', title: '过程累计成成绩', desc: '课前、课中、课后全程留痕，努力看得见、可回溯。' }
-]
 
 const registerRules: FormRules = {
   username: [
@@ -276,23 +267,22 @@ const registerRules: FormRules = {
 }
 
 function handleResize() {
-  isMobile.value = window.innerWidth <= 900
+  isMobile.value = window.innerWidth <= 1024
 }
 
-// 弹窗被 teleport 到 body，拿不到 .auth 上的 CSS 变量，颜色用计算属性传进去
 const inkBtn = computed(() => (
   themeStore.isDark
-    ? { bg: '#e9e9e6', ink: '#101012' }
-    : { bg: '#16171a', ink: '#ffffff' }
+    ? { bg: '#fafaf9', ink: '#0c0a09' }
+    : { bg: '#3f51b5', ink: '#ffffff' }
 ))
 
 function modalStyle(width: string) {
   return {
     width: isMobile.value ? '94vw' : width,
     maxWidth: '94vw',
-    background: themeStore.isDark ? '#16161a' : '#ffffff',
-    borderRadius: '6px',
-    border: themeStore.isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(20,21,24,0.12)',
+    background: themeStore.isDark ? '#1c1917' : '#ffffff',
+    borderRadius: '8px',
+    border: themeStore.isDark ? '1px solid #292524' : '1px solid #e2e8f0',
     boxShadow: 'none'
   }
 }
@@ -312,8 +302,10 @@ async function handleLogin() {
     await userStore.login(formData.value.username.trim(), formData.value.password)
     if (rememberMe.value) {
       localStorage.setItem(REMEMBER_KEY, formData.value.username.trim())
+      localStorage.setItem(REMEMBER_TS_KEY, String(Date.now() + REMEMBER_DAYS * 86400_000))
     } else {
       localStorage.removeItem(REMEMBER_KEY)
+      localStorage.removeItem(REMEMBER_TS_KEY)
     }
     router.replace(userStore.isTeacher ? '/admin' : '/')
   } catch (error: any) {
@@ -373,9 +365,13 @@ async function loadSettings() {
 onMounted(() => {
   window.addEventListener('resize', handleResize, { passive: true })
   const saved = localStorage.getItem(REMEMBER_KEY)
-  if (saved) {
+  const expires = Number(localStorage.getItem(REMEMBER_TS_KEY) || 0)
+  if (saved && expires > Date.now()) {
     formData.value.username = saved
     rememberMe.value = true
+  } else {
+    localStorage.removeItem(REMEMBER_KEY)
+    localStorage.removeItem(REMEMBER_TS_KEY)
   }
   loadSettings()
 })
@@ -386,52 +382,278 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* ================= 基础 ================= */
-/* 配色统一由 src/styles/mono.css 的 .mono-theme 提供，这里只管布局 */
-.auth {
+/* ===== CareerCompass 风格适配：靛蓝主色 / Inter / 8px 圆角 / 左渐变右居中 ===== */
+.cc-auth {
+  --cc-bg: #ffffff;
+  --cc-fg: #0f172a;
+  --cc-muted: #64748b;
+  --cc-border: #e2e8f0;
+  --cc-input-border: #cbd5e1;
+  --cc-primary: #3f51b5;
+  --cc-primary-fg: #ffffff;
+  --cc-link: #3f51b5;
+  --cc-error: #b91c1c;
+  --cc-error-bg: rgba(239, 68, 68, 0.08);
+  --cc-error-border: rgba(239, 68, 68, 0.3);
+  --cc-placeholder: #64748b;
+  --cc-left-a: #6b7280;
+  --cc-left-b: #4b5563;
+  --cc-left-c: #374151;
+  --cc-left-fg: #ffffff;
+  --cc-left-muted: #ffffff;
+  --cc-grid-line: rgba(255, 255, 255, 0.05);
+  --cc-blob: rgba(255, 255, 255, 0.16);
+
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 100vh;
   overflow: hidden;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--cc-bg);
+  color: var(--cc-fg);
+  font-family: Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ================= 动效 ================= */
-@keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes line-up {
-  from { transform: translateY(112%); }
-  to { transform: translateY(0); }
-}
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
-}
-@keyframes bot-drift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(-14px, -10px) scale(1.025); }
-}
-@keyframes glyph-float {
-  from { transform: translateY(0) rotate(-3deg); }
-  to { transform: translateY(-20px) rotate(4deg); }
-}
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(4px); }
-  75% { transform: translateX(-2px); }
-}
-@keyframes dot-blink {
-  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-3px); }
+.cc-auth.dark {
+  --cc-bg: #0c0a09;
+  --cc-fg: #fafaf9;
+  --cc-muted: #a8a29e;
+  --cc-border: #292524;
+  --cc-input-border: #44403c;
+  --cc-primary: #3f51b5;
+  --cc-primary-fg: #ffffff;
+  --cc-link: #9fa8da;
+  --cc-error: #fca5a5;
+  --cc-error-bg: rgba(239, 68, 68, 0.12);
+  --cc-error-border: rgba(239, 68, 68, 0.35);
+  --cc-placeholder: #a8a29e;
+  /* 暗色下左面板反转为浅渐变 + 深字（参考仓库同款处理） */
+  --cc-left-a: rgba(255, 255, 255, 0.9);
+  --cc-left-b: rgba(255, 255, 255, 0.8);
+  --cc-left-c: rgba(255, 255, 255, 0.7);
+  --cc-left-fg: #1c1917;
+  --cc-left-muted: rgba(28, 25, 23, 0.72);
+  --cc-grid-line: rgba(28, 25, 23, 0.05);
+  --cc-blob: rgba(28, 25, 23, 0.08);
 }
 
-/* 背景大角色：贴底、眼睛跟随指针；内容层 z-index 在其上
-   亮色=白底黑线，暗色=深底浅线，颜色来自 --bot-* 变量 */
+/* ===== 左面板 ===== */
+.cc-left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  background: linear-gradient(to bottom right, var(--cc-left-a), var(--cc-left-b), var(--cc-left-c));
+  color: var(--cc-left-fg);
+  overflow: hidden;
+}
+
+.cc-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--cc-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cc-grid-line) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+.cc-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  background: var(--cc-blob);
+  pointer-events: none;
+}
+.cc-blob-a { top: 25%; right: 25%; width: 256px; height: 256px; }
+.cc-blob-b { bottom: 25%; left: 25%; width: 384px; height: 384px; }
+
+.cc-left-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cc-left-mid {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 420px;
+}
+
+.cc-mascot {
+  line-height: 0;
+  animation: cc-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both, cc-bob 5.5s ease-in-out 0.9s infinite;
+}
+
+.cc-left-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-size: 13px;
+  color: var(--cc-left-muted);
+}
+
+/* ===== 右面板 ===== */
+.cc-right {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.cc-theme {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--cc-muted);
+  background: transparent;
+  border: 1px solid var(--cc-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.cc-theme:hover { color: var(--cc-fg); border-color: var(--cc-input-border); }
+.cc-theme-ico { display: inline-block; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.cc-theme:hover .cc-theme-ico { transform: rotate(40deg) scale(1.15); }
+
+.cc-form-wrap {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+}
+
+.cc-mobile-brand { display: none; }
+
+.cc-head { text-align: center; margin-bottom: 40px; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cc-head h1 { margin: 0 0 8px; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.cc-head p { margin: 0; font-size: 14px; color: var(--cc-muted); }
+
+.cc-form { display: flex; flex-direction: column; gap: 20px; }
+
+.cc-field { display: flex; flex-direction: column; gap: 8px; animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cc-field:nth-of-type(1) { animation-delay: 0.08s; }
+.cc-field:nth-of-type(2) { animation-delay: 0.16s; }
+.cc-field label { font-size: 14px; font-weight: 500; }
+
+.cc-field input {
+  height: 48px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--cc-fg);
+  background: var(--cc-bg);
+  border: 1px solid var(--cc-input-border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cc-field input::placeholder { color: var(--cc-placeholder); }
+.cc-field input:focus {
+  border-color: var(--cc-primary);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.18);
+}
+
+.cc-pw-wrap { position: relative; }
+.cc-pw-wrap input { width: 100%; padding-right: 44px; }
+.cc-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  padding: 4px;
+  color: var(--cc-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.cc-eye:hover { color: var(--cc-fg); }
+.cc-eye svg { width: 20px; height: 20px; }
+
+.cc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+.cc-remember { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.cc-remember input { width: 16px; height: 16px; accent-color: var(--cc-primary); cursor: pointer; }
+
+.cc-link {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cc-link);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.cc-link:hover { text-decoration: underline; }
+.cc-link.strong { color: var(--cc-fg); font-weight: 600; }
+
+.cc-error {
+  margin: 0;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--cc-error);
+  background: var(--cc-error-bg);
+  border: 1px solid var(--cc-error-border);
+  border-radius: 8px;
+  animation: cc-shake 0.4s ease;
+}
+
+/* 主按钮：悬停时色块扫过（参考 InteractiveHoverButton） */
+.cc-submit {
+  position: relative;
+  height: 48px;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--cc-primary-fg);
+  background: var(--cc-primary);
+  border: 1px solid var(--cc-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both;
+  transition: opacity 0.2s;
+}
+.cc-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(-101%);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cc-submit:hover:not(:disabled)::before { transform: translateX(0); }
+.cc-submit:active:not(:disabled) .cc-submit-txt { transform: translateY(1px); }
+.cc-submit:disabled { opacity: 0.6; cursor: default; }
+.cc-submit-txt { position: relative; display: inline-block; transition: transform 0.12s; }
+
+.cc-alt { margin: 32px 0 0; text-align: center; font-size: 14px; color: var(--cc-muted); animation: cc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both; }
+.cc-alt.muted { color: var(--cc-muted); }
+
+/* ===== 右下角大表情头（保留） ===== */
 .bg-bot {
   position: absolute;
   right: -90px;
@@ -441,672 +663,60 @@ onBeforeUnmount(() => {
   height: 520px;
   display: grid;
   place-items: center;
-  /* 两层：贴着身体轮廓的细线 + 外圈柔光，让白底角色从纸面里“浮”出来 */
-  background:
-    radial-gradient(circle at 50% 50%, transparent 0 197px, var(--bot-ring) 198px, transparent 200px),
-    var(--bot-plate);
-  opacity: var(--bot-opacity);
+  opacity: 0.5;
   pointer-events: none;
   line-height: 0;
-  /* 库里角色的身体取色板 ink（暖白/米白），这里用滤镜推成纯白：
-     墨色五官（#2B2420）几乎不受影响，身体则收敛到接近 #fff */
   filter: saturate(0.3) brightness(1.05);
-  /* 边缘淡出，避免与内容抢注意力；中间部分保持清晰 */
   -webkit-mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
   mask-image: radial-gradient(circle at 52% 48%, #000 42%, transparent 76%);
-  transition: opacity 0.3s ease, background 0.3s ease;
-  animation: bot-drift 11s ease-in-out infinite alternate;
-  /* 角色内部的线条/纸色，跟随主题 */
-  --aora-fg: var(--bot-fg);
-  --aora-paper: var(--bot-paper);
+  animation: cc-drift 11s ease-in-out infinite alternate;
+  --aora-fg: #16171a;
+  --aora-paper: #ffffff;
   --aora-bg-base: transparent;
 }
 
-@media (max-width: 900px) {
-  /* 窄屏把背景角色收进右下角：只留一道淡弧，避免整张脸 + 白色底盘
-     完整露出而在右下形成一块突兀的空白 */
+/* ===== 动效 ===== */
+@keyframes cc-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes cc-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-14px, -10px) scale(1.025); } }
+@keyframes cc-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+
+/* ===== 弹窗内元素 ===== */
+.reg-form :deep(.n-input),
+.reg-form :deep(.n-base-selection),
+.mod-actions :deep(.n-button) { --n-border-radius: 8px !important; border-radius: 8px !important; }
+.reg-form :deep(.n-input),
+.reg-form :deep(.n-base-selection) { --n-border-focus: #3f51b5 !important; --n-border-hover: #3f51b5 !important; --n-box-shadow-focus: none !important; }
+.reg-form :deep(.n-form-item-label) { font-size: 12.5px; }
+.help p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.8; color: var(--cc-muted); }
+.help p:last-child { margin-bottom: 0; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 1024px) {
+  .cc-auth { grid-template-columns: 1fr; }
+  .cc-left { display: none; }
+  .cc-right { min-height: 100vh; padding: 72px 24px 24px; }
+  .cc-mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-bottom: 40px;
+    font-size: 16px;
+    font-weight: 600;
+  }
   .bg-bot {
     right: -170px;
     bottom: -180px;
     width: 320px;
     height: 320px;
-    opacity: calc(var(--bot-opacity) * 0.6);
+    opacity: 0.35;
     -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
     mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
   }
 }
 
-
-/* ================= 左：墨色面板 ================= */
-.pane-info {
-  position: relative;
-  z-index: 1;
-  width: 44%;
-  min-width: 420px;
-  max-width: 620px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 44px 56px 36px;
-  background: #16171a;
-  color: #f4f4f1;
-  overflow: hidden;
-}
-
-.auth.dark .pane-info {
-  background: #08080a;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* 墨色面板里的巨型代码符号水印：压暗、垫底，给面板一层「代码纸」的纵深 */
-.info-watermark {
-  position: absolute;
-  right: -28px;
-  bottom: -78px;
-  z-index: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 300px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.06em;
-  color: rgba(244, 244, 241, 0.045);
-  pointer-events: none;
-  user-select: none;
-}
-
-.info-top,
-.info-body,
-.info-foot {
-  position: relative;
-  z-index: 1;
-}
-
-.info-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(244, 244, 241, 0.9);
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
-}
-
-.brand-name {
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.info-body {
-  padding: 8px 0;
-}
-
-.mascot {
-  margin-bottom: 18px;
-  line-height: 0;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both, bob 5.5s ease-in-out 0.9s infinite;
-}
-
-.eyebrow {
-  margin: 0 0 18px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.22em;
-  color: rgba(244, 244, 241, 0.6);
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
-}
-
-.tagline {
-  margin: 0 0 40px;
-  font-size: clamp(26px, 2.4vw, 34px);
-  font-weight: 600;
-  line-height: 1.45;
-  letter-spacing: -0.01em;
-  color: #f4f4f1;
-}
-
-.tagline .line {
-  display: block;
-  overflow: hidden;
-}
-
-.tagline .line > span {
-  display: inline-block;
-  animation: line-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.tagline .line:nth-child(1) > span { animation-delay: 0.32s; }
-.tagline .line:nth-child(2) > span { animation-delay: 0.44s; }
-
-.steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-width: 420px;
-}
-
-.steps li {
-  display: flex;
-  gap: 14px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(244, 244, 241, 0.14);
-  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: transform 0.25s ease;
-}
-
-.steps li:nth-child(1) { animation-delay: 0.52s; }
-.steps li:nth-child(2) { animation-delay: 0.6s; }
-.steps li:nth-child(3) { animation-delay: 0.68s; }
-.steps li:nth-child(4) { animation-delay: 0.76s; }
-
-.steps li:hover {
-  transform: translateX(5px);
-}
-
-.steps li:hover .idx {
-  color: #9fd6c3;
-}
-
-.steps li:last-child {
-  border-bottom: 1px solid rgba(244, 244, 241, 0.14);
-}
-
-.idx {
-  flex: 0 0 auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  line-height: 1.95;
-  color: rgba(244, 244, 241, 0.55);
-  font-variant-numeric: tabular-nums;
-  transition: color 0.25s ease;
-}
-
-.steps strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.7;
-  color: rgba(244, 244, 241, 0.95);
-}
-
-.steps p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: rgba(244, 244, 241, 0.66);
-}
-
-.info-foot {
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  color: rgba(244, 244, 241, 0.62);
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.88s both;
-}
-
-/* ================= 右：表单区 ================= */
-.pane-form {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 48px 40px 22px;
-}
-
-/* 纸面点阵：只在四周浮现，中心留给表单 */
-.pane-form::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(var(--hair) 1px, transparent 1.4px);
-  background-size: 26px 26px;
-  -webkit-mask-image: radial-gradient(ellipse 62% 55% at 50% 46%, transparent 38%, #000 82%);
-  mask-image: radial-gradient(ellipse 62% 55% at 50% 46%, transparent 38%, #000 82%);
-  pointer-events: none;
-}
-
-/* 极淡的纸纹颗粒：给纸面一点手感，明暗两态都成立，不抢内容 */
-.pane-form::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.03;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* 漂浮代码符号 */
-.drift {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.drift span {
-  position: absolute;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 14px;
-  color: var(--faint);
-  opacity: 0.4;
-  animation: glyph-float 9s ease-in-out infinite alternate;
-}
-
-.drift span:nth-child(1) { top: 13%; left: 9%; font-size: 18px; animation-duration: 11s; }
-.drift span:nth-child(2) { top: 21%; right: 11%; animation-duration: 8s; animation-delay: -3s; }
-.drift span:nth-child(3) { top: 56%; left: 6%; font-size: 20px; animation-duration: 13s; animation-delay: -5s; }
-.drift span:nth-child(4) { bottom: 24%; right: 13%; font-size: 16px; animation-duration: 10s; animation-delay: -2s; }
-.drift span:nth-child(5) { top: 9%; left: 47%; animation-duration: 12s; animation-delay: -7s; }
-.drift span:nth-child(6) { bottom: 13%; left: 16%; animation-duration: 9.5s; animation-delay: -4s; }
-.drift span:nth-child(7) { top: 40%; right: 6%; font-size: 17px; animation-duration: 14s; animation-delay: -6s; }
-.drift span:nth-child(8) { bottom: 9%; right: 32%; animation-duration: 10.5s; animation-delay: -1s; }
-
-.theme {
-  position: absolute;
-  top: 26px;
-  right: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid var(--hair);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.theme-ico {
-  display: inline-block;
-  font-size: 13px;
-  line-height: 1;
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.theme:hover .theme-ico {
-  transform: rotate(40deg) scale(1.15);
-}
-
-.theme:hover {
-  color: var(--ink);
-  border-color: var(--ink);
-}
-
-.form-wrap {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 344px;
-}
-
-.mobile-brand {
-  display: none;
-}
-
-.intro {
-  margin-bottom: 32px;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
-}
-
-.intro h1 {
-  margin: 0 0 8px;
-  font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-}
-
-.intro p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-
-/* ---- 下划线输入框 ---- */
-.field {
-  position: relative;
-  display: block;
-  padding: 22px 0 7px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--hair);
-  transition: border-color 0.2s ease;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.field:nth-of-type(1) { animation-delay: 0.26s; }
-.field:nth-of-type(2) { animation-delay: 0.36s; }
-
-/* 聚焦时墨线从左向右画出 */
-.field::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1.5px;
-  background: var(--accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.field:focus-within::after {
-  transform: scaleX(1);
-}
-
-.field:focus-within {
-  border-bottom-color: var(--accent);
-}
-
-.field-label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  color: var(--faint);
-  transition: color 0.2s ease;
-}
-
-.field:focus-within .field-label {
-  color: var(--accent);
-}
-
-.form :deep(.n-input) {
-  --n-height: 32px;
-  --n-color: transparent !important;
-  --n-color-focus: transparent !important;
-  --n-text-color: var(--ink) !important;
-  --n-placeholder-color: var(--faint) !important;
-  --n-caret-color: var(--accent) !important;
-  --n-box-shadow-focus: none !important;
-  background: transparent !important;
-}
-
-.form :deep(.n-input .n-input__border),
-.form :deep(.n-input .n-input__state-border) {
-  display: none !important;
-}
-
-.form :deep(.n-input .n-input-wrapper) {
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.form :deep(.n-input input) {
-  font-size: 14.5px;
-}
-
-.form :deep(.n-input .n-input__suffix) {
-  color: var(--faint);
-}
-
-/* 错误 */
-.error {
-  display: flex;
-  gap: 9px;
-  margin: 0 0 16px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #b4342c;
-  animation: shake 0.4s ease, rise 0.3s ease both;
-}
-
-.auth.dark .error {
-  color: #e2827a;
-}
-
-.error-bar {
-  flex: 0 0 2px;
-  background: currentColor;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 22px;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.46s both;
-}
-
-.form :deep(.n-checkbox__label) {
-  font-size: 12px;
-  color: var(--muted) !important;
-}
-
-.link {
-  padding: 0;
-  font-size: 12px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  border-bottom: 1px solid transparent;
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.link:hover {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-/* 主按钮 */
-.submit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  height: 44px;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  color: var(--btn-ink);
-  background: var(--btn-bg);
-  border: 1px solid var(--btn-bg);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: opacity 0.2s ease, letter-spacing 0.3s ease;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.54s both;
-}
-
-.submit .arrow {
-  display: inline-block;
-  opacity: 0;
-  transform: translateX(-8px);
-  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.submit:hover:not(:disabled) {
-  opacity: 0.92;
-  letter-spacing: 0.26em;
-}
-
-.submit:hover:not(:disabled) .arrow {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.submit:active:not(:disabled) .submit-txt {
-  transform: translateY(1px);
-}
-
-.submit-txt {
-  display: inline-block;
-  transition: transform 0.12s ease;
-}
-
-.submit .dots {
-  display: inline-flex;
-  gap: 4px;
-}
-
-.submit .dots i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: dot-blink 1.1s ease-in-out infinite;
-}
-
-.submit .dots i:nth-child(2) { animation-delay: 0.15s; }
-.submit .dots i:nth-child(3) { animation-delay: 0.3s; }
-
-.submit:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.alt {
-  margin: 18px 0 0;
-  font-size: 12px;
-  color: var(--muted);
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.64s both;
-}
-
-.alt.muted {
-  color: var(--faint);
-}
-
-/* 底部 */
-.foot {
-  position: absolute;
-  left: 40px;
-  right: 40px;
-  bottom: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 14px;
-  border-top: 1px solid var(--hair);
-  font-size: 11px;
-  color: var(--faint);
-}
-
-.foot-meta {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.help p {
-  margin: 0 0 12px;
-  font-size: 13.5px;
-  line-height: 1.8;
-  color: var(--muted);
-}
-
-.help p:last-child {
-  margin-bottom: 0;
-}
-
-/* 弹窗内元素：去掉圆角与蓝色，与整体风格一致 */
-.reg-form :deep(.n-input),
-.reg-form :deep(.n-base-selection),
-.mod-actions :deep(.n-button) {
-  --n-border-radius: 2px !important;
-  border-radius: 2px !important;
-}
-
-.reg-form :deep(.n-input),
-.reg-form :deep(.n-base-selection) {
-  --n-border-focus: #1c6b52 !important;
-  --n-border-hover: #1c6b52 !important;
-  --n-box-shadow-focus: none !important;
-}
-
-.reg-form :deep(.n-form-item-label) {
-  font-size: 12.5px;
-}
-
-/* ================= 响应式 ================= */
-@media (max-width: 1180px) {
-  .pane-info {
-    width: 42%;
-    min-width: 360px;
-    padding: 40px 40px 32px;
-  }
-
-  .pane-form {
-    padding: 48px 32px 22px;
-  }
-}
-
-@media (max-width: 900px) {
-  .auth {
-    display: block;
-    min-height: 100vh;
-  }
-
-  .pane-info {
-    display: none;
-  }
-
-  .pane-form {
-    min-height: 100vh;
-    justify-content: flex-start;
-    padding: 72px 24px 24px;
-  }
-
-  .form-wrap {
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .mobile-brand {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 34px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--ink);
-    animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
-  }
-
-  .drift span:nth-child(n + 5) {
-    display: none;
-  }
-
-  .theme {
-    top: 20px;
-    right: 20px;
-  }
-
-  /* 页脚沉底，避免内容上方挤、下方空 */
-  .foot {
-    position: static;
-    margin: auto auto 0;
-    width: 100%;
-    max-width: 400px;
-  }
-
-  .foot span:first-child {
-    font-size: 10.5px;
-  }
-}
-
-@media (max-height: 700px) and (min-width: 901px) {
-  .tagline {
-    margin-bottom: 26px;
-  }
-
-  .steps li {
-    padding: 10px 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .auth,
-  .auth *,
-  .auth *::before,
-  .auth *::after {
-    animation: none !important;
-    transition: none !important;
-  }
+  .cc-auth, .cc-auth *, .cc-auth *::before, .cc-auth *::after { animation: none !important; transition: none !important; }
 }
 </style>
