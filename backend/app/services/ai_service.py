@@ -52,6 +52,9 @@ class AiService:
         requested = self._provider_override or app_settings.default_provider()
         if app_settings.provider_config(requested)["api_key"]:
             return requested
+        if self._provider_override:
+            # 显式指定的（health_check 测试）严格使用，缺密钥时让调用明确报 503
+            return requested
         for name in ("deepseek", "mimo"):
             if name != requested and app_settings.provider_config(name)["api_key"]:
                 if not self._fallback_warned:
@@ -64,8 +67,8 @@ class AiService:
     def model(self) -> str:
         return app_settings.provider_config(self.provider)["model"]
 
-    def set_provider(self, name: str) -> dict:
-        """运行时切换服务商（重启后回到数据库/.env 里配置的默认值）"""
+    async def set_provider(self, name: str, updated_by: int = 0) -> dict:
+        """切换默认服务商：写入数据库，多 worker 即时生效，重启后仍保持"""
         name = (name or "").strip().lower()
         if name not in PROVIDER_CAPS:
             raise AiServiceError(f"不支持的 AI 服务商：{name}", status_code=400)
@@ -76,7 +79,9 @@ class AiService:
                 f"{label} 未配置 API Key，请先在管理后台「AI 服务配置」里填写",
                 status_code=400,
             )
-        self._provider_override = name
+        # 写数据库而不是进程内存：uvicorn 多 worker 时改内存只有本进程生效
+        await app_settings.set_values({"ai.provider": name}, updated_by=updated_by)
+        self._provider_override = None  # 让 provider 属性读数据库里的默认值
         return self.describe()
 
     def describe(self) -> dict:
@@ -680,7 +685,8 @@ total_score 必须 = correctness*0.4 + code_style*0.2 + completion*0.3 + creativ
         started = time.perf_counter()
         try:
             if provider:
-                self.set_provider(provider)
+                # 测试指定服务商：进程内临时切换，不写数据库（避免污染全局默认值）
+                self._provider_override = provider
             resp = await self._chat(
                 system_prompt="你是一个测试助手，请只回复一句简短的中文问候。",
                 user_prompt="请用中文回复：你好",

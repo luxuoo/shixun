@@ -158,10 +158,10 @@ async def switch_ai_provider(
     data: dict,
     current_user: User = Depends(get_current_admin)
 ):
-    """运行时切换 AI 服务商（仅本次进程有效，重启后回到 .env 配置）"""
+    """切换默认 AI 服务商（写入数据库，多 worker 即时生效，重启后保持）"""
     provider = (data or {}).get("provider", "")
     try:
-        return ai_service.set_provider(provider)
+        return await ai_service.set_provider(provider, updated_by=current_user.id)
     except AiServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
