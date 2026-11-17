@@ -12,7 +12,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
-REF="$REMOTE/$BRANCH"
+REF=""
 FORCE=0
 KEEP_FAILED=0
 FORCE_REBUILD=0
@@ -23,6 +23,7 @@ SKIP_HEALTH="${SKIP_HEALTH:-0}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --ref) REF="${2:?--ref 需要参数}"; shift 2 ;;
+        --remote) REMOTE="${2:?--remote 需要参数}"; shift 2 ;;
         --force) FORCE=1; shift ;;
         --actor) ACTOR="${2:?--actor 需要参数}"; shift 2 ;;
         --keep-failed) KEEP_FAILED=1; shift ;;
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+REF="${REF:-$REMOTE/$BRANCH}"
 export NO_RESTART SKIP_HEALTH
 
 # 构建失败时清理未完成的版本目录（日志里已有全部输出，留着只会占磁盘）
@@ -99,6 +101,14 @@ prepare_shared
 step "拉取代码"
 if [ ! -d "$APP_DIR/.git" ]; then
     die "$APP_DIR 不是 git 仓库，请先 git clone"
+fi
+
+# 选了 cnb/github 但仓库还没这个远程时，按内置镜像地址补上（首次切源不用手动 git remote add）
+if ! git -C "$APP_DIR" remote get-url "$REMOTE" >/dev/null 2>&1; then
+    REMOTE_URL="$(remote_url "$REMOTE")"
+    [ -n "$REMOTE_URL" ] || die "远程 $REMOTE 未配置，请先 git remote add $REMOTE <url>"
+    git -C "$APP_DIR" remote add "$REMOTE" "$REMOTE_URL" || die "添加远程 $REMOTE 失败"
+    log "  已添加远程 $REMOTE → $REMOTE_URL"
 fi
 
 git -C "$APP_DIR" fetch --prune --tags "$REMOTE" >>"$LOG_FILE" 2>&1 || die "git fetch 失败（检查网络或仓库权限）"

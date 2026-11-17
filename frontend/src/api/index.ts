@@ -145,9 +145,9 @@ export const aiApi = {
 export const opsApi = {
   getStatus: (lines = 60) =>
     api.get('/admin/ops/status', { params: { lines } }),
-  check: () =>
-    api.get('/admin/ops/check', { timeout: 45000 }),
-  deploy: (payload: { ref?: string; force?: boolean } = {}) =>
+  check: (remote = 'origin') =>
+    api.get('/admin/ops/check', { params: { remote }, timeout: 45000 }),
+  deploy: (payload: { ref?: string; force?: boolean; remote?: string } = {}) =>
     api.post('/admin/ops/deploy', payload, { timeout: 30000 }),
   rollback: (release?: string) =>
     api.post('/admin/ops/rollback', release ? { release } : {}, { timeout: 30000 }),

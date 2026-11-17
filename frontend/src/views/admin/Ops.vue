@@ -3,9 +3,17 @@
     <header class="page-head">
       <div>
         <h2>部署运维</h2>
-        <p class="sub">拉取 GitHub 最新代码 → 构建 → 切换 → 重启；新版本启动失败会自动回滚</p>
+        <p class="sub">拉取所选源最新代码 → 构建 → 切换 → 重启；新版本启动失败会自动回滚</p>
       </div>
       <n-space :size="10" align="center">
+        <n-select
+          v-model:value="remote"
+          :options="remoteOptions"
+          size="small"
+          style="width: 168px"
+          :disabled="running"
+          @update:value="onRemoteChange"
+        />
         <n-button text :loading="loading" @click="loadStatus(true)">刷新</n-button>
         <n-button text :loading="checking" :disabled="!status.platform_ok" @click="handleCheck">
           检查更新
@@ -60,6 +68,7 @@
               落后 {{ checkResult.behind }} 个提交
             </n-tag>
             <n-tag v-else type="success" size="small" :bordered="false">已是最新</n-tag>
+            <n-tag size="small" :bordered="false" type="info">{{ checkResult.remote || 'origin' }}</n-tag>
             <span class="mono">{{ checkResult.current_commit || '未发布' }} → {{ checkResult.latest_commit }}</span>
             <span v-if="checkResult.changed_count" class="muted">{{ checkResult.changed_count }} 个文件变更</span>
           </div>
@@ -247,6 +256,15 @@ const dialog = useDialog()
 
 const loading = ref(false)
 const checking = ref(false)
+const remote = ref('origin')
+const remoteOptions = [
+  { label: 'origin · 主仓库', value: 'origin' },
+  { label: 'github · 镜像', value: 'github' },
+  { label: 'cnb · 镜像', value: 'cnb' }
+]
+function onRemoteChange() {
+  checkResult.value = null
+}
 const offline = ref(false)
 const checkResult = ref<any>(null)
 const deploying = ref(false)
@@ -349,7 +367,7 @@ function schedule() {
 async function handleCheck() {
   checking.value = true
   try {
-    const data = await opsApi.check() as any
+    const data = await opsApi.check(remote.value) as any
     checkResult.value = data
     if (data.ok && data.behind === 0) message.success('已经是最新版本')
   } catch (e: any) {
@@ -360,15 +378,16 @@ async function handleCheck() {
 }
 
 async function handleDeploy() {
+  const sourceLabel = remoteOptions.find(o => o.value === remote.value)?.label || remote.value
   dialog.info({
     title: '确认更新到最新版本',
-    content: '将从远端拉取最新代码并重新构建，完成后自动重启后端，期间约 10 秒不可用。',
+    content: `将从 ${sourceLabel} 拉取最新代码并重新构建，完成后自动重启后端，期间约 10 秒不可用。`,
     positiveText: '开始更新',
     negativeText: '取消',
     onPositiveClick: async () => {
       deploying.value = true
       try {
-        const res = await opsApi.deploy() as any
+        const res = await opsApi.deploy({ remote: remote.value }) as any
         message.success(res.message || '已开始发布')
         await loadStatus(true)
         schedule()

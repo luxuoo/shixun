@@ -263,12 +263,13 @@ def _read_history(limit: int = 15) -> list:
     return items
 
 
-def _spawn(script: str, extra_args: list, actor: str = "") -> None:
+def _spawn(script: str, extra_args: list, actor: str = "", env_extra: Optional[dict] = None) -> None:
     """以独立会话启动脚本（不受后端重启影响）
 
     操作者通过环境变量 OPS_ACTOR 传递，而不是命令行参数 —— 服务器上的
     ops/ 脚本可能比正在运行的后端旧（还没 git pull），旧脚本不认识新参数会直接
     退出（报「未知参数: --actor」）。环境变量对任何版本都无害。
+    更新源同理走 REMOTE 环境变量：旧版 _common.sh 也已读取它。
     """
     DEPLOY_DIR.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
@@ -279,6 +280,8 @@ def _spawn(script: str, extra_args: list, actor: str = "") -> None:
     env["HEALTH_URL"] = settings.OPS_HEALTH_URL
     if actor:
         env["OPS_ACTOR"] = actor
+    if env_extra:
+        env.update(env_extra)
 
     with LOG_FILE.open("a", encoding="utf-8") as out:
         subprocess.Popen(
@@ -291,9 +294,60 @@ def _spawn(script: str, extra_args: list, actor: str = "") -> None:
         )
 
 
-def _git_check() -> dict:
-    """拉取远端并比较当前版本，判断有多少新提交（只读，不改任何东西）"""
+_KNOWN_REMOTES = {
+    "github": "https://github.com/luxuoo/shixun.git",
+    "cnb": "https://cnb.cool/fumeng.ybx/learning-system",
+}
+_ALLOWED_REMOTES = {"origin", *_KNOWN_REMOTES}
+
+# 检查更新要访问网络，短 TTL 缓存避免连点/重复检查反复 fetch
+_CHECK_CACHE: dict = {}
+_CHECK_TTL = 30.0
+
+
+def _validate_remote(remote: Optional[str]) -> str:
+    name = (remote or "origin").strip()
+    if name not in _ALLOWED_REMOTES:
+        raise HTTPException(status_code=400, detail=f"不支持的更新源：{name}")
+    return name
+
+
+def _ensure_remote(remote: str) -> None:
+    """服务器仓库可能还没配 cnb/github 远程，按内置镜像地址补上再 fetch"""
     root = str(PROJECT_ROOT)
+    try:
+        has = subprocess.run(
+            ["git", "-C", root, "remote", "get-url", remote],
+            capture_output=True, text=True, timeout=10,
+        )
+        if has.returncode == 0:
+            return
+        url = _KNOWN_REMOTES.get(remote)
+        if url:
+            subprocess.run(
+                ["git", "-C", root, "remote", "add", remote, url],
+                capture_output=True, text=True, timeout=10,
+            )
+    except Exception:
+        pass
+
+
+def _git_check(remote: str = "origin") -> dict:
+    now = time.monotonic()
+    hit = _CHECK_CACHE.get(remote)
+    if hit and now - hit[0] < _CHECK_TTL:
+        return hit[1]
+    result = _git_check_uncached(remote)
+    if result.get("ok"):
+        _CHECK_CACHE[remote] = (now, result)
+    return result
+
+
+def _git_check_uncached(remote: str) -> dict:
+    """拉取所选远端并比较当前版本，判断有多少新提交（只读，不改任何东西）"""
+    root = str(PROJECT_ROOT)
+    _ensure_remote(remote)
+    upstream = f"{remote}/main"
 
     def run(args, timeout=30):
         return subprocess.run(
@@ -304,15 +358,17 @@ def _git_check() -> dict:
         )
 
     try:
-        fetch = run(["fetch", "--quiet", "--tags", "origin"], timeout=30)
+        # 只取 main、不带 tags：检查更新不需要全量标签，省一次大网络往返
+        fetch = run(["fetch", "--quiet", remote, f"+refs/heads/main:refs/remotes/{upstream}"])
         if fetch.returncode != 0:
             return {"ok": False, "error": f"git fetch 失败：{(fetch.stderr or '').strip()[:200]}"}
 
         current = _current_release_commit()
         if not current:
-            latest = run(["rev-parse", "--short=7", "origin/main"])
+            latest = run(["rev-parse", "--short=7", upstream])
             return {
                 "ok": True,
+                "remote": remote,
                 "current_commit": "",
                 "latest_commit": latest.stdout.strip(),
                 "behind": None,
@@ -321,9 +377,9 @@ def _git_check() -> dict:
                 "note": "还没有发布记录，首次发布会构建全部内容",
             }
 
-        behind = run(["rev-list", "--count", f"{current}..origin/main"])
-        log_out = run(["log", "--pretty=%h|%s|%ad|%an", "--date=format:%m-%d %H:%M", "-n", "10", f"{current}..origin/main"])
-        diff = run(["diff", "--name-only", f"{current}..origin/main"])
+        behind = run(["rev-list", "--count", f"{current}..{upstream}"])
+        log_out = run(["log", "--pretty=%h|%s|%ad|%an", "--date=format:%m-%d %H:%M", "-n", "10", f"{current}..{upstream}"])
+        diff = run(["diff", "--name-only", f"{current}..{upstream}"])
 
         commits = []
         for line in (log_out.stdout or "").splitlines():
@@ -332,10 +388,11 @@ def _git_check() -> dict:
                 commits.append({"sha": parts[0], "subject": parts[1], "time": parts[2], "author": parts[3]})
 
         files = [f for f in (diff.stdout or "").splitlines() if f]
-        latest = run(["rev-parse", "--short=7", "origin/main"])
+        latest = run(["rev-parse", "--short=7", upstream])
 
         return {
             "ok": True,
+            "remote": remote,
             "current_commit": current,
             "latest_commit": latest.stdout.strip(),
             "behind": int((behind.stdout or "0").strip() or 0),
@@ -379,17 +436,25 @@ def _current_release_commit() -> str:
 class DeployRequest(BaseModel):
     ref: Optional[str] = None
     force: bool = False
+    remote: Optional[str] = None
 
 
 class RollbackRequest(BaseModel):
     release: Optional[str] = None
 
 
-@router.get("/status")
-async def ops_status(
-    lines: int = Query(60, ge=0, le=500),
-    current_user: User = Depends(get_current_admin),
-):
+def _remote_names() -> list:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "remote"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return [l.strip() for l in (out.stdout or "").splitlines() if l.strip()]
+    except Exception:
+        return []
+
+
+def _status_payload(lines: int) -> dict:
     """当前版本、操作进度、历史版本与日志尾部"""
     state = _read_state()
     running = _is_running(state)
@@ -434,6 +499,7 @@ async def ops_status(
         },
         "drift": drift,
         "project_dir": str(PROJECT_ROOT),
+        "remotes": _remote_names(),
         "running": running,
         "state": state,
         "current": current,
@@ -448,12 +514,25 @@ async def ops_status(
     }
 
 
+@router.get("/status")
+async def ops_status(
+    lines: int = Query(60, ge=0, le=500),
+    current_user: User = Depends(get_current_admin),
+):
+    # 扫盘 / 探测健康都是阻塞 IO，放线程里跑，避免卡住事件循环拖慢其它接口
+    return await asyncio.to_thread(_status_payload, lines)
+
+
 @router.get("/check")
-async def ops_check(current_user: User = Depends(get_current_admin)):
-    """检查是否有新提交（只读，可在点更新前先看）"""
+async def ops_check(
+    remote: str = Query("origin"),
+    current_user: User = Depends(get_current_admin),
+):
+    """检查所选更新源是否有新提交（只读，可在点更新前先看）"""
     if not _platform_ok():
         raise HTTPException(status_code=400, detail="当前环境不支持（需 Linux + bash）")
-    return await asyncio.to_thread(_git_check)
+    name = _validate_remote(remote)
+    return await asyncio.to_thread(_git_check, name)
 
 
 @router.post("/deploy")
@@ -466,17 +545,23 @@ async def ops_deploy(
     if _is_running(_read_state()):
         raise HTTPException(status_code=409, detail="已有发布/回滚正在进行，请等待完成")
 
+    remote = _validate_remote(payload.remote)
+    # 先补好远程，旧版 deploy.sh 只认 REMOTE 环境变量也能直接 fetch 新源
+    await asyncio.to_thread(_ensure_remote, remote)
+    _CHECK_CACHE.clear()
+
     args = []
     if payload.ref:
         args += ["--ref", payload.ref]
     if payload.force:
         args += ["--force"]
 
-    _spawn("deploy.sh", args, actor=current_user.username)
+    _spawn("deploy.sh", args, actor=current_user.username, env_extra={"REMOTE": remote})
     return {
         "ok": True,
         "message": "已开始发布，页面会在完成后自动刷新状态",
         "action": "deploy",
+        "remote": remote,
         "ref": payload.ref or f"{os.getenv('OPS_BRANCH', 'main')}",
     }
 

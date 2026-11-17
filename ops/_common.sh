@@ -142,6 +142,18 @@ acquire_lock() {
     fi
 }
 
+# ---------------- 更新源 ----------------
+
+# 可选更新源的镜像地址（origin 为克隆时自带，不在此列）。
+# 面板/CLI 选 cnb、github 时若仓库尚未配置该远程，据此自动补上。
+remote_url() {
+    case "$1" in
+        github) echo "${GITHUB_URL:-https://github.com/luxuoo/shixun.git}" ;;
+        cnb)    echo "${CNB_URL:-https://cnb.cool/fumeng.ybx/learning-system}" ;;
+        *)      echo "" ;;
+    esac
+}
+
 # ---------------- 版本信息 ----------------
 
 # 从新到旧列出所有版本（只用 basename + sort，不依赖 GNU find）
