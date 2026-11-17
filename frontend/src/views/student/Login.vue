@@ -139,13 +139,6 @@
           </button>
         </form>
 
-        <div class="cc-social">
-          <button class="cc-outline" type="button" @click="handleGoogle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-            Google 登录
-          </button>
-        </div>
-
         <p class="cc-alt">
           还没有账号？<button class="cc-alt-link" type="button" @click="openRegister">申请开通</button>
         </p>
@@ -414,10 +407,6 @@ function modalStyle(width: string) {
   }
 }
 
-function handleGoogle() {
-  message.info('本系统使用教师分配的账号登录，暂不支持 Google 登录')
-}
-
 async function handleLogin() {
   if (!formData.value.username.trim()) {
     errorMsg.value = '请填写账号'
@@ -525,7 +514,6 @@ onBeforeUnmount(() => {
   --cc-muted: #71717a;
   --cc-border: #e4e4e7;
   --cc-input: #e4e4e7;
-  --cc-accent: #f4f4f5;
   --cc-primary: #18181b;
   --cc-primary-fg: #fafafa;
   --cc-ring: #18181b;
@@ -559,7 +547,6 @@ onBeforeUnmount(() => {
   --cc-muted: #a1a1aa;
   --cc-border: #27272a;
   --cc-input: #27272a;
-  --cc-accent: #27272a;
   --cc-primary: #fafafa;
   --cc-primary-fg: #18181b;
   --cc-ring: #fafafa;
@@ -662,16 +649,6 @@ onBeforeUnmount(() => {
 }
 .cc-submit:hover:not(:disabled) { opacity: 0.9; }
 .cc-submit:disabled { opacity: 0.5; cursor: default; }
-
-.cc-social { margin-top: 24px; }
-.cc-outline {
-  height: 48px; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font-size: 16px; font-weight: 500; color: var(--cc-fg);
-  background: var(--cc-bg); border: 1px solid var(--cc-input); border-radius: 6px; cursor: pointer;
-  transition: background 0.2s;
-}
-.cc-outline:hover { background: var(--cc-accent); }
-.cc-outline svg { width: 20px; height: 20px; }
 
 .cc-alt { margin: 32px 0 0; text-align: center; font-size: 14px; color: var(--cc-muted); }
 .cc-alt-link { padding: 0; font-size: 14px; font-weight: 500; color: var(--cc-fg); background: none; border: none; cursor: pointer; }
