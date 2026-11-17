@@ -7,7 +7,7 @@
         :color="bgBotColor"
         state="reading"
         face="eyes"
-        :sizePx="400"
+        :sizePx="isMobile ? 280 : 400"
         followPointer
         seed="login-bg-bot"
       />
@@ -456,12 +456,16 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
+  /* 窄屏把背景角色收进右下角：只留一道淡弧，避免整张脸 + 白色底盘
+     完整露出而在右下形成一块突兀的空白 */
   .bg-bot {
-    right: -130px;
-    bottom: -170px;
-    width: 460px;
-    height: 460px;
-    opacity: calc(var(--bot-opacity) * 0.8);
+    right: -170px;
+    bottom: -180px;
+    width: 320px;
+    height: 320px;
+    opacity: calc(var(--bot-opacity) * 0.6);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
+    mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 78%);
   }
 }
 
