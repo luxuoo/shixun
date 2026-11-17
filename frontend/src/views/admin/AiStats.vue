@@ -134,7 +134,7 @@
       <n-card title="每日调用趋势" style="margin-bottom: 24px;">
         <n-space vertical :size="12">
           <div v-for="item in stats.daily_calls" :key="item.date" style="display: flex; align-items: center; gap: 12px;">
-            <span style="width: 80px; font-size: 13px; color: #4a5160;">{{ item.date }}</span>
+            <span style="width: 80px; font-size: 13px; color: var(--t2);">{{ item.date }}</span>
             <n-progress type="line" :percentage="getDailyPercentage(item.count)" :color="'#2080f0'" style="flex: 1;" />
             <span style="width: 40px; text-align: right; font-size: 14px; font-weight: 500;">{{ item.count }}</span>
           </div>
@@ -286,7 +286,7 @@ onMounted(() => {
 
 .provider-label {
   font-size: 13px;
-  color: #7b869c;
+  color: var(--t3);
 }
 
 .provider-model {
@@ -298,13 +298,14 @@ onMounted(() => {
 .provider-tip {
   margin: 12px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--t3);
 }
 
 .provider-tip code {
   padding: 1px 5px;
   border-radius: 4px;
   background: rgba(148, 163, 184, 0.16);
+  color: var(--t2);
   font-size: 11.5px;
 }
 </style>

@@ -18,7 +18,7 @@
             <n-gi>
               <n-statistic label="过程性评价总分" :value="dashboardData.total_score ?? 0">
                 <template #suffix>
-                  <span style="font-size: 14px; color: #5f6673;">/ 100</span>
+                  <span style="font-size: 14px; color: var(--t3);">/ 100</span>
                 </template>
               </n-statistic>
             </n-gi>
@@ -147,7 +147,7 @@
             <div v-if="diagnoseReport" class="ai-report-content">
               <div v-html="renderMarkdown(diagnoseReport)"></div>
             </div>
-            <div v-else-if="!diagnoseLoading" style="text-align: center; padding: 40px 0; color: #5f6673;">
+            <div v-else-if="!diagnoseLoading" style="text-align: center; padding: 40px 0; color: var(--t3);">
               点击上方按钮，AI 将根据您的过程性评价数据生成个性化诊断报告
             </div>
           </n-spin>
@@ -173,6 +173,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h } from 'v
 import { NTag } from 'naive-ui'
 import { evalApi, authApi } from '@/api'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 interface PhaseScore {
   phase_id: number
@@ -209,6 +210,7 @@ interface TrendData {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const gradesVisible = ref(true)
 const dashboardData = ref<DashboardData | null>(null)
@@ -260,7 +262,7 @@ const detailColumns = [
     width: 100,
     render: (row: any) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #8a919e;' }, '--')
+        return h('span', { style: 'color: var(--t4);' }, '--')
       }
       const color = getScoreColor(row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 15px;` }, `${row.score}`)
@@ -279,14 +281,14 @@ const detailColumns = [
     render: (row: any) => {
       if (row.score === null || row.score === undefined) return '--'
       const pct = Math.round(row.score)
-      const color = pct >= 90 ? '#18a058' : pct >= 60 ? '#f0a020' : '#d03050'
+      const color = pct >= 90 ? 'var(--ok)' : pct >= 60 ? 'var(--warn)' : 'var(--bad)'
       return h('span', { style: `color: ${color};` }, `${pct}%`)
     }
   }
 ]
 
 function getScoreColor(score: number | null | undefined): string {
-  if (score === null || score === undefined) return '#5f6673'
+  if (score === null || score === undefined) return 'var(--t3)'
   if (score >= 90) return '#18a058'
   if (score >= 60) return '#f0a020'
   return '#d03050'
@@ -363,15 +365,15 @@ function renderMarkdown(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     // Headings: ### / ## / #
-    .replace(/^### (.+)$/gm, '<h4 style="margin:16px 0 8px;font-size:15px;font-weight:600;color:#333;">$1</h4>')
-    .replace(/^## (.+)$/gm, '<h3 style="margin:18px 0 10px;font-size:16px;font-weight:700;color:#222;">$1</h3>')
-    .replace(/^# (.+)$/gm, '<h2 style="margin:20px 0 12px;font-size:18px;font-weight:700;color:#111;">$1</h2>')
+    .replace(/^### (.+)$/gm, '<h4 style="margin:16px 0 8px;font-size:15px;font-weight:600;color:var(--t1);">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:18px 0 10px;font-size:16px;font-weight:700;color:var(--t1);">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="margin:20px 0 12px;font-size:18px;font-weight:700;color:var(--t1);">$1</h2>')
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:600;">$1</strong>')
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Inline code
-    .replace(/`(.+?)`/g, '<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;font-size:13px;">$1</code>')
+    .replace(/`(.+?)`/g, '<code style="background:var(--c-sunken);padding:2px 6px;border-radius:3px;font-size:13px;">$1</code>')
     // Unordered list items
     .replace(/^[-*] (.+)$/gm, '<li style="margin:4px 0;">$1</li>')
     // Ordered list items
@@ -386,7 +388,7 @@ function renderMarkdown(text: string): string {
   // Clean up <br> inside <ul>
   html = html.replace(/<ul[^>]*>(.*?)<\/ul>/gs, (match) => match.replace(/<br>/g, ''))
 
-  return '<div style="line-height:1.8;color:#333;font-size:14px;"><p style="margin:8px 0;line-height:1.8;">' + html + '</p></div>'
+  return '<div style="line-height:1.8;color:var(--t1);font-size:14px;"><p style="margin:8px 0;line-height:1.8;">' + html + '</p></div>'
 }
 
 /**
@@ -407,6 +409,20 @@ async function generateDiagnoseReport() {
     diagnoseLoading.value = false
   }
 }
+
+/** Canvas 不支持 var()：绘制时读取当前主题下 CSS 变量的解析值 */
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+function redrawCharts() {
+  drawPieChart()
+  drawRadarChart()
+  drawTrendChart()
+}
+
+// 明暗切换后重绘图表，让文字 / 网格线跟随主题
+watch(() => themeStore.isDark, () => { nextTick(redrawCharts) })
 
 /**
  * 绘制阶段得分占比饼图
@@ -470,7 +486,7 @@ function drawPieChart() {
     ctx.fill()
 
     // Slice border
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
 
@@ -494,12 +510,12 @@ function drawPieChart() {
   }
 
   // Center text
-  ctx.fillStyle = '#333'
+  ctx.fillStyle = cssVar('--t1')
   ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(total.toFixed(1), centerX, centerY - 8)
-  ctx.fillStyle = '#5f6673'
+  ctx.fillStyle = cssVar('--t3')
   ctx.font = '11px sans-serif'
   ctx.fillText('总分', centerX, centerY + 12)
 
@@ -519,12 +535,12 @@ function drawPieChart() {
     ctx.fill()
 
     // Phase name
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.font = '13px sans-serif'
     ctx.fillText(slice.name, legendX + 20, legendY + 1)
 
     // Score and percentage
-    ctx.fillStyle = '#4a5160'
+    ctx.fillStyle = cssVar('--t2')
     ctx.font = '12px sans-serif'
     ctx.fillText(slice.value.toFixed(1) + ' (' + pct + '%)', legendX + 20, legendY + 18)
 
@@ -570,13 +586,13 @@ function drawRadarChart() {
       else ctx.lineTo(x, y)
     }
     ctx.closePath()
-    ctx.strokeStyle = ring === 5 ? '#d0d5dd' : '#e8e8e8'
+    ctx.strokeStyle = ring === 5 ? cssVar('--line-strong') : cssVar('--line')
     ctx.lineWidth = 1
     ctx.stroke()
 
     // Ring labels
     if (ring % 2 === 0 || ring === 5) {
-      ctx.fillStyle = '#8a919e'
+      ctx.fillStyle = cssVar('--t4')
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(String(ring * 20), centerX - 4, centerY - r + 12)
@@ -592,7 +608,7 @@ function drawRadarChart() {
       centerX + maxRadius * Math.cos(angle),
       centerY + maxRadius * Math.sin(angle)
     )
-    ctx.strokeStyle = '#d0d5dd'
+    ctx.strokeStyle = cssVar('--line-strong')
     ctx.lineWidth = 1
     ctx.stroke()
   }
@@ -628,13 +644,13 @@ function drawRadarChart() {
     ctx.arc(x, y, 4, 0, 2 * Math.PI)
     ctx.fillStyle = '#2080f0'
     ctx.fill()
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
   }
 
   // Draw labels
-  ctx.fillStyle = '#333'
+  ctx.fillStyle = cssVar('--t1')
   ctx.font = '13px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -653,7 +669,7 @@ function drawRadarChart() {
 
     const label = radarData.value[i].dim_label
     const scoreText = radarData.value[i].score.toFixed(1)
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.fillText(label, x, y - 8)
     ctx.fillStyle = '#2080f0'
     ctx.font = 'bold 12px sans-serif'
@@ -689,7 +705,7 @@ function drawTrendChart() {
   const minVal = 0
 
   // Draw background grid
-  ctx.strokeStyle = '#f0f0f0'
+  ctx.strokeStyle = cssVar('--line')
   ctx.lineWidth = 1
   for (let i = 0; i <= 5; i++) {
     const y = padding.top + (chartH / 5) * i
@@ -699,7 +715,7 @@ function drawTrendChart() {
     ctx.stroke()
 
     // Y-axis labels
-    ctx.fillStyle = '#5f6673'
+    ctx.fillStyle = cssVar('--t3')
     ctx.font = '11px sans-serif'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -709,7 +725,7 @@ function drawTrendChart() {
 
   // X-axis labels
   const stepX = chartW / Math.max(points.length - 1, 1)
-  ctx.fillStyle = '#5f6673'
+  ctx.fillStyle = cssVar('--t3')
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -759,7 +775,7 @@ function drawTrendChart() {
       ctx.arc(x, y, 3.5, 0, 2 * Math.PI)
       ctx.fillStyle = '#2080f0'
       ctx.fill()
-      ctx.strokeStyle = '#fff'
+      ctx.strokeStyle = cssVar('--c-card')
       ctx.lineWidth = 2
       ctx.stroke()
     }
@@ -771,12 +787,12 @@ function drawTrendChart() {
     ctx.arc(x, y, 5, 0, 2 * Math.PI)
     ctx.fillStyle = '#2080f0'
     ctx.fill()
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
 
     // Show score label
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.font = 'bold 13px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
@@ -786,14 +802,14 @@ function drawTrendChart() {
   // Legend
   ctx.fillStyle = '#2080f0'
   ctx.fillRect(displayWidth - padding.right - 80, 8, 14, 3)
-  ctx.fillStyle = '#4a5160'
+  ctx.fillStyle = cssVar('--t2')
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('总分', displayWidth - padding.right - 62, 10)
 
   // Chart title
-  ctx.fillStyle = '#5f6673'
+  ctx.fillStyle = cssVar('--t3')
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText('Y: 分数 (0-100)', padding.left, 12)
@@ -848,9 +864,7 @@ async function loadData() {
 
 // Redraw on window resize
 function handleResize() {
-  drawPieChart()
-  drawRadarChart()
-  drawTrendChart()
+  redrawCharts()
 }
 
 onMounted(() => {
@@ -885,7 +899,7 @@ onBeforeUnmount(() => {
   text-align: center;
   padding: 20px 12px;
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--c-sunken);
   transition: box-shadow 0.2s;
 }
 
@@ -895,7 +909,7 @@ onBeforeUnmount(() => {
 
 .phase-name {
   font-size: 14px;
-  color: #4a5160;
+  color: var(--t2);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -909,13 +923,13 @@ onBeforeUnmount(() => {
 
 .phase-weight {
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
   margin-bottom: 12px;
 }
 
 .phase-bar {
   height: 6px;
-  background: #eee;
+  background: var(--c-sunken);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -947,8 +961,8 @@ onBeforeUnmount(() => {
 }
 
 .ai-report-content {
-  background: #f8f9fa;
-  border: 1px solid #e8e8e8;
+  background: var(--c-sunken);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px 24px;
   min-height: 80px;
@@ -957,7 +971,7 @@ onBeforeUnmount(() => {
 .ai-report-content :deep(h2),
 .ai-report-content :deep(h3),
 .ai-report-content :deep(h4) {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--line);
   padding-bottom: 6px;
 }
 
@@ -966,7 +980,7 @@ onBeforeUnmount(() => {
 }
 
 .ai-report-content :deep(code) {
-  background: #f0f0f0;
+  background: var(--c-sunken);
   padding: 1px 4px;
   border-radius: 3px;
 }

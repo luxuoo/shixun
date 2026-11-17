@@ -58,10 +58,6 @@ const resolvedColor = computed(() => props.color || (themeStore.isDark ? 'cyan' 
 .empty-text {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #5f6673;
-}
-
-:global(html.dark) .empty-text {
-  color: #a9b0be;
+  color: var(--t3);
 }
 </style>

@@ -71,15 +71,15 @@ const difficultyOptions = [
 
 /* 分类视觉：淡底 + 角色，替代原来的高饱和渐变封面 */
 const CATEGORY_VISUAL: Record<string, { bg: string; ink: string; shape: string }> = {
-  'Python': { bg: '#eef2ff', ink: 'blue', shape: 'circle' },
-  'Web': { bg: '#ecfeff', ink: 'cyan', shape: 'cloud' },
-  'YOLO': { bg: '#f0fdf4', ink: 'green', shape: 'star' },
-  '数据分析': { bg: '#fff7ed', ink: 'orange', shape: 'gem' },
-  '机器学习': { bg: '#faf5ff', ink: 'violet', shape: 'planet' }
+  'Python': { bg: 'var(--indigo-bg)', ink: 'blue', shape: 'circle' },
+  'Web': { bg: 'var(--cyan-bg)', ink: 'cyan', shape: 'cloud' },
+  'YOLO': { bg: 'var(--green-bg)', ink: 'green', shape: 'star' },
+  '数据分析': { bg: 'var(--orange-bg)', ink: 'orange', shape: 'gem' },
+  '机器学习': { bg: 'var(--purple-bg)', ink: 'violet', shape: 'planet' }
 }
 
 function visualOf(category: string) {
-  return CATEGORY_VISUAL[category] || { bg: '#f4f5f7', ink: 'black', shape: 'blob' }
+  return CATEGORY_VISUAL[category] || { bg: 'var(--c-sunken)', ink: 'black', shape: 'blob' }
 }
 
 function coverBg(category: string) {
@@ -144,9 +144,9 @@ onMounted(() => { loadTasks() })
 }
 
 .task-card {
-  background: #fff;
+  background: var(--c-card);
   border-radius: 12px;
-  border: 1px solid #e8e8ec;
+  border: 1px solid var(--line);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s;
@@ -154,8 +154,8 @@ onMounted(() => { loadTasks() })
 
 .task-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  border-color: #d0d0d8;
+  box-shadow: var(--shadow-2);
+  border-color: var(--line);
 }
 
 .task-cover {
@@ -179,7 +179,7 @@ onMounted(() => { loadTasks() })
   margin: 0 0 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #1e1e2d;
+  color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -188,7 +188,7 @@ onMounted(() => { loadTasks() })
 .task-desc {
   margin: 0 0 12px;
   font-size: 13px;
-  color: #4a5160;
+  color: var(--t2);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -200,7 +200,7 @@ onMounted(() => { loadTasks() })
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
 }
 
 /* 响应式 */

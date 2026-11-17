@@ -88,8 +88,8 @@ onMounted(() => { loadHistory() })
 .history-list { display: flex; flex-direction: column; gap: 12px; }
 
 .history-card {
-  background: #fff;
-  border: 1px solid #e8e8ec;
+  background: var(--c-card);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 16px 20px;
 }
@@ -103,18 +103,18 @@ onMounted(() => { loadHistory() })
 
 .history-time {
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
 }
 
 .history-content {
   font-size: 14px;
   line-height: 1.7;
-  color: #333;
+  color: var(--t1);
 }
 
 .history-content :deep(p) { margin: 0 0 6px; }
 .history-content :deep(p:last-child) { margin-bottom: 0; }
-.history-content :deep(code) { background: #f0f0f4; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.history-content :deep(code) { background: var(--c-sunken); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
 .history-content :deep(pre) { background: #1e1e2d; color: #e0e0e0; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
 .history-content :deep(pre code) { background: none; padding: 0; color: inherit; }
 .history-content :deep(ul), .history-content :deep(ol) { padding-left: 20px; margin: 4px 0; }

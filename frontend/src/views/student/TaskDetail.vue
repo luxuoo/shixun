@@ -10,7 +10,7 @@
               <n-tag :type="getDifficultyType(task.difficulty)">{{ task.difficulty }}星难度</n-tag>
             </n-space>
             <h2 style="margin: 0 0 8px 0;">{{ task.title }}</h2>
-            <p style="color: #4a5160; margin: 0;">{{ task.description }}</p>
+            <p style="color: var(--t2); margin: 0;">{{ task.description }}</p>
             <n-space style="margin-top: 16px;" :size="16">
               <n-statistic label="总步骤" :value="task.total_steps" />
               <n-statistic label="预计时长" :value="task.estimated_hours || '未知'" suffix="小时" />
@@ -56,7 +56,7 @@
             <n-space vertical :size="16">
               <div>
                 <h4 style="margin: 0 0 8px 0;">步骤说明</h4>
-                <p style="color: #4a5160; margin: 0; white-space: pre-wrap;">{{ currentStepData.description }}</p>
+                <p style="color: var(--t2); margin: 0; white-space: pre-wrap;">{{ currentStepData.description }}</p>
               </div>
               <div v-if="currentStepData.requirements">
                 <h4 style="margin: 0 0 8px 0;">具体要求</h4>
@@ -75,7 +75,7 @@
 
           <!-- 代码编辑器 -->
           <n-card title="代码编辑器" style="margin-bottom: 16px;">
-            <div ref="editorContainer" :style="{ height: isMobile ? '300px' : '400px', border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden' }"></div>
+            <div ref="editorContainer" :style="{ height: isMobile ? '300px' : '400px', border: '1px solid var(--line)', borderRadius: '8px', overflow: 'hidden' }"></div>
             <div class="editor-actions">
               <n-space :size="8">
                 <n-button @click="resetCode" size="small">重置代码</n-button>
@@ -111,7 +111,7 @@
         <div class="ai-chat-area" ref="chatArea">
           <div v-for="(msg, index) in aiMessages" :key="index" :class="['chat-msg', msg.role]">
             <div class="chat-avatar">
-              <n-icon v-if="msg.role === 'ai'" size="20" color="#6366f1"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
+              <n-icon v-if="msg.role === 'ai'" size="20" color="var(--indigo-fg)"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
               <n-icon v-else size="20" color="#fff"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></n-icon>
             </div>
             <div class="chat-bubble" :class="msg.role">
@@ -123,7 +123,7 @@
           <!-- AI 加载气泡 -->
           <div v-if="isAiTyping" class="chat-msg ai">
             <div class="chat-avatar">
-              <n-icon size="20" color="#6366f1"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
+              <n-icon size="20" color="var(--indigo-fg)"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></n-icon>
             </div>
             <div class="chat-bubble ai typing-bubble">
               <div class="typing-dots">
@@ -505,7 +505,7 @@ onBeforeUnmount(() => {
   max-height: 480px;
   overflow-y: auto;
   padding: 20px;
-  background: #f5f5f9;
+  background: var(--c-sunken);
   border-radius: 12px;
 }
 
@@ -530,11 +530,11 @@ onBeforeUnmount(() => {
 }
 
 .chat-msg.ai .chat-avatar {
-  background: #eef2ff;
+  background: var(--indigo-bg);
 }
 
 .chat-msg.user .chat-avatar {
-  background: #6366f1;
+  background: var(--indigo);
 }
 
 .chat-bubble {
@@ -546,14 +546,14 @@ onBeforeUnmount(() => {
 }
 
 .chat-bubble.ai {
-  background: #fff;
-  border: 1px solid #e8e8ec;
+  background: var(--c-card);
+  border: 1px solid var(--line);
   border-top-left-radius: 4px;
-  color: #1e1e2d;
+  color: var(--t1);
 }
 
 .chat-bubble.user {
-  background: #6366f1;
+  background: var(--indigo);
   color: white;
   border-top-right-radius: 4px;
 }
@@ -568,7 +568,7 @@ onBeforeUnmount(() => {
 }
 
 .markdown-body :deep(code) {
-  background: #f0f0f4;
+  background: var(--c-sunken);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
@@ -604,10 +604,10 @@ onBeforeUnmount(() => {
 }
 
 .markdown-body :deep(blockquote) {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid var(--indigo);
   padding-left: 12px;
   margin: 8px 0;
-  color: #4a5160;
+  color: var(--t2);
 }
 
 /* 加载动画 */
@@ -624,7 +624,7 @@ onBeforeUnmount(() => {
 .typing-dots span {
   width: 8px;
   height: 8px;
-  background: #6366f1;
+  background: var(--indigo);
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out;
 }

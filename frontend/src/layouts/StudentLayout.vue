@@ -256,7 +256,7 @@ function handleUserMenu(key: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: var(--c-card);
 }
 
 @media (min-width: 769px) {

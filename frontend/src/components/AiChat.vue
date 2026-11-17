@@ -13,7 +13,7 @@
       <div class="messages-area" ref="messagesRef">
         <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.role]">
           <div class="message-avatar">
-            <n-avatar :size="36" round :color="msg.role === 'ai' ? '#2080f0' : '#18a058'">
+            <n-avatar :size="36" round :color="msg.role === 'ai' ? 'var(--info)' : 'var(--ok)'">
               {{ msg.role === 'ai' ? 'AI' : '我' }}
             </n-avatar>
           </div>
@@ -129,7 +129,7 @@ watch(() => props.messages.length, () => {
   max-height: 400px;
   overflow-y: auto;
   padding: 16px;
-  background: #f5f5f5;
+  background: var(--c-sunken);
   border-radius: 8px;
   margin-bottom: 16px;
 }
@@ -150,7 +150,7 @@ watch(() => props.messages.length, () => {
 
 .message-time {
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
   margin-top: 4px;
   display: block;
 }
@@ -160,7 +160,7 @@ watch(() => props.messages.length, () => {
 }
 
 .actions-area {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--line);
   padding-top: 16px;
 }
 </style>

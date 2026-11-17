@@ -184,17 +184,28 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--c-page);
   padding: 20px;
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
-  background: #fff;
+  background: var(--c-card);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-2);
+  animation: reg-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes reg-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-card { animation: none; }
 }
 
 .register-header {
@@ -205,12 +216,12 @@ onMounted(() => {
 .register-header h1 {
   margin-top: 16px;
   font-size: 24px;
-  color: #333;
+  color: var(--t1);
 }
 
 .register-header p {
   margin-top: 8px;
-  color: #4a5160;
+  color: var(--t3);
   font-size: 14px;
 }
 

@@ -26,13 +26,13 @@
           <n-space align="center" justify="space-between">
             <n-space align="center" :size="24">
               <div>
-                <div style="font-size: 14px; color: #5f6673; margin-bottom: 4px;">过程性评价总分</div>
+                <div style="font-size: 14px; color: var(--t3); margin-bottom: 4px;">过程性评价总分</div>
                 <div
                   class="total-score-number"
                   :style="{ color: getScoreColor(dashboardData.total_score) }"
                 >
                   {{ dashboardData.total_score ?? '--' }}
-                  <span style="font-size: 16px; color: #5f6673; font-weight: 400;">/ 100</span>
+                  <span style="font-size: 16px; color: var(--t3); font-weight: 400;">/ 100</span>
                 </div>
               </div>
               <n-divider vertical />
@@ -97,10 +97,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch, h } from 'vue'
 import { NTag, NProgress } from 'naive-ui'
 import { evalApi, authApi } from '@/api'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 interface Indicator {
   name: string
@@ -134,6 +135,7 @@ interface DashboardData {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const gradesVisible = ref(true)
 const dashboardData = ref<DashboardData | null>(null)
@@ -163,7 +165,7 @@ const phaseColumns = [
     width: 120,
     render: (row: PhaseScore) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #8a919e;' }, '未录入')
+        return h('span', { style: 'color: var(--t4);' }, '未录入')
       }
       const color = getScoreColor(row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 16px;` }, `${row.score}`)
@@ -175,7 +177,7 @@ const phaseColumns = [
     width: 120,
     render: (row: PhaseScore) => {
       if (row.weighted_score === null || row.weighted_score === undefined) {
-        return h('span', { style: 'color: #8a919e;' }, '--')
+        return h('span', { style: 'color: var(--t4);' }, '--')
       }
       return h('span', { style: 'font-weight: 600;' }, `${row.weighted_score}`)
     }
@@ -227,7 +229,7 @@ const detailColumns = [
     width: 100,
     render: (row: any) => {
       if (row.score === null || row.score === undefined) {
-        return h('span', { style: 'color: #8a919e;' }, '未录入')
+        return h('span', { style: 'color: var(--t4);' }, '未录入')
       }
       const color = getScoreColor(row.normalized_score ?? row.score)
       return h('span', { style: `color: ${color}; font-weight: 600; font-size: 15px;` }, `${row.score}`)
@@ -239,7 +241,7 @@ const detailColumns = [
     width: 110,
     render: (row: any) => {
       if (row.normalized_score === null || row.normalized_score === undefined) {
-        return h('span', { style: 'color: #8a919e;' }, '--')
+        return h('span', { style: 'color: var(--t4);' }, '--')
       }
       const color = getScoreColor(row.normalized_score)
       return h('span', { style: `color: ${color}; font-weight: 500;` }, `${row.normalized_score}`)
@@ -268,10 +270,10 @@ const detailColumns = [
 // ---- Helpers ----
 
 function getScoreColor(score: number | null | undefined): string {
-  if (score === null || score === undefined) return '#5f6673'
-  if (score >= 90) return '#18a058'
-  if (score >= 60) return '#f0a020'
-  return '#d03050'
+  if (score === null || score === undefined) return 'var(--t3)'
+  if (score >= 90) return 'var(--ok)'
+  if (score >= 60) return 'var(--warn-ink)'
+  return 'var(--bad)'
 }
 
 function getScoreTagType(score: number | null | undefined): 'success' | 'warning' | 'error' | 'default' {
@@ -323,6 +325,10 @@ function buildDetailTable(dashboard: DashboardData): any[] {
 
 // ---- Radar chart ----
 
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 function drawRadarChart() {
   const canvas = radarCanvasRef.value
   if (!canvas || !radarData.value.length) return
@@ -361,13 +367,13 @@ function drawRadarChart() {
       else ctx.lineTo(x, y)
     }
     ctx.closePath()
-    ctx.strokeStyle = ring === 5 ? '#d0d5dd' : '#e8e8e8'
+    ctx.strokeStyle = ring === 5 ? cssVar('--line-strong') : cssVar('--line')
     ctx.lineWidth = 1
     ctx.stroke()
 
     // Ring labels
     if (ring % 2 === 0 || ring === 5) {
-      ctx.fillStyle = '#8a919e'
+      ctx.fillStyle = cssVar('--t4')
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'right'
       ctx.fillText(String(ring * 20), centerX - 4, centerY - r + 12)
@@ -383,7 +389,7 @@ function drawRadarChart() {
       centerX + maxRadius * Math.cos(angle),
       centerY + maxRadius * Math.sin(angle)
     )
-    ctx.strokeStyle = '#d0d5dd'
+    ctx.strokeStyle = cssVar('--line-strong')
     ctx.lineWidth = 1
     ctx.stroke()
   }
@@ -419,7 +425,7 @@ function drawRadarChart() {
     ctx.arc(x, y, 4, 0, 2 * Math.PI)
     ctx.fillStyle = '#2080f0'
     ctx.fill()
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
   }
@@ -442,7 +448,7 @@ function drawRadarChart() {
 
     const label = radarData.value[i].dim_label
     const scoreText = radarData.value[i].score.toFixed(1)
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.fillText(label, x, y - 8)
     ctx.fillStyle = '#2080f0'
     ctx.font = 'bold 12px sans-serif'
@@ -496,6 +502,10 @@ function handleResize() {
   drawRadarChart()
 }
 
+watch(() => themeStore.isDark, () => {
+  nextTick(drawRadarChart)
+})
+
 onMounted(() => {
   loadData()
   window.addEventListener('resize', handleResize)
@@ -508,22 +518,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* 空态卡片：高度定在内容区，并让角色垂直居中 */
-.empty-card :deep(.n-card__content) {
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 空态卡片：高度定在内容区，并让角色垂直居中 */
-.empty-card :deep(.n-card__content) {
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 空态卡片：高度定在内容区，并让角色居中 */
 .empty-card :deep(.n-card__content) {
   min-height: 320px;
   display: flex;

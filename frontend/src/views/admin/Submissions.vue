@@ -220,11 +220,11 @@ function getStatusLabel(status: string) {
 }
 
 function getScoreColor(score: number | null) {
-  if (!score) return '#5f6673'
-  if (score >= 90) return '#18a058'
-  if (score >= 80) return '#2080f0'
-  if (score >= 60) return '#f0a020'
-  return '#d03050'
+  if (!score) return 'var(--t3)'
+  if (score >= 90) return 'var(--ok)'
+  if (score >= 80) return 'var(--info)'
+  if (score >= 60) return 'var(--warn-ink)'
+  return 'var(--bad)'
 }
 
 function openReview(row: any) {

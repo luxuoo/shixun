@@ -205,8 +205,10 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, h } from 'vue'
 import { NTag, NIcon, useMessage } from 'naive-ui'
 import { evalApi, adminApi } from '@/api'
+import { useThemeStore } from '@/stores/theme'
 
 const message = useMessage()
+const themeStore = useThemeStore()
 
 // --- 类型定义 ---
 interface ScoreRange {
@@ -300,11 +302,11 @@ const rankingColumns = [
     },
     render(row: { total_score: number }) {
       const score = row.total_score
-      let color = '#d03050'
-      if (score >= 90) color = '#18a058'
-      else if (score >= 80) color = '#2080f0'
-      else if (score >= 70) color = '#f0a020'
-      else if (score >= 60) color = '#f0a020'
+      let color = 'var(--bad)'
+      if (score >= 90) color = 'var(--ok)'
+      else if (score >= 80) color = 'var(--info)'
+      else if (score >= 70) color = 'var(--warn-ink)'
+      else if (score >= 60) color = 'var(--warn-ink)'
       return h(
         'span',
         { style: `color: ${color}; font-weight: 600; font-size: 15px;` },
@@ -371,6 +373,10 @@ function getScoreRangeColor(range: string): string {
 }
 
 // --- 绘制柱状图 ---
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 function drawDistributionChart() {
   const canvas = chartCanvas.value
   if (!canvas || !dashboard.value) return
@@ -401,7 +407,7 @@ function drawDistributionChart() {
   ctx.clearRect(0, 0, displayWidth, displayHeight)
 
   // 绘制背景网格线
-  ctx.strokeStyle = '#f0f0f0'
+  ctx.strokeStyle = cssVar('--line-soft')
   ctx.lineWidth = 1
   const gridLines = 5
   for (let i = 0; i <= gridLines; i++) {
@@ -413,7 +419,7 @@ function drawDistributionChart() {
 
     // Y 轴标签
     const value = niceMax - (niceMax / gridLines) * i
-    ctx.fillStyle = '#5f6673'
+    ctx.fillStyle = cssVar('--t3')
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
@@ -451,14 +457,14 @@ function drawDistributionChart() {
     ctx.fill()
 
     // 柱体上方数值
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.font = 'bold 13px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
     ctx.fillText(String(item.count), x + barWidth / 2, y - 6)
 
     // X 轴标签
-    ctx.fillStyle = '#4a5160'
+    ctx.fillStyle = cssVar('--t2')
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
@@ -469,7 +475,7 @@ function drawDistributionChart() {
   ctx.save()
   ctx.translate(16, padding.top + chartHeight / 2)
   ctx.rotate(-Math.PI / 2)
-  ctx.fillStyle = '#4a5160'
+  ctx.fillStyle = cssVar('--t2')
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -477,7 +483,7 @@ function drawDistributionChart() {
   ctx.restore()
 
   // X 轴标题
-  ctx.fillStyle = '#4a5160'
+  ctx.fillStyle = cssVar('--t2')
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -533,7 +539,7 @@ function drawPieChart() {
     ctx.fill()
 
     // 扇区之间的分隔线
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
 
@@ -556,12 +562,12 @@ function drawPieChart() {
   }
 
   // 中心文字
-  ctx.fillStyle = '#333'
+  ctx.fillStyle = cssVar('--t1')
   ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(`${total}`, centerX, centerY - 8)
-  ctx.fillStyle = '#5f6673'
+  ctx.fillStyle = cssVar('--t3')
   ctx.font = '12px sans-serif'
   ctx.fillText('总人数', centerX, centerY + 12)
 
@@ -585,7 +591,7 @@ function drawPieChart() {
     ctx.fillRect(legendX, y - 6, 12, 12)
 
     // 标签文字
-    ctx.fillStyle = '#555'
+    ctx.fillStyle = cssVar('--t2')
     ctx.font = '12px sans-serif'
     ctx.fillText(`${label} (${item.count})`, legendX + 18, y)
   }
@@ -622,7 +628,7 @@ function drawRadarChart() {
 
   // 绘制背景网格 (同心菱形)
   const gridLevels = 5
-  ctx.strokeStyle = '#e8e8e8'
+  ctx.strokeStyle = cssVar('--line')
   ctx.lineWidth = 1
 
   for (let level = 1; level <= gridLevels; level++) {
@@ -640,7 +646,7 @@ function drawRadarChart() {
 
     // 刻度数值
     const labelValue = Math.round((maxValue / gridLevels) * level)
-    ctx.fillStyle = '#8a919e'
+    ctx.fillStyle = cssVar('--t4')
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'bottom'
@@ -648,7 +654,7 @@ function drawRadarChart() {
   }
 
   // 绘制轴线
-  ctx.strokeStyle = '#ddd'
+  ctx.strokeStyle = cssVar('--line-strong')
   ctx.lineWidth = 1
   for (let i = 0; i < axes; i++) {
     const angle = -Math.PI / 2 + angleStep * i
@@ -694,7 +700,7 @@ function drawRadarChart() {
     ctx.arc(x, y, 4, 0, 2 * Math.PI)
     ctx.fillStyle = '#2080f0'
     ctx.fill()
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = cssVar('--c-card')
     ctx.lineWidth = 2
     ctx.stroke()
 
@@ -702,7 +708,7 @@ function drawRadarChart() {
     const labelR = r + 18
     const labelX = centerX + Math.cos(angle) * labelR
     const labelY = centerY + Math.sin(angle) * labelR
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = cssVar('--t1')
     ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -711,7 +717,7 @@ function drawRadarChart() {
 
   // 绘制维度名称标签
   const labelRadius = maxRadius + 36
-  ctx.fillStyle = '#555'
+  ctx.fillStyle = cssVar('--t2')
   ctx.font = '13px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -845,6 +851,10 @@ function handleResize() {
   drawRadarChart()
 }
 
+watch(() => themeStore.isDark, () => {
+  nextTick(handleResize)
+})
+
 // --- 生命周期 ---
 onMounted(() => {
   loadClasses()
@@ -875,13 +885,13 @@ onBeforeUnmount(() => {
 
 .weak-dim-item {
   padding: 12px 16px;
-  background: #fafafa;
+  background: var(--c-sunken);
   border-radius: 8px;
   transition: background 0.2s;
 }
 
 .weak-dim-item:hover {
-  background: #f0f0f0;
+  background: var(--c-hover);
 }
 
 .weak-dim-header {
@@ -893,13 +903,13 @@ onBeforeUnmount(() => {
 .weak-dim-label {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--t1);
 }
 
 .weak-dim-score {
   font-size: 15px;
   font-weight: 600;
-  color: #d03050;
+  color: var(--bad);
 }
 
 @media (max-width: 1024px) {
@@ -919,11 +929,11 @@ onBeforeUnmount(() => {
   word-break: break-word;
   line-height: 1.8;
   font-size: 14px;
-  color: #333;
+  color: var(--t1);
   padding: 16px 20px;
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  background: linear-gradient(135deg, var(--blue-bg) 0%, var(--indigo-bg) 100%);
   border-radius: 8px;
-  border: 1px solid #e0e6f6;
+  border: 1px solid var(--line);
   min-height: 120px;
 }
 </style>

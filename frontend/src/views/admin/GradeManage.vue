@@ -318,7 +318,7 @@ const scoreColumns = [
     key: 'avg_score',
     width: 110,
     render: (row: any) => {
-      if (row.avg_score == null) return h('span', { style: 'color: #8a919e;' }, '--')
+      if (row.avg_score == null) return h('span', { style: 'color: var(--t4);' }, '--')
       const color = row.avg_score >= 90 ? '#18a058' : row.avg_score >= 60 ? '#f0a020' : '#d03050'
       return h('span', { style: `color: ${color}; font-weight: 600;` }, row.avg_score.toFixed(1))
     }
@@ -429,7 +429,7 @@ onMounted(() => {
 
 .step-content {
   font-size: 13px;
-  color: #555;
+  color: var(--t2);
   padding: 4px 0;
 }
 
@@ -447,13 +447,13 @@ onMounted(() => {
 }
 
 .concept-card.blue {
-  background: #f0f6ff;
-  border-color: #b8d4ff;
+  background: var(--blue-bg);
+  border-color: color-mix(in srgb, var(--blue-fg) 30%, var(--blue-bg));
 }
 
 .concept-card.green {
-  background: #f0faf0;
-  border-color: #b8e6b8;
+  background: var(--green-bg);
+  border-color: color-mix(in srgb, var(--green-fg) 30%, var(--green-bg));
 }
 
 .concept-num {
@@ -478,7 +478,7 @@ onMounted(() => {
 
 .concept-desc {
   font-size: 13px;
-  color: #555;
+  color: var(--t2);
   line-height: 1.8;
 }
 
@@ -494,15 +494,15 @@ onMounted(() => {
 
 .formula-box {
   padding: 20px;
-  background: #f8f9fa;
+  background: var(--c-sunken);
   border-radius: 8px;
-  border: 1px solid #e8e8ec;
+  border: 1px solid var(--line);
 }
 
 .formula-title {
   font-weight: 600;
   margin-bottom: 8px;
-  color: #4a5160;
+  color: var(--t2);
   font-size: 13px;
 }
 
@@ -514,11 +514,11 @@ onMounted(() => {
 
 .formula-example {
   font-size: 13px;
-  color: #5f6673;
+  color: var(--t3);
   padding: 12px;
-  background: #fff;
+  background: var(--c-card);
   border-radius: 6px;
-  border: 1px dashed #ddd;
+  border: 1px dashed var(--line);
 }
 
 @media (max-width: 768px) {

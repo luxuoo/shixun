@@ -437,7 +437,7 @@ onBeforeUnmount(() => {
 .sub {
   margin: 6px 0 0;
   font-size: 12.5px;
-  color: var(--muted-2, #5f6673);
+  color: var(--t3);
 }
 
 .hint {
@@ -458,10 +458,10 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
-  border: 1px solid var(--hair, #dcdfe6);
+  border: 1px solid var(--line-input);
   border-left: 2px solid #d0a54a;
   border-radius: 2px;
-  background: var(--panel, #fff);
+  background: var(--c-card);
 }
 
 .update-body {
@@ -492,7 +492,7 @@ onBeforeUnmount(() => {
 }
 
 .commit-list .sha {
-  color: var(--muted-2, #6b7280);
+  color: var(--t2);
   flex: 0 0 auto;
 }
 
@@ -518,12 +518,6 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-.ops.dark .update-box {
-  background: #1b1c20;
-  border-color: rgba(233, 233, 230, 0.14);
-  border-left-color: #d0a54a;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -533,15 +527,15 @@ onBeforeUnmount(() => {
 
 .panel {
   padding: 16px 18px;
-  border: 1px solid var(--hair, #dcdfe6);
+  border: 1px solid var(--line-input);
   border-radius: 4px;
-  background: var(--panel, #fff);
+  background: var(--c-card);
 }
 
 .panel-label {
   font-size: 11.5px;
   letter-spacing: 0.06em;
-  color: var(--muted-2, #6b7280);
+  color: var(--t2);
   margin-bottom: 10px;
 }
 
@@ -560,7 +554,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 4px 12px;
   font-size: 11.5px;
-  color: var(--muted-2, #6b7280);
+  color: var(--t2);
 }
 
 .service {
@@ -579,7 +573,7 @@ onBeforeUnmount(() => {
 }
 
 .muted {
-  color: var(--muted-2, #8a919e);
+  color: var(--t4);
 }
 
 .block {
@@ -605,14 +599,14 @@ onBeforeUnmount(() => {
 
 .subject {
   font-size: 12.5px;
-  color: var(--muted-2, #4a5160);
+  color: var(--t2);
 }
 
 .empty {
   text-align: center;
   padding: 26px 0;
   font-size: 12.5px;
-  color: var(--muted-2, #8a919e);
+  color: var(--t4);
 }
 
 .log {
@@ -630,72 +624,11 @@ onBeforeUnmount(() => {
   word-break: break-all;
 }
 
-/* 暗色主题：卡片不要用固定白底 */
-.ops.dark .panel {
-  background: #1b1c20;
-  border-color: rgba(233, 233, 230, 0.14);
-}
-
-.ops.dark .panel-main {
-  color: #e9e9e6;
-}
-
-.ops.dark .subject {
-  color: #c3c7cd;
-}
-
-.ops.dark .muted {
-  color: #9096a0;
-}
-
-.ops.dark .panel-meta,
-.ops.dark .panel-label,
-.ops.dark .sub {
-  color: #9096a0;
-}
-
+/* 发布日志是刻意的黑色终端区域，两种主题下都保持深色；暗色下仅微调底色与边线 */
 .ops.dark .log {
   background: #101114;
   border: 1px solid rgba(233, 233, 230, 0.12);
   color: #cfd4ce;
-}
-
-.ops.dark .empty {
-  color: #9096a0;
-}
-
-/* 暗色主题：卡片不要用固定白底 */
-.ops.dark .panel {
-  background: #1b1c20;
-  border-color: rgba(233, 233, 230, 0.14);
-}
-
-.ops.dark .panel-main {
-  color: #e9e9e6;
-}
-
-.ops.dark .subject {
-  color: #c3c7cd;
-}
-
-.ops.dark .muted {
-  color: #9096a0;
-}
-
-.ops.dark .panel-meta,
-.ops.dark .panel-label,
-.ops.dark .sub {
-  color: #9096a0;
-}
-
-.ops.dark .log {
-  background: #101114;
-  border: 1px solid rgba(233, 233, 230, 0.12);
-  color: #cfd4ce;
-}
-
-.ops.dark .empty {
-  color: #9096a0;
 }
 
 @media (max-width: 900px) {

@@ -288,7 +288,7 @@ onMounted(load)
 .sub {
   margin: 0;
   font-size: 13px;
-  color: var(--n-text-color-3, #888);
+  color: var(--t4);
 }
 
 .fallback-note {
@@ -297,7 +297,7 @@ onMounted(load)
   padding: 8px 12px;
   border-radius: 4px;
   background: rgba(240, 160, 32, 0.1);
-  color: #b4740f;
+  color: var(--orange-fg);
 }
 
 .provider-card {

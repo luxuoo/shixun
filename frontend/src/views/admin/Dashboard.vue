@@ -4,8 +4,8 @@
     <n-card class="welcome-banner">
       <div class="welcome-content">
         <div>
-          <h2 style="margin: 0; color: #1e1e2d;">{{ greeting }}，{{ userStore.user?.name || userStore.user?.username }}</h2>
-          <p style="margin: 6px 0 0; color: #4a5160;">{{ userStore.isAdmin ? '系统管理员' : '教师' }} · 今天是 {{ todayStr }}</p>
+          <h2 style="margin: 0; color: var(--t1);">{{ greeting }}，{{ userStore.user?.name || userStore.user?.username }}</h2>
+          <p style="margin: 6px 0 0; color: var(--t2);">{{ userStore.isAdmin ? '系统管理员' : '教师' }} · 今天是 {{ todayStr }}</p>
         </div>
         <n-tag :type="userStore.isAdmin ? 'error' : 'warning'" size="large" round>
           {{ userStore.isAdmin ? '管理员' : '教师' }}
@@ -68,28 +68,28 @@
         <n-space vertical align="center" :size="8">
           <AoraBot shape="chick" color="blue" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-students" />
           <span style="font-weight: 500;">学生管理</span>
-          <span style="font-size: 12px; color: #5f6673;">管理学生账号和班级</span>
+          <span style="font-size: 12px; color: var(--t3);">管理学生账号和班级</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminTasks' })">
         <n-space vertical align="center" :size="8">
           <AoraBot shape="bulb" color="green" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-tasks" />
           <span style="font-weight: 500;">任务管理</span>
-          <span style="font-size: 12px; color: #5f6673;">创建和编辑教学任务</span>
+          <span style="font-size: 12px; color: var(--t3);">创建和编辑教学任务</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminProcessEval' })">
         <n-space vertical align="center" :size="8">
           <AoraBot shape="star" color="orange" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-eval" />
           <span style="font-weight: 500;">过程性评价</span>
-          <span style="font-size: 12px; color: #5f6673;">查看班级评价看板</span>
+          <span style="font-size: 12px; color: var(--t3);">查看班级评价看板</span>
         </n-space>
       </n-card>
       <n-card hoverable class="quick-card" @click="router.push({ name: 'AdminRollCall' })">
         <n-space vertical align="center" :size="8">
           <AoraBot shape="bell" color="pink" face="eyes" :sizePx="40" :lineWeight="1.15" seed="quick-roll" />
           <span style="font-weight: 500;">课堂点名</span>
-          <span style="font-size: 12px; color: #5f6673;">随机点名学生</span>
+          <span style="font-size: 12px; color: var(--t3);">随机点名学生</span>
         </n-space>
       </n-card>
     </div>
@@ -193,10 +193,10 @@ const columns = [
 ]
 
 function getScoreColor(score: number) {
-  if (score >= 90) return '#18a058'
-  if (score >= 80) return '#2080f0'
-  if (score >= 60) return '#f0a020'
-  return '#d03050'
+  if (score >= 90) return 'var(--ok)'
+  if (score >= 80) return 'var(--info)'
+  if (score >= 60) return 'var(--warn-ink)'
+  return 'var(--bad)'
 }
 
 async function loadDashboard() {
@@ -233,8 +233,8 @@ onMounted(() => {
 }
 
 .welcome-banner {
-  background: #fff;
-  border: 1px solid #e8e8ec;
+  background: var(--c-card);
+  border: 1px solid var(--line);
 }
 
 .welcome-content {
@@ -253,7 +253,7 @@ onMounted(() => {
 }
 
 .stat-card {
-  border: 1px solid #e8e8ec;
+  border: 1px solid var(--line);
 }
 
 .stat-icon {
@@ -270,13 +270,13 @@ onMounted(() => {
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #1e1e2d;
+  color: var(--t1);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #5f6673;
+  color: var(--t3);
   margin-top: 2px;
 }
 
@@ -289,7 +289,7 @@ onMounted(() => {
 .quick-card {
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid #e8e8ec;
+  border: 1px solid var(--line);
 }
 
 .quick-card:hover {

@@ -374,7 +374,7 @@ function handleUserMenu(key: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: var(--c-card);
 }
 
 @media (min-width: 769px) {
@@ -390,6 +390,6 @@ function handleUserMenu(key: string) {
 }
 
 .admin-content {
-  background: #f5f5f9;
+  background: var(--c-page);
 }
 </style>

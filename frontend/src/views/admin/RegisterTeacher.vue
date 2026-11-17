@@ -2,7 +2,7 @@
   <div class="register-container">
     <div class="register-card">
       <div class="register-header">
-        <n-icon size="48" color="#f0a020">
+        <n-icon size="48" color="var(--warn)">
           <svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
@@ -135,17 +135,18 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--c-page);
   padding: 20px;
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
-  background: #fff;
+  background: var(--c-card);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-2);
 }
 
 .register-header {
@@ -156,12 +157,12 @@ async function handleRegister() {
 .register-header h1 {
   margin-top: 16px;
   font-size: 24px;
-  color: #333;
+  color: var(--t1);
 }
 
 .register-header p {
   margin-top: 8px;
-  color: #4a5160;
+  color: var(--t2);
   font-size: 14px;
 }
 

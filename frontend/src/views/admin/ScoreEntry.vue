@@ -35,7 +35,7 @@
           @update:value="handleIndicatorChange"
         />
       </n-space>
-      <div v-if="currentIndicator" style="margin-top: 12px; color: #4a5160; font-size: 13px;">
+      <div v-if="currentIndicator" style="margin-top: 12px; color: var(--t2); font-size: 13px;">
         <n-space>
           <n-tag size="small" type="info">权重: {{ currentIndicator.weight }}%</n-tag>
           <n-tag size="small">满分: {{ currentIndicator.max_score }}</n-tag>
@@ -137,7 +137,7 @@ const columns = [
     key: 'latest_score',
     width: 100,
     render: (row: any) => {
-      if (row.latest_score == null) return h('span', { style: 'color: #8a919e;' }, '--')
+      if (row.latest_score == null) return h('span', { style: 'color: var(--t4);' }, '--')
       return h('span', { style: 'font-weight: 600;' }, `${row.latest_score}`)
     }
   },
@@ -167,7 +167,7 @@ const columns = [
       return h('input', {
         value: remarkMap.value[row.student_id] || '',
         placeholder: '可选',
-        style: 'width: 100%; padding: 4px 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 13px;',
+        style: 'width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;',
         onInput: (e: Event) => {
           remarkMap.value[row.student_id] = (e.target as HTMLInputElement).value
           changedIds.value.add(row.student_id)

@@ -1,0 +1,116 @@
+/* ============================================================
+   全局明暗主题变量
+   ------------------------------------------------------------
+   所有页面的背景 / 文字 / 边框 / 彩色底一律从这里取色，
+   页面内禁止再写死这些类别的色值。
+   切换由 stores/theme.ts 在 <html> 上加减 .dark 完成。
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* —— 面 —— */
+  --c-page: #f5f5f9;        /* 页面底色 */
+  --c-card: #ffffff;        /* 卡片 / 抬升面 */
+  --c-sunken: #f0f0f4;      /* 下沉面：进度轨道、标签底、空状态 */
+  --c-hover: #fafafe;       /* 行 hover */
+
+  /* —— 文字（深 → 浅）—— */
+  --t1: #1e1e2d;            /* 标题 / 主文字 */
+  --t2: #4a5160;            /* 正文 */
+  --t3: #5f6673;            /* 次要说明 */
+  --t4: #646b78;            /* 最弱：时间戳、占位 */
+
+  /* —— 线 —— */
+  --line: #e8e8ec;          /* 卡片边框 */
+  --line-soft: #f5f5f9;     /* 行分隔线 */
+  --line-input: #dcdfe6;    /* 输入类边框 */
+  --line-strong: #d0d5dd;   /* 强调边 / 滚动条 */
+
+  /* —— 阴影 —— */
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* —— 彩色底 + 前景成对使用 —— */
+  --blue-bg: #e8f1ff;   --blue-fg: #1f6feb;
+  --green-bg: #e8f7ee;  --green-fg: #12805c;
+  --purple-bg: #f1e9ff; --purple-fg: #6d28d9;
+  --orange-bg: #fff2e0; --orange-fg: #c2740b;
+  --red-bg: #fff5f5;    --red-fg: #d03050;
+  --indigo-bg: #eef2ff; --indigo-fg: #5558e8;
+  --cyan-bg: #ecfeff;   --cyan-fg: #0e7490;
+
+  /* —— 语义色（两种主题下均可读，用于进度条 / 标签 / 图表）—— */
+  --ok: #0b7341;
+  --warn: #f0a020;
+  --warn-ink: #b45309;      /* 警告色的文字安全变体 */
+  --bad: #c22546;
+  --info: #1667d9;
+  --indigo: #6366f1;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --c-page: #101014;
+  --c-card: #1a1a2e;
+  --c-sunken: #22223a;
+  --c-hover: #22223a;
+
+  --t1: #e8eaf0;
+  --t2: #c3c8d4;
+  --t3: #9aa3b2;
+  --t4: #868e9e;
+
+  --line: #2a2a3e;
+  --line-soft: #24243a;
+  --line-input: #3a3a52;
+  --line-strong: #3a3a52;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --blue-bg: #1a2a4e;   --blue-fg: #60a5fa;
+  --green-bg: #1a2e22;  --green-fg: #4ade80;
+  --purple-bg: #2a1a3e; --purple-fg: #a78bfa;
+  --orange-bg: #2e2a1a; --orange-fg: #fbbf24;
+  --red-bg: #2e1a1a;    --red-fg: #f87171;
+  --indigo-bg: #22223a; --indigo-fg: #818cf8;
+  --cyan-bg: #12303a;   --cyan-fg: #22d3ee;
+
+  --ok: #36ad6a;
+  --warn: #f2c97d;
+  --warn-ink: #f2c97d;
+  --bad: #e88080;
+  --info: #4d9df5;
+}
+
+body {
+  background-color: var(--c-page);
+  color: var(--t1);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* —— 滚动条跟随主题 —— */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 6px;
+  border: 2px solid var(--c-page);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--t4);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

@@ -208,10 +208,10 @@ function getStatusLabel(status: string) {
 }
 
 function getScoreColor(score: number | null) {
-  if (!score) return '#5f6673'
-  if (score >= 90) return '#18a058'
-  if (score >= 60) return '#f0a020'
-  return '#d03050'
+  if (!score) return 'var(--t3)'
+  if (score >= 90) return 'var(--ok)'
+  if (score >= 60) return 'var(--warn-ink)'
+  return 'var(--bad)'
 }
 
 function getTaskProgress(task: any) {
@@ -364,14 +364,14 @@ onMounted(() => { loadData() })
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
-  background: #fff;
-  border: 1px solid #dcdfe6;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  background: var(--c-card);
+  border: 1px solid var(--line-input);
+  box-shadow: var(--shadow-1);
 }
 
 .quick-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-2);
 }
 
 .quick-icon {
@@ -384,20 +384,20 @@ onMounted(() => { loadData() })
   flex-shrink: 0;
 }
 
-.quick-blue .quick-icon { background: #e8f1ff; color: #1f6feb; }
-.quick-green .quick-icon { background: #e8f7ee; color: #12805c; }
-.quick-purple .quick-icon { background: #f1e9ff; color: #6d28d9; }
-.quick-orange .quick-icon { background: #fff2e0; color: #c2740b; }
+.quick-blue .quick-icon { background: var(--blue-bg); color: var(--blue-fg); }
+.quick-green .quick-icon { background: var(--green-bg); color: var(--green-fg); }
+.quick-purple .quick-icon { background: var(--purple-bg); color: var(--purple-fg); }
+.quick-orange .quick-icon { background: var(--orange-bg); color: var(--orange-fg); }
 
 .quick-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1e1e2d;
+  color: var(--t1);
 }
 
 .quick-desc {
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
   margin-top: 2px;
 }
 
@@ -409,11 +409,11 @@ onMounted(() => { loadData() })
 }
 
 .card-section {
-  background: #fff;
+  background: var(--c-card);
   border-radius: 12px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--line-input);
   padding: 20px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: var(--shadow-1);
 }
 
 .card-header {
@@ -426,7 +426,7 @@ onMounted(() => { loadData() })
 .card-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1e1e2d;
+  color: var(--t1);
 }
 
 /* 学习进度 */
@@ -439,7 +439,7 @@ onMounted(() => { loadData() })
 .progress-item {
   cursor: pointer;
   padding: 8px 0;
-  border-bottom: 1px solid #f5f5f9;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .progress-item:last-child { border-bottom: none; }
@@ -454,7 +454,7 @@ onMounted(() => { loadData() })
 .progress-name {
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -469,7 +469,7 @@ onMounted(() => { loadData() })
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: #f0f0f4;
+  background: var(--c-sunken);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -484,7 +484,7 @@ onMounted(() => { loadData() })
 .progress-pct {
   font-size: 12px;
   font-weight: 600;
-  color: #6366f1;
+  color: var(--indigo-fg);
   min-width: 36px;
   text-align: right;
 }
@@ -501,7 +501,7 @@ onMounted(() => { loadData() })
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #f5f5f9;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .submit-item:last-child { border-bottom: none; }
@@ -517,7 +517,7 @@ onMounted(() => { loadData() })
 .submit-task {
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -525,7 +525,7 @@ onMounted(() => { loadData() })
 
 .submit-time {
   font-size: 11px;
-  color: #8a919e;
+  color: var(--t4);
 }
 
 .submit-right {
@@ -554,11 +554,11 @@ onMounted(() => { loadData() })
   padding: 14px 0;
   cursor: pointer;
   transition: background 0.15s;
-  border-bottom: 1px solid #f5f5f9;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .task-row:last-child { border-bottom: none; }
-.task-row:hover { background: #fafafe; margin: 0 -20px; padding: 14px 20px; border-radius: 8px; }
+.task-row:hover { background: var(--c-hover); margin: 0 -20px; padding: 14px 20px; border-radius: 8px; }
 
 .task-row-left {
   display: flex;
@@ -571,7 +571,7 @@ onMounted(() => { loadData() })
 .task-row-title {
   font-size: 14px;
   font-weight: 500;
-  color: #1e1e2d;
+  color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -586,7 +586,7 @@ onMounted(() => { loadData() })
 
 .task-row-steps, .task-row-hours {
   font-size: 12px;
-  color: #5f6673;
+  color: var(--t3);
 }
 
 /* 响应式 */

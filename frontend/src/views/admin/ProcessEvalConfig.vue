@@ -57,7 +57,7 @@
           确定删除模板 "{{ currentTemplate?.name }}" 及其所有配置？
         </n-popconfirm>
       </n-space>
-      <div v-if="currentTemplate" style="margin-top: 12px; color: #4a5160;">
+      <div v-if="currentTemplate" style="margin-top: 12px; color: var(--t2);">
         <n-space>
           <n-tag :type="currentTemplate.is_active ? 'success' : 'default'" size="small">
             {{ currentTemplate.is_active ? '已激活' : '未激活' }}
@@ -275,7 +275,7 @@
                     <n-tag size="small">{{ dataSourceMap[item.data_source] || item.data_source || '未指定' }}</n-tag>
                     <n-tag size="small" type="warning">权重: {{ item.weight }}%</n-tag>
                   </n-space>
-                  <div v-if="item.reason" style="color: #5f6673; font-size: 13px; margin-top: 2px;">{{ item.reason }}</div>
+                  <div v-if="item.reason" style="color: var(--t3); font-size: 13px; margin-top: 2px;">{{ item.reason }}</div>
                 </div>
                 <n-button
                   type="success"
@@ -358,7 +358,7 @@
         </n-form-item>
         <n-form-item label="自动采集">
           <n-switch v-model:value="indicatorForm.auto_collect" />
-          <span style="margin-left: 8px; color: #4a5160;">开启后系统将自动采集该指标数据</span>
+          <span style="margin-left: 8px; color: var(--t2);">开启后系统将自动采集该指标数据</span>
         </n-form-item>
         <n-form-item label="描述">
           <n-input v-model:value="indicatorForm.description" type="textarea" placeholder="可选，指标说明" />
@@ -584,7 +584,7 @@ const indicatorColumns = [
     renderExpand: (row: any) => {
       const scorers = row.scorer_configs || []
       if (scorers.length === 0) {
-        return h('div', { style: 'padding: 8px 16px; color: #5f6673;' }, '暂无评分主体配置')
+        return h('div', { style: 'padding: 8px 16px; color: var(--t3);' }, '暂无评分主体配置')
       }
       return h('div', { style: 'padding: 8px 16px;' }, [
         h('div', { style: 'margin-bottom: 8px; font-weight: 600;' }, '评分主体配置：'),

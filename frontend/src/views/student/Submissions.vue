@@ -23,7 +23,7 @@
           <n-descriptions-item label="最终分数" :span="2"><span style="font-size: 24px; font-weight: bold;" :style="{ color: getScoreColor(detailData.final_score) }">{{ detailData.final_score ? `${detailData.final_score}分` : '-' }}</span></n-descriptions-item>
         </n-descriptions>
         <n-space v-if="canRescore" justify="space-between" align="center">
-          <span style="font-size: 12px; color: #6b7280;">
+          <span style="font-size: 12px; color: var(--t2);">
             AI 评分未完成或失败，可手动重试一次
           </span>
           <n-button size="small" type="primary" secondary :loading="rescoring" @click="handleRescore">
@@ -110,7 +110,7 @@ const columns = [
 
 function getStatusType(s: string) { return ({ pending: 'warning', ai_scored: 'info', reviewed: 'success' } as any)[s] || 'default' }
 function getStatusLabel(s: string) { return ({ pending: '待评分', ai_scored: 'AI 已评分', reviewed: '已审核' } as any)[s] || s }
-function getScoreColor(s: number | null) { if (!s) return '#5f6673'; if (s >= 90) return '#18a058'; if (s >= 80) return '#2080f0'; if (s >= 60) return '#f0a020'; return '#d03050' }
+function getScoreColor(s: number | null) { if (!s) return 'var(--t3)'; if (s >= 90) return '#18a058'; if (s >= 80) return '#2080f0'; if (s >= 60) return '#f0a020'; return '#d03050' }
 
 async function loadSubmissions() {
   loading.value = true
