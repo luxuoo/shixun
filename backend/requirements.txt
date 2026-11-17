@@ -3,11 +3,11 @@ uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 aiosqlite==0.19.0
 python-jose[cryptography]==3.4.0
-passlib[bcrypt]==1.7.4
-# 必须锁 4.0.1：bcrypt>=4.1 移除了 __about__，bcrypt 5.x 更会让 passlib 校验直接抛
-# ValueError: password cannot be longer than 72 bytes，导致登录 500
-bcrypt==4.0.1
+# 裸用 bcrypt（不再经停更的 passlib）：hashpw/checkpw API 稳定，无需锁版本；
+# 72 字节截断在 security.py 统一处理，兼容旧 passlib 哈希
+bcrypt>=4.0.1
 python-multipart==0.0.7
+alembic>=1.13.0
 openai>=1.30.0
 pydantic==2.5.3
 pydantic-settings==2.1.0

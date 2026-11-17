@@ -8,9 +8,9 @@ import os
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api import auth, tasks, submissions, ai, admin, evaluation, ops
+from app.api import auth, tasks, submissions, ai, admin, evaluation, ops, upload
 from app.models import (
-    User, Class, Task, TaskStep, Submission, AiLog, Score,
+    User, Class, Task, TaskStep, Submission, Attachment, AiLog, Score,
     EvalTemplate, EvalPhase, EvalIndicator, EvalScorerConfig, EvalRecord, EvalSnapshot,
     AppSetting
 )
@@ -71,6 +71,7 @@ app.include_router(ai.router)
 app.include_router(admin.router)
 app.include_router(evaluation.router)
 app.include_router(ops.router)
+app.include_router(upload.router)
 
 
 @app.get("/")
