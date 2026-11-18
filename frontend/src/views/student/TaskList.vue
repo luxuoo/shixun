@@ -149,7 +149,7 @@ onMounted(() => { loadTasks() })
   border: 1px solid var(--line);
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .task-card:hover {

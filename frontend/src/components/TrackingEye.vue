@@ -4,9 +4,10 @@
     class="t-eye"
     :style="{
       width: (showWhite ? size : pupilSize) + 'px',
-      height: (showWhite && blinking ? 2 : (showWhite ? size : pupilSize)) + 'px',
+      height: (showWhite ? size : pupilSize) + 'px',
       backgroundColor: showWhite ? eyeColor : 'transparent',
       overflow: showWhite ? 'hidden' : 'visible',
+      transform: showWhite && blinking ? 'scaleY(0.06)' : 'scaleY(1)',
     }"
   >
     <div
@@ -72,7 +73,7 @@ const off = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: transform 0.15s, background-color 0.15s;
 }
 .t-pupil {
   border-radius: 50%;

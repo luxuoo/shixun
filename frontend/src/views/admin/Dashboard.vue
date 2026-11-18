@@ -269,7 +269,7 @@ onMounted(() => {
 
 .stat-value {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--t1);
   line-height: 1.2;
 }
@@ -288,13 +288,12 @@ onMounted(() => {
 
 .quick-card {
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s, transform 0.2s;
   border: 1px solid var(--line);
 }
 
 .quick-card:hover {
-  border-color: #6366f1;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  border-color: var(--indigo-fg);
   transform: translateY(-2px);
 }
 

@@ -472,14 +472,14 @@ onMounted(() => {
   color: #fff;
   text-align: center;
   line-height: 28px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
   margin-bottom: 8px;
 }
 
 .concept-title {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 

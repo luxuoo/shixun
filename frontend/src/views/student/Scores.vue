@@ -603,12 +603,12 @@ onBeforeUnmount(() => {
 
 .total-score-card :deep(.n-statistic .n-statistic-value__content) {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .total-score-number {
   font-size: 42px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.2;
 }
 

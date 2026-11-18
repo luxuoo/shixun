@@ -931,7 +931,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--t1);
   padding: 16px 20px;
-  background: linear-gradient(135deg, var(--blue-bg) 0%, var(--indigo-bg) 100%);
+  background: var(--blue-bg);
   border-radius: 8px;
   border: 1px solid var(--line);
   min-height: 120px;

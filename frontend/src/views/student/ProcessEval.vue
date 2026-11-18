@@ -892,7 +892,7 @@ onBeforeUnmount(() => {
 
 .total-score-card :deep(.n-statistic .n-statistic-value__content) {
   font-size: 36px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .phase-card {
@@ -916,7 +916,7 @@ onBeforeUnmount(() => {
 
 .phase-score {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   margin-bottom: 4px;
 }

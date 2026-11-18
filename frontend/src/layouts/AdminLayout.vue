@@ -343,7 +343,7 @@ function handleUserMenu(key: string) {
 
 .logo-title {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   line-height: 1.3;
   white-space: nowrap;
@@ -364,8 +364,6 @@ function handleUserMenu(key: string) {
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.48);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .admin-header {

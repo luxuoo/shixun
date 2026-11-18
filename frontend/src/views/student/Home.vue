@@ -86,7 +86,7 @@
             </div>
             <div class="progress-bar-wrap">
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: getTaskProgress(task) + '%' }"></div>
+                <div class="progress-fill" :style="{ transform: 'scaleX(' + getTaskProgress(task) / 100 + ')' }"></div>
               </div>
               <span class="progress-pct">{{ getTaskProgress(task) }}%</span>
             </div>
@@ -312,7 +312,7 @@ onMounted(() => { loadData() })
 .hero-text h1 {
   margin: 0 0 8px;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .hero-text p {
@@ -332,7 +332,7 @@ onMounted(() => { loadData() })
 .hero-stat-num {
   display: block;
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
@@ -363,7 +363,7 @@ onMounted(() => { loadData() })
   padding: 18px 20px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   background: var(--c-card);
   border: 1px solid var(--line-input);
   box-shadow: var(--shadow-1);
@@ -476,9 +476,11 @@ onMounted(() => { loadData() })
 
 .progress-fill {
   height: 100%;
+  width: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #2080f0, #6366f1);
-  transition: width 0.6s ease;
+  background: var(--info);
+  transform-origin: left center;
+  transition: transform 0.6s ease;
 }
 
 .progress-pct {
@@ -537,7 +539,7 @@ onMounted(() => { loadData() })
 
 .submit-score {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   min-width: 32px;
   text-align: right;
 }

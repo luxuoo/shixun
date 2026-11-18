@@ -309,7 +309,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: border-color 0.3s, background-color 0.3s;
   margin-bottom: 24px;
 }
 .call-display.rolling {
@@ -331,22 +331,21 @@ onMounted(() => {
 .rolling-label { font-size: 16px; color: var(--blue-fg); margin-bottom: 12px; }
 .rolling-name {
   font-size: 56px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--blue-fg);
-  letter-spacing: 4px;
-  animation: pulse 0.08s infinite alternate;
+  letter-spacing: 2px;
 }
 
 .result-state { text-align: center; padding: 20px; }
 .result-label { font-size: 14px; color: var(--t3); margin-bottom: 16px; }
 .result-avatar {
   width: 80px; height: 80px; border-radius: 50%;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white; font-size: 32px; font-weight: 700;
+  background: var(--red-bg);
+  color: var(--red-fg); font-size: 32px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 16px;
 }
-.result-name { font-size: 32px; font-weight: 800; color: var(--red-fg); margin-bottom: 8px; }
+.result-name { font-size: 32px; font-weight: 600; color: var(--red-fg); margin-bottom: 8px; }
 .result-info { display: flex; gap: 20px; justify-content: center; color: var(--t2); font-size: 14px; }
 
 .call-actions {
@@ -413,11 +412,11 @@ onMounted(() => {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 14px;
-  transition: all 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 .rank-item.rank-top {
   background: var(--orange-bg);
-  border-color: #f0d060;
+  border-color: var(--orange-fg);
 }
 .rank-medal { font-size: 18px; }
 .rank-num {
@@ -426,16 +425,11 @@ onMounted(() => {
 }
 .rank-name { font-size: 14px; font-weight: 500; color: var(--t1); flex: 1; }
 .rank-score {
-  font-size: 15px; font-weight: 700; color: var(--red-fg);
+  font-size: 15px; font-weight: 600; color: var(--red-fg);
 }
 .rank-tip {
   margin-top: 12px;
   text-align: center;
-}
-
-@keyframes pulse {
-  from { opacity: 0.6; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1.03); }
 }
 
 /* 响应式 */
