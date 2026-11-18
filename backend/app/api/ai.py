@@ -16,6 +16,7 @@ from app.schemas.submission import (
     AiScoreResponse
 )
 from app.services.ai_service import ai_service, ai_error_detail
+from app.services import scoring
 from app.api.auth import _system_settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
@@ -281,9 +282,12 @@ async def score_submission(
         completed_steps = completed_steps_result.scalar() or 0
         score.completion_rate = (completed_steps / total_steps) * 100
 
-        # 计算最终分数
-        from app.api.admin import calc_final_score
-        score.final_score = calc_final_score(score)
+        # 计算最终分数（统一走 scoring 服务，不再跨路由引用 admin）
+        score.final_score = scoring.task_final(
+            score.ai_total_score, score.teacher_score,
+            score.attendance_score, score.bonus_score,
+            scoring.current_weights(), score.teacher_score is not None,
+        )
         score.status = "completed"
 
     await db.commit()

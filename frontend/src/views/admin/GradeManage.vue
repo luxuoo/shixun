@@ -192,6 +192,13 @@
               <template v-if="weights.attendance > 0"> + 80×{{ weights.attendance/100 }}</template>
               = <strong>{{ (85*weights.ai/100 + 90*weights.teacher/100 + 80*weights.attendance/100).toFixed(1) }}</strong> 分
             </div>
+            <div class="formula-text" style="margin-top: 8px;">
+              加分（bonus）是<strong>额外累加项</strong>：直接加在加权分之上，总分封顶 100，不占权重。
+            </div>
+            <div class="formula-example">
+              教师未复核时，教师权重并入 AI，避免未复核任务被凭空扣分。<br>
+              提交级成绩只按 AI : 教师 = {{ weights.ai }} : {{ weights.teacher }} 加权（出勤/加分属任务级）。
+            </div>
           </div>
 
           <n-form label-placement="left" label-width="100" style="margin-top: 20px;">

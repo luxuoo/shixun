@@ -14,6 +14,7 @@ from app.schemas.submission import (
     ScoreResponse
 )
 from app.services.ai_service import ai_service
+from app.services import scoring
 from app.api.auth import _system_settings
 
 router = APIRouter(prefix="/api/submissions", tags=["提交"])
@@ -355,12 +356,19 @@ async def get_my_scores(
             ai_total_score=score.ai_total_score,
             completion_rate=score.completion_rate,
             teacher_score=score.teacher_score,
+            attendance_score=score.attendance_score,
+            bonus_score=score.bonus_score,
             final_score=score.final_score,
             ai_hint_count=score.ai_hint_count,
             total_submissions=score.total_submissions,
             status=score.status,
             completed_at=score.completed_at,
             reviewed_at=score.reviewed_at,
+            breakdown=scoring.task_breakdown(
+                score.ai_total_score, score.teacher_score,
+                score.attendance_score, score.bonus_score,
+                scoring.current_weights(), score.teacher_score is not None,
+            ),
             user_name=current_user.name,
             username=current_user.username,
             task_title=task_title

@@ -88,6 +88,7 @@ class ScoreResponse(BaseModel):
     ai_total_score: Optional[float] = None
     completion_rate: Optional[float] = None
     teacher_score: Optional[float] = None
+    attendance_score: Optional[float] = None
     bonus_score: Optional[float] = None
     final_score: Optional[float] = None
     ai_hint_count: Optional[int] = None
@@ -95,6 +96,8 @@ class ScoreResponse(BaseModel):
     status: str
     completed_at: Optional[datetime] = None
     reviewed_at: Optional[datetime] = None
+    # 成绩构成（权重/各项贡献/加分），供前端解释「分是怎么算的」
+    breakdown: Optional[dict] = None
     # 关联信息
     user_name: Optional[str] = None
     username: Optional[str] = None

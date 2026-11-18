@@ -26,6 +26,7 @@ from app.schemas.user import (
     ClassCreate,
     ClassResponse
 )
+from app.services import scoring
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -36,7 +37,7 @@ _DEFAULT_SETTINGS = {
     "ai_hints_limit": 0,
     "ai_auto_score": True,
     "submission_limit": 0,
-    "grade_weights": {"ai": 40, "teacher": 30, "attendance": 20},
+    "grade_weights": dict(scoring.DEFAULT_GRADE_WEIGHTS),
     "rollcall_score": 5,
     "rollcall_auto_score": False,
     "student_view_grades": True
@@ -343,11 +344,7 @@ async def update_settings(
     if "grade_weights" in data:
         gw = data["grade_weights"]
         if isinstance(gw, dict):
-            _system_settings["grade_weights"] = {
-                "ai": max(0, min(100, int(gw.get("ai", 40)))),
-                "teacher": max(0, min(100, int(gw.get("teacher", 30)))),
-                "attendance": max(0, min(100, int(gw.get("attendance", 20))))
-            }
+            _system_settings["grade_weights"] = scoring.normalize_weights(gw)
     if "rollcall_score" in data:
         _system_settings["rollcall_score"] = max(0, int(data["rollcall_score"]))
     if "rollcall_auto_score" in data:

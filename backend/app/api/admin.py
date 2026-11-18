@@ -12,6 +12,7 @@ from app.schemas.submission import SubmissionReview, SubmissionResponse
 from app.schemas.user import UserResponse, ClassUpdate, ClassResponse
 from app.services.ai_service import ai_service, AiServiceError
 from app.services import app_settings
+from app.services import scoring
 from app.core.config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["管理后台"])
@@ -113,31 +114,12 @@ async def update_ai_config(
 
 
 def calc_final_score(score) -> float:
-    """统一的最终分数计算函数，使用 grade_weights 配置
-
-    grade_weights 示例: {"ai": 40, "teacher": 30, "attendance": 20}
-    剩余权重归入 bonus_score。各项按满分100标准化后加权。
-    """
-    from app.api.auth import _system_settings
-
-    weights = _system_settings.get("grade_weights", {"ai": 60, "teacher": 40, "attendance": 0})
-    w_ai = weights.get("ai", 60)
-    w_teacher = weights.get("teacher", 40)
-    w_attendance = weights.get("attendance", 0)
-
-    ai = score.ai_total_score or 0
-    teacher = score.teacher_score or 0
-    attendance = score.attendance_score or 0
-    bonus = score.bonus_score or 0
-
-    # 如果教师未评分，教师权重归入 AI
-    if score.teacher_score is None:
-        w_ai_total = w_ai + w_teacher
-        weighted = ai * (w_ai_total / 100) + attendance * (w_attendance / 100) + bonus
-    else:
-        weighted = ai * (w_ai / 100) + teacher * (w_teacher / 100) + attendance * (w_attendance / 100) + bonus
-
-    return round(min(100, weighted), 1)
+    """任务级最终分适配器：真实规则在 services.scoring，路由不再自带公式"""
+    return scoring.task_final(
+        score.ai_total_score, score.teacher_score,
+        score.attendance_score, score.bonus_score,
+        scoring.current_weights(), score.teacher_score is not None,
+    )
 
 
 @router.get("/ai-provider")
@@ -312,7 +294,13 @@ async def get_student_detail(
             "ai_total_score": round(s.ai_total_score, 1) if s.ai_total_score else None,
             "completion_rate": round(s.completion_rate, 1) if s.completion_rate else None,
             "teacher_score": round(s.teacher_score, 1) if s.teacher_score else None,
+            "attendance_score": round(s.attendance_score, 1) if s.attendance_score else None,
+            "bonus_score": round(s.bonus_score, 1) if s.bonus_score else None,
             "final_score": round(s.final_score, 1) if s.final_score else None,
+            "breakdown": scoring.task_breakdown(
+                s.ai_total_score, s.teacher_score, s.attendance_score, s.bonus_score,
+                scoring.current_weights(), s.teacher_score is not None,
+            ),
             "ai_hint_count": s.ai_hint_count,
             "total_submissions": s.total_submissions,
             "status": s.status
@@ -396,11 +384,10 @@ async def review_submission(
     submission.status = "reviewed"
     submission.reviewed_at = datetime.now(timezone.utc)
 
-    # 计算提交级最终分数（AI 60% + 老师 40%）
-    if submission.ai_score:
-        submission.final_score = round(submission.ai_score * 0.6 + review_data.teacher_score * 0.4, 1)
-    else:
-        submission.final_score = round(review_data.teacher_score, 1)
+    # 提交级最终分：AI 与教师按配置比例加权（不再写死 60/40）
+    submission.final_score = scoring.submission_final(
+        submission.ai_score, review_data.teacher_score, scoring.current_weights()
+    )
 
     # 更新评分记录
     score_result = await db.execute(
@@ -604,10 +591,9 @@ async def batch_score_submissions(
             submission.teacher_comment = teacher_comment
             submission.status = "reviewed"
             submission.reviewed_at = datetime.now(timezone.utc)
-            if submission.ai_score:
-                submission.final_score = round(submission.ai_score * 0.6 + teacher_score * 0.4, 1)
-            else:
-                submission.final_score = round(teacher_score, 1)
+            submission.final_score = scoring.submission_final(
+                submission.ai_score, teacher_score, scoring.current_weights()
+            )
 
             # 更新评分记录
             score_result = await db.execute(

@@ -6,6 +6,32 @@
     </n-space>
 
     <n-spin :show="loading">
+      <!-- 成绩构成说明：把两套评分讲清楚 -->
+      <n-card v-if="gradesVisible" class="explain-card" style="margin-bottom: 20px;">
+        <div class="explain-title">成绩是怎么算的？</div>
+        <div class="explain-grid">
+          <div class="explain-item">
+            <div class="explain-head"><n-tag type="info" size="small">任务成绩</n-tag></div>
+            <p>每次提交由 AI 从正确性、规范性、完成度、创新性四维打分，教师可复核。任务最终分 = AI×权重 + 教师×权重 + 出勤×权重 + 加分（加分直接累加、总分封顶 100）。教师未复核时其权重并入 AI。</p>
+          </div>
+          <div class="explain-item">
+            <div class="explain-head"><n-tag type="success" size="small">过程性评价</n-tag></div>
+            <p>按「课前 / 课中 / 课后」等阶段划分，每阶段内若干指标各占权重，阶段得分再按阶段权重加权汇总为过程性评价总分，反映全程表现而非单次作业。</p>
+          </div>
+        </div>
+      </n-card>
+
+      <!-- 任务成绩（含构成明细） -->
+      <n-card v-if="gradesVisible && taskScores.length" title="任务成绩" style="margin-bottom: 20px;">
+        <n-data-table
+          :columns="taskColumns"
+          :data="taskScores"
+          :bordered="false"
+          :pagination="false"
+          :row-key="(r: any) => r.id"
+        />
+      </n-card>
+
       <!-- 成绩未开放 -->
       <template v-if="!loading && !gradesVisible">
         <n-card class="empty-card">
@@ -99,7 +125,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, watch, h } from 'vue'
 import { NTag, NProgress } from 'naive-ui'
-import { evalApi, authApi } from '@/api'
+import { evalApi, authApi, submissionApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 
@@ -142,6 +168,7 @@ const dashboardData = ref<DashboardData | null>(null)
 const phaseScores = ref<PhaseScore[]>([])
 const radarData = ref<DimScore[]>([])
 const detailTableData = ref<any[]>([])
+const taskScores = ref<any[]>([])
 
 const radarCanvasRef = ref<HTMLCanvasElement | null>(null)
 
@@ -265,6 +292,36 @@ const detailColumns = [
       })
     }
   }
+]
+
+// ---- 任务成绩列 + 构成明细 ----
+
+function scoreCell(v: number | null | undefined, bold = false) {
+  if (v === null || v === undefined) return h('span', { style: 'color: var(--t4);' }, '—')
+  return h('span', { style: `color: ${getScoreColor(v)}; font-weight: ${bold ? 700 : 500};` }, String(v))
+}
+
+function renderBreakdown(row: any) {
+  const b = row.breakdown
+  if (!b) return h('span', { style: 'color: var(--t4);' }, '—')
+  const parts: any[] = []
+  for (const c of b.components) {
+    if (!c.weight) continue
+    parts.push(h('span', { class: 'bd-chip' }, `${c.label} ${c.raw ?? '—'} × ${c.weight}% = ${c.contribution}`))
+  }
+  if (b.bonus) parts.push(h('span', { class: 'bd-chip bd-bonus' }, `+ 加分 ${b.bonus}`))
+  if (!b.teacher_reviewed) parts.push(h('span', { class: 'bd-chip bd-note' }, '教师未复核，权重并入 AI'))
+  return h('div', { class: 'bd' }, parts)
+}
+
+const taskColumns = [
+  { title: '任务', key: 'task_title', render: (r: any) => h('span', { style: 'font-weight: 500;' }, r.task_title) },
+  { title: 'AI 评分', key: 'ai_total_score', width: 90, render: (r: any) => scoreCell(r.ai_total_score) },
+  { title: '教师评分', key: 'teacher_score', width: 90, render: (r: any) => scoreCell(r.teacher_score) },
+  { title: '出勤', key: 'attendance_score', width: 70, render: (r: any) => scoreCell(r.attendance_score) },
+  { title: '加分', key: 'bonus_score', width: 70, render: (r: any) => scoreCell(r.bonus_score) },
+  { title: '最终成绩', key: 'final_score', width: 90, render: (r: any) => scoreCell(r.final_score, true) },
+  { title: '构成明细', key: 'breakdown', render: renderBreakdown }
 ]
 
 // ---- Helpers ----
@@ -478,6 +535,13 @@ async function loadData() {
       return
     }
 
+    // 任务成绩独立加载：即使过程性评价为空，学生也能看到任务分与构成
+    try {
+      taskScores.value = (await submissionApi.getMyScores()) as any
+    } catch {
+      taskScores.value = []
+    }
+
     const dashboard = await evalApi.getStudentDashboard(studentId) as any as DashboardData
 
     dashboardData.value = dashboard
@@ -565,4 +629,20 @@ onBeforeUnmount(() => {
   align-items: center;
   min-height: 200px;
 }
+
+/* 成绩说明 */
+.explain-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--t1); }
+.explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.explain-item p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--t2); }
+@media (max-width: 800px) { .explain-grid { grid-template-columns: 1fr; } }
+
+/* 构成明细 chips */
+.bd { display: flex; flex-wrap: wrap; gap: 6px; }
+.bd-chip {
+  font-size: 12px; color: var(--t2);
+  background: var(--c-sunken); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 8px; white-space: nowrap;
+}
+.bd-bonus { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); }
+.bd-note { color: var(--t3); font-style: italic; }
 </style>
