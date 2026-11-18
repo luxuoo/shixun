@@ -1,0 +1,16 @@
+/* BoardUI（React 组件库）样式接入 Vue 应用。
+   只引入 theme + utilities，刻意不引入 preflight，避免重置 naive-ui 与既有样式。 */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "../boardui/styles/theme.css";
+
+:root {
+  --font-inter: Inter, ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* React-island 宿主：行内块，便于按钮排布 */
+.boardui-host {
+  display: inline-block;
+  vertical-align: middle;
+}

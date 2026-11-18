@@ -4,11 +4,13 @@ import naive from 'naive-ui'
 import { defineAoraBot } from '@aora-bot/element'
 import App from './App.vue'
 import './styles/theme.css'
+import './styles/boardui.css'
 import router from './router'
 import HelpIcon from './components/HelpIcon.vue'
 import AoraBot from './components/AoraBot'
 import BotAvatar from './components/BotAvatar'
 import EmptyState from './components/EmptyState.vue'
+import BoardUI from './components/BoardUI.vue'
 
 // 注册 <aora-bot> 卡通角色组件（Web Component，框架无关）
 defineAoraBot()
@@ -24,5 +26,6 @@ app.component('HelpIcon', HelpIcon)
 app.component('AoraBot', AoraBot)
 app.component('BotAvatar', BotAvatar)
 app.component('EmptyState', EmptyState)
+app.component('BoardUI', BoardUI)
 
 app.mount('#app')

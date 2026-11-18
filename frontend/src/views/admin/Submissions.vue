@@ -19,13 +19,15 @@
           style="width: 150px;"
           @update:value="loadSubmissions"
         />
-        <n-button
-          type="warning"
-          :disabled="selectedRowKeys.length === 0"
-          @click="showBatchReview = true"
-        >
-          批量评分 ({{ selectedRowKeys.length }})
-        </n-button>
+        <BoardUI
+          as="Button"
+          :config="{
+            variant: 'secondary',
+            disabled: selectedRowKeys.length === 0,
+            onClick: () => (showBatchReview = true),
+            children: `批量评分 (${selectedRowKeys.length})`,
+          }"
+        />
       </n-space>
     </div>
 
