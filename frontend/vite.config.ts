@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 export default defineConfig({
@@ -13,10 +11,7 @@ export default defineConfig({
           isCustomElement: (tag) => tag === 'aora-bot'
         }
       }
-    }),
-    // BoardUI 为 React TSX 组件，经 React-island 桥接在 Vue 页面内使用
-    react(),
-    tailwindcss()
+    })
   ],
   resolve: {
     alias: {
@@ -65,9 +60,6 @@ export default defineConfig({
             id.includes('vue-demi')
           ) {
             return 'vue-vendor'
-          }
-          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) {
-            return 'react'
           }
           return 'vendor'
         }

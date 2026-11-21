@@ -14,10 +14,21 @@
           :disabled="running"
           @update:value="onRemoteChange"
         />
-        <BoardUI as="Button" :config="{ variant: 'ghost', size: 'small', disabled: loading, onClick: () => loadStatus(true), children: loading ? '刷新中…' : '刷新' }" />
-        <BoardUI as="Button" :config="{ variant: 'ghost', size: 'small', disabled: !status.platform_ok || checking, onClick: handleCheck, children: checking ? '检查中…' : '检查更新' }" />
-        <BoardUI as="Button" :config="{ variant: 'primary', disabled: !canOperate || running || deploying, onClick: handleDeploy, children: deploying ? '发布中…' : '一键更新' }" />
-        <BoardUI as="Button" :config="{ variant: 'secondary', disabled: !canOperate || running || releases.length < 2 || rollingBack, onClick: () => handleRollback(), children: rollingBack ? '回滚中…' : '一键回滚' }" />
+        <n-button text :loading="loading" @click="loadStatus(true)">刷新</n-button>
+        <n-button text :loading="checking" :disabled="!status.platform_ok" @click="handleCheck">
+          检查更新
+        </n-button>
+        <n-button :disabled="!canOperate || running" :loading="deploying" @click="handleDeploy">
+          一键更新
+        </n-button>
+        <n-button
+          secondary
+          :disabled="!canOperate || running || releases.length < 2"
+          :loading="rollingBack"
+          @click="handleRollback()"
+        >
+          一键回滚
+        </n-button>
       </n-space>
     </header>
 
